@@ -57,7 +57,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="relative z-30 px-4 pt-5 sm:px-6 lg:px-8">
+      <header className="relative z-30 px-4 pt-7 sm:px-6 sm:pt-8 lg:px-8">
         <div className="mx-auto max-w-[1120px]">
           <div className="relative flex items-center justify-between gap-6">
             <Link href="/" aria-label="Arch City Tutors home" className="shrink-0">
@@ -99,7 +99,7 @@ export function SiteHeader() {
               aria-expanded={open}
               aria-controls="mobile-nav"
               aria-label="Toggle navigation menu"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-white/6 text-white transition hover:bg-white/10 lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-transparent text-white transition hover:bg-white/10 lg:hidden"
               onClick={() => setOpen((current) => !current)}
             >
               <span className="space-y-1.5">
