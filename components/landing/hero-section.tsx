@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-x-hidden overflow-y-visible px-4 pb-0 pt-10 sm:px-6 lg:px-8">
+    <section className="relative overflow-hidden px-4 pb-16 pt-10 sm:px-6 lg:px-8">
       <div className="absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-[#a50f15]/35 blur-[120px]" />
       <div className="absolute left-[-10%] top-32 h-72 w-72 rounded-full bg-[#7f1015]/20 blur-[120px]" />
       <div className="absolute right-[-8%] top-24 h-80 w-80 rounded-full bg-[#3c0b0d]/25 blur-[150px]" />
@@ -44,15 +44,16 @@ export function HeroSection() {
         <div id="hero-cta-threshold" aria-hidden="true" className="h-px w-full" />
       </div>
 
-      <div className="relative z-10 mx-auto mt-24 w-full max-w-5xl translate-y-16 px-3 sm:mt-28 sm:translate-y-20 sm:px-6">
-        <div className="relative overflow-hidden rounded-[2rem] ">
+      <div className="pointer-events-none relative z-10 mx-auto mt-24 w-full max-w-5xl px-3 sm:mt-28 sm:px-6">
+        <div className="relative overflow-hidden rounded-[2rem]">
           <div className="relative aspect-[16/9] w-full">
             <Image
               src="/app-dashboard.webp"
               alt="Arch City Tutors dashboard preview"
               fill
               priority
-              className="object-cover object-top"
+              draggable={false}
+              className="pointer-events-none select-none object-cover object-top"
             />
           </div>
         </div>

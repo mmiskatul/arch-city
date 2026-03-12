@@ -2,7 +2,7 @@ export function FeaturesSection() {
   return (
     <section
       id="students"
-      className="relative bg-white px-4 pb-24 pt-36 text-[#111111] sm:px-6 sm:pt-44 lg:px-8"
+      className="relative bg-white px-4 pb-24 pt-16 text-[#111111] sm:px-6 sm:pt-20 lg:px-8"
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-center text-center">
