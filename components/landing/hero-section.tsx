@@ -9,12 +9,12 @@ export function HeroSection() {
       <div className="absolute right-[-8%] top-24 h-80 w-80 rounded-full bg-[#3c0b0d]/25 blur-[150px]" />
 
       <div className="relative mx-auto flex max-w-5xl flex-col items-center text-center">
-        <div className="inline-flex items-center rounded-full border border-[#ef242a]/25 bg-white/6 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-white/78">
-          <span className="mr-2 h-2 w-2 rounded-full bg-[#48d597]" />
+        <div className="inline-flex items-center rounded-full border border-[#ef242a]/25 bg-white/6 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.24em] text-white/78 space-x-[-0.06em]">
+          <span className="mr-2 h-2 w-2 rounded-full bg-[#48d597] " />
           Beta 1.0 Available Now
         </div>
 
-        <h1 className="mt-8 max-w-4xl text-5xl font-black tracking-[-0.06em] text-white sm:text-6xl lg:text-[6.25rem] lg:leading-[0.92]">
+        <h1 className="mt-8 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-5xl lg:text-[6.25rem] lg:leading-[0.92]">
           Tutoring Made
           <span className="mx-3 inline-block rotate-[-2deg] rounded-[1.15rem] bg-white px-4 py-2 text-[#ef242a] shadow-[0_12px_60px_rgba(255,255,255,0.1)]">
             Easier
