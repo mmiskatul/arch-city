@@ -16,14 +16,12 @@ const navItems = [
 function SiteLogo({ sticky = false }: { sticky?: boolean }) {
   return (
     <Image
-      src="/logo-dark.svg"
+      src={sticky ? "/logo-light.svg" : "/logo-dark.svg"}
       alt="Arch City Tutors"
       width={172}
       height={48}
       priority
-      className={`h-auto w-[148px] sm:w-[164px] ${
-        sticky ? "brightness-[0.96]" : ""
-      }`}
+      className="h-auto w-[148px] sm:w-[164px]"
     />
   );
 }
@@ -39,34 +37,55 @@ export function SiteHeader() {
       return;
     }
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowStickyHeader(!entry.isIntersecting);
-      },
-      {
-        root: null,
-        rootMargin: "-28px 0px 0px 0px",
-        threshold: 0,
+    let ticking = false;
+
+    const syncStickyHeader = () => {
+      const markerTop = marker.getBoundingClientRect().top + window.scrollY;
+      const shouldShowSticky = window.scrollY >= markerTop - 88;
+
+      setShowStickyHeader(shouldShowSticky);
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (ticking) {
+        return;
       }
-    );
 
-    observer.observe(marker);
+      ticking = true;
+      window.requestAnimationFrame(syncStickyHeader);
+    };
 
-    return () => observer.disconnect();
+    syncStickyHeader();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", syncStickyHeader);
+    window.addEventListener("load", syncStickyHeader);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", syncStickyHeader);
+      window.removeEventListener("load", syncStickyHeader);
+    };
   }, []);
 
   return (
     <>
-      <header className="relative z-30 px-4 pt-7 sm:px-6 sm:pt-8 lg:px-8">
-        <div className="mx-auto max-w-[1120px]">
-          <div className="relative flex items-center justify-between gap-6">
+      <header
+        className={`relative z-30 hidden px-4 pt-7 transition-[opacity,transform,visibility] duration-300 ease-out sm:px-6 sm:pt-8 lg:block lg:px-8 ${
+          showStickyHeader
+            ? "pointer-events-none invisible -translate-y-4 opacity-0"
+            : "visible translate-y-0 opacity-100"
+        }`}
+      >
+        <div className="mx-auto max-w-[1040px]">
+          <div className="relative flex items-center justify-between gap-4">
             <Link href="/" aria-label="Arch City Tutors home" className="shrink-0">
               <SiteLogo />
             </Link>
 
             <nav
               aria-label="Primary navigation"
-              className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-10 lg:flex"
+              className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex"
             >
               {navItems.map((item) => (
                 <Link
@@ -79,7 +98,7 @@ export function SiteHeader() {
               ))}
             </nav>
 
-            <div className="hidden items-center gap-6 lg:flex">
+            <div className="hidden items-center gap-5 lg:flex">
               <Link
                 href="#login"
                 className="text-[0.96rem] font-semibold text-white/92 transition hover:text-[#ef242a]"
@@ -88,7 +107,7 @@ export function SiteHeader() {
               </Link>
               <Link
                 href="#create-account"
-                className="inline-flex h-11 items-center rounded-full bg-[#ef242a] px-7 text-[0.96rem] font-bold text-white shadow-[0_14px_34px_rgba(239,36,42,0.3)] transition hover:bg-[#ff343a]"
+                className="inline-flex h-11 items-center rounded-full bg-[#ef242a] px-6 text-[0.96rem] font-bold text-white shadow-[0_14px_34px_rgba(239,36,42,0.3)] transition hover:bg-[#ff343a]"
               >
                 Create Account
               </Link>
@@ -100,6 +119,31 @@ export function SiteHeader() {
               aria-controls="mobile-nav"
               aria-label="Toggle navigation menu"
               className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-transparent text-white transition hover:bg-white/10 lg:hidden"
+              onClick={() => setOpen((current) => !current)}
+            >
+              <span className="space-y-1.5">
+                <span className="block h-0.5 w-5 rounded-full bg-current" />
+                <span className="block h-0.5 w-5 rounded-full bg-current" />
+                <span className="block h-0.5 w-5 rounded-full bg-current" />
+              </span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <header className="relative z-30 px-4 pt-7 sm:px-6 sm:pt-8 lg:hidden">
+        <div className="mx-auto max-w-[1040px]">
+          <div className="relative flex items-center justify-between gap-6">
+            <Link href="/" aria-label="Arch City Tutors home" className="shrink-0">
+              <SiteLogo />
+            </Link>
+
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls="mobile-nav"
+              aria-label="Toggle navigation menu"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-transparent text-white transition hover:bg-white/10"
               onClick={() => setOpen((current) => !current)}
             >
               <span className="space-y-1.5">
@@ -157,15 +201,15 @@ export function SiteHeader() {
             : "-translate-y-8 scale-[0.97] opacity-0 blur-[6px]"
         }`}
       >
-        <div className="mx-auto max-w-[1120px]">
+        <div className="mx-auto max-w-[1040px]">
           <div
-            className={`pointer-events-auto rounded-full border border-black/8 bg-white/96 px-4 py-2 backdrop-blur-xl transition-[box-shadow,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`pointer-events-auto rounded-full border border-black/8 bg-white/96 px-3 py-2 backdrop-blur-xl transition-[box-shadow,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               showStickyHeader
                 ? "shadow-[0_20px_60px_rgba(0,0,0,0.22)]"
                 : "shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
             }`}
           >
-            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-6">
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
               <Link
                 href="/"
                 aria-label="Arch City Tutors home"
@@ -176,7 +220,7 @@ export function SiteHeader() {
 
               <nav
                 aria-label="Sticky navigation"
-                className="flex items-center justify-center gap-10"
+                className="flex items-center justify-center gap-8"
               >
                 {navItems.map((item) => (
                   <Link
@@ -189,7 +233,7 @@ export function SiteHeader() {
                 ))}
               </nav>
 
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-5">
                 <Link
                   href="#login"
                   className="text-[0.95rem] font-semibold text-[#2b2b2b] transition hover:text-[#ef242a]"
@@ -198,7 +242,7 @@ export function SiteHeader() {
                 </Link>
                 <Link
                   href="#create-account"
-                  className="inline-flex h-11 items-center rounded-full bg-[#ef242a] px-7 text-[0.95rem] font-bold text-white shadow-[0_12px_30px_rgba(239,36,42,0.24)] transition hover:bg-[#ff343a]"
+                  className="inline-flex h-11 items-center rounded-full bg-[#ef242a] px-6 text-[0.95rem] font-bold text-white shadow-[0_12px_30px_rgba(239,36,42,0.24)] transition hover:bg-[#ff343a]"
                 >
                   Create Account
                 </Link>

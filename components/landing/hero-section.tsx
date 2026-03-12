@@ -44,9 +44,7 @@ export function HeroSection() {
         <div id="hero-cta-threshold" aria-hidden="true" className="h-px w-full" />
       </div>
 
-      <div className="relative mx-auto mt-16 w-full max-w-5xl px-3 sm:px-6">
-        <div className="absolute inset-x-12 -top-8 h-28 rounded-full bg-[#ef242a]/22 blur-3xl" />
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/12 shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
+      <div className=" mx-auto mt-16 w-full max-w-5xl px-3 sm:px-6">
           <Image
             src="/app-dashboard.webp"
             alt="Arch City Tutors dashboard preview"
@@ -55,7 +53,6 @@ export function HeroSection() {
             priority
             className="h-auto w-full"
           />
-        </div>
       </div>
     </section>
   );
