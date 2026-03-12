@@ -162,6 +162,8 @@ export function HeroSection() {
             Get started for just $10/month. Cancel anytime.
           </p>
         </div>
+
+        <div id="hero-cta-threshold" aria-hidden="true" className="h-px w-full" />
       </div>
 
       <DashboardPreview />
