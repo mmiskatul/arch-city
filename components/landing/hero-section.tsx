@@ -1,127 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-
-function DashboardPreview() {
-  return (
-    <div className="relative mx-auto mt-16 w-full max-w-5xl px-3 sm:px-6">
-      <div className="absolute inset-x-12 -top-8 h-28 rounded-full bg-[#ef242a]/22 blur-3xl" />
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/12 bg-[#f2f2f2] shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
-        <div className="flex items-center justify-between border-b border-black/6 bg-white px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-xs font-black text-white">
-              AC
-            </div>
-            <div className="rounded-full bg-[#f4f4f5] px-4 py-2 text-sm font-semibold text-[#222]">
-              Student Dashboard
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden rounded-full bg-[#111827] px-4 py-2 text-xs font-semibold text-white sm:block">
-              12-25-2024 - 2:57 PM CT
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e5e7eb] text-xs font-bold text-[#6b7280]">
-              SA
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ef4444] text-sm font-bold text-white">
-              +
-            </div>
-          </div>
-        </div>
-
-        <div className="grid min-h-[24rem] grid-cols-[72px_1fr] bg-[#f8f8f8]">
-          <aside className="border-r border-black/6 bg-white px-3 py-4">
-            <div className="grid gap-3">
-              {["⌂", "⌕", "🗓"].map((icon) => (
-                <div
-                  key={icon}
-                  className={`flex h-11 w-11 items-center justify-center rounded-2xl text-lg ${
-                    icon === "🗓"
-                      ? "bg-[#ffe3e3] text-[#ef242a]"
-                      : "bg-[#f4f4f5] text-[#6b7280]"
-                  }`}
-                >
-                  <span aria-hidden="true">{icon}</span>
-                </div>
-              ))}
-            </div>
-          </aside>
-
-          <div className="p-5 sm:p-8">
-            <div className="max-w-xl">
-              <h3 className="text-3xl font-extrabold tracking-tight text-[#151515]">
-                My Schedule
-              </h3>
-              <p className="mt-2 text-sm text-[#707070]">
-                View your upcoming, completed, and canceled tutoring sessions
-                here.
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              {[
-                { label: "All", active: true },
-                { label: "Upcoming" },
-                { label: "Completed" },
-                { label: "Cancelled" },
-              ].map((tab) => (
-                <button
-                  key={tab.label}
-                  type="button"
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    tab.active
-                      ? "bg-[#ef242a] text-white shadow-[0_8px_24px_rgba(239,36,42,0.22)]"
-                      : "border border-black/8 bg-white text-[#5e5e5e]"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {[
-                {
-                  subject: "AP Calculus Session",
-                  time: "Today, 4:30 PM",
-                  tutor: "with Daniel H.",
-                  status: "Upcoming",
-                },
-                {
-                  subject: "SAT Writing Review",
-                  time: "Tomorrow, 6:00 PM",
-                  tutor: "with Monica T.",
-                  status: "Rescheduled",
-                },
-                {
-                  subject: "Physics Homework Help",
-                  time: "Friday, 5:15 PM",
-                  tutor: "with Amir R.",
-                  status: "Confirmed",
-                },
-              ].map((item) => (
-                <div
-                  key={item.subject}
-                  className="flex flex-col gap-4 rounded-[1.6rem] border border-black/6 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] md:flex-row md:items-center md:justify-between"
-                >
-                  <div>
-                    <div className="text-base font-bold text-[#171717]">
-                      {item.subject}
-                    </div>
-                    <div className="mt-1 text-sm text-[#666]">
-                      {item.time} {item.tutor}
-                    </div>
-                  </div>
-                  <div className="inline-flex w-fit rounded-full bg-[#111827] px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white">
-                    {item.status}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function HeroSection() {
   return (
@@ -166,7 +44,19 @@ export function HeroSection() {
         <div id="hero-cta-threshold" aria-hidden="true" className="h-px w-full" />
       </div>
 
-      <DashboardPreview />
+      <div className="relative mx-auto mt-16 w-full max-w-5xl px-3 sm:px-6">
+        <div className="absolute inset-x-12 -top-8 h-28 rounded-full bg-[#ef242a]/22 blur-3xl" />
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/12 shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
+          <Image
+            src="/app-dashboard.webp"
+            alt="Arch City Tutors dashboard preview"
+            width={1400}
+            height={980}
+            priority
+            className="h-auto w-full"
+          />
+        </div>
+      </div>
     </section>
   );
 }

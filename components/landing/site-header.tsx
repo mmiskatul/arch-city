@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -12,33 +13,18 @@ const navItems = [
   { label: "FAQs", href: "#faqs" },
 ];
 
-function BrandMark({ sticky = false }: { sticky?: boolean }) {
+function SiteLogo({ sticky = false }: { sticky?: boolean }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative flex h-11 w-11 items-end justify-center overflow-hidden rounded-[0.95rem] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
-        <div className="absolute inset-x-1.5 top-1.5 h-5 rounded-full border-[3px] border-[#d71920] border-b-0" />
-        <div className="absolute inset-x-2 bottom-2 h-4 rounded-t-md bg-[#101010]" />
-        <div className="absolute bottom-2 left-[11px] h-3.5 w-1 rounded-full bg-white" />
-        <div className="absolute bottom-2 left-[17px] h-4.5 w-1 rounded-full bg-white" />
-        <div className="absolute bottom-2 left-[23px] h-3 w-1 rounded-full bg-white" />
-      </div>
-      <div className="leading-none">
-        <div
-          className={`text-[0.95rem] font-extrabold uppercase tracking-[0.12em] ${
-            sticky ? "text-[#222]" : "text-[#f4f4f4]"
-          }`}
-        >
-          <span className="text-[#ef242a]">ARCH CITY</span>
-        </div>
-        <div
-          className={`mt-1 text-[0.54rem] font-bold uppercase tracking-[0.42em] ${
-            sticky ? "text-[#4a4a4a]" : "text-white"
-          }`}
-        >
-          TUTORS
-        </div>
-      </div>
-    </div>
+    <Image
+      src="/logo-dark.svg"
+      alt="Arch City Tutors"
+      width={172}
+      height={48}
+      priority
+      className={`h-auto w-[148px] sm:w-[164px] ${
+        sticky ? "brightness-[0.96]" : ""
+      }`}
+    />
   );
 }
 
@@ -53,18 +39,20 @@ export function SiteHeader() {
       return;
     }
 
-    const syncStickyHeader = () => {
-      setShowStickyHeader(marker.getBoundingClientRect().top <= 24);
-    };
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowStickyHeader(!entry.isIntersecting);
+      },
+      {
+        root: null,
+        rootMargin: "-28px 0px 0px 0px",
+        threshold: 0,
+      }
+    );
 
-    syncStickyHeader();
-    window.addEventListener("scroll", syncStickyHeader, { passive: true });
-    window.addEventListener("resize", syncStickyHeader);
+    observer.observe(marker);
 
-    return () => {
-      window.removeEventListener("scroll", syncStickyHeader);
-      window.removeEventListener("resize", syncStickyHeader);
-    };
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -73,7 +61,7 @@ export function SiteHeader() {
         <div className="mx-auto max-w-[1120px]">
           <div className="relative flex items-center justify-between gap-6">
             <Link href="/" aria-label="Arch City Tutors home" className="shrink-0">
-              <BrandMark />
+              <SiteLogo />
             </Link>
 
             <nav
@@ -183,7 +171,7 @@ export function SiteHeader() {
                 aria-label="Arch City Tutors home"
                 className="shrink-0"
               >
-                <BrandMark sticky />
+                <SiteLogo sticky />
               </Link>
 
               <nav
