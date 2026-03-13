@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { SIGNUP_ROUTE } from "@/lib/routes";
+
 function SiteLogo({ sticky = false }: { sticky?: boolean }) {
   return (
     <Image
@@ -115,7 +117,7 @@ export function SiteHeader({
                 Login
               </Link>
               <Link
-                href="/signup"
+                href={SIGNUP_ROUTE}
                 className="inline-flex h-10 items-center rounded-full bg-[#ef242a] px-5 text-[0.9rem] font-bold text-white shadow-[0_14px_34px_rgba(239,36,42,0.3)] transition hover:bg-[#ff343a]"
               >
                 Create Account
@@ -191,7 +193,7 @@ export function SiteHeader({
                   Login
                 </Link>
                 <Link
-                  href="/signup"
+                  href={SIGNUP_ROUTE}
                   className="rounded-2xl bg-[#ef242a] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#ff343a]"
                   onClick={() => setOpen(false)}
                 >
@@ -250,7 +252,7 @@ export function SiteHeader({
                   Login
                 </Link>
                 <Link
-                  href="/signup"
+                  href={SIGNUP_ROUTE}
                   className="inline-flex h-10 items-center rounded-full bg-[#ef242a] px-5 text-[0.89rem] font-bold text-white shadow-[0_12px_30px_rgba(239,36,42,0.24)] transition hover:bg-[#ff343a]"
                 >
                   Create Account

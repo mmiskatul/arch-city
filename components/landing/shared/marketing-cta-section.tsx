@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ReactNode } from "react";
 
 import { ArrowIcon } from "@/components/landing/shared/arrow-icon";
+import { SIGNUP_ROUTE } from "@/lib/routes";
 
 type MarketingCTASectionProps = {
   title: ReactNode;
@@ -18,7 +19,7 @@ export function MarketingCTASection({
   description,
   imageAlt,
   imageSrc = "/home-06-builder-tools.webp",
-  href = "/signup",
+  href = SIGNUP_ROUTE,
   ctaLabel = "Get started",
 }: MarketingCTASectionProps) {
   return (

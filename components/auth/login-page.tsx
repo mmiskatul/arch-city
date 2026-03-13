@@ -1,4 +1,4 @@
-import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthShell } from "@/components/auth/create-account/auth-shell";
 
 export function LoginPage() {
   return <AuthShell mode="login" />;

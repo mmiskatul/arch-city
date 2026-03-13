@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { SIGNUP_ROUTE } from "@/lib/routes";
+
 function YoutubeIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
@@ -39,7 +41,7 @@ const navLinks = [
 ];
 
 const resourceLinks = [
-  { label: "Join as a Student", href: "/signup" },
+  { label: "Join as a Student", href: SIGNUP_ROUTE },
   { label: "Become a Tutor", href: "/tutors" },
   { label: "Terms of Service", href: "#terms" },
   { label: "Privacy Policy", href: "#privacy" },
