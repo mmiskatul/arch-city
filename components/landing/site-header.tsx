@@ -71,43 +71,43 @@ export function SiteHeader() {
   return (
     <>
       <header
-        className={`relative z-30 hidden px-4 pt-7 transition-[opacity,transform,visibility] duration-300 ease-out sm:px-6 sm:pt-8 lg:block lg:px-8 ${
+        className={`relative z-30 hidden bg-transparent px-4 pt-4 transition-[opacity,transform,visibility] duration-300 ease-out sm:px-6 sm:pt-5 lg:block lg:px-8 ${
           showStickyHeader
             ? "pointer-events-none invisible -translate-y-4 opacity-0"
             : "visible translate-y-0 opacity-100"
         }`}
       >
         <div className="mx-auto max-w-[1040px]">
-          <div className="relative flex items-center justify-between gap-4">
+          <div className="relative flex items-center justify-between gap-4 bg-transparent">
             <Link href="/" aria-label="Arch City Tutors home" className="shrink-0">
               <SiteLogo />
             </Link>
 
             <nav
               aria-label="Primary navigation"
-              className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex"
+              className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-7 lg:flex"
             >
               {navItems.map((item) => (
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="text-[0.96rem] font-semibold text-white/92 transition hover:text-[#ef242a]"
+                  className="text-[0.9rem] font-semibold text-white/92 transition hover:text-[#ef242a]"
                 >
                   {item.label}
                 </Link>
               ))}
             </nav>
 
-            <div className="hidden items-center gap-5 lg:flex">
+            <div className="hidden items-center gap-4 lg:flex">
               <Link
                 href="#login"
-                className="text-[0.96rem] font-semibold text-white/92 transition hover:text-[#ef242a]"
+                className="text-[0.9rem] font-semibold text-white/92 transition hover:text-[#ef242a]"
               >
                 Login
               </Link>
               <Link
                 href="#create-account"
-                className="inline-flex h-11 items-center rounded-full bg-[#ef242a] px-6 text-[0.96rem] font-bold text-white shadow-[0_14px_34px_rgba(239,36,42,0.3)] transition hover:bg-[#ff343a]"
+                className="inline-flex h-10 items-center rounded-full bg-[#ef242a] px-5 text-[0.9rem] font-bold text-white shadow-[0_14px_34px_rgba(239,36,42,0.3)] transition hover:bg-[#ff343a]"
               >
                 Create Account
               </Link>
@@ -131,9 +131,9 @@ export function SiteHeader() {
         </div>
       </header>
 
-      <header className="relative z-30 px-4 pt-7 sm:px-6 sm:pt-8 lg:hidden">
+      <header className="relative z-30 bg-transparent px-4 pt-4 sm:px-6 sm:pt-5 lg:hidden">
         <div className="mx-auto max-w-[1040px]">
-          <div className="relative flex items-center justify-between gap-6">
+          <div className="relative flex items-center justify-between gap-6 bg-transparent">
             <Link href="/" aria-label="Arch City Tutors home" className="shrink-0">
               <SiteLogo />
             </Link>
@@ -203,7 +203,7 @@ export function SiteHeader() {
       >
         <div className="mx-auto max-w-[1040px]">
           <div
-            className={`pointer-events-auto rounded-full border border-black/8 bg-white/96 px-3 py-2 backdrop-blur-xl transition-[box-shadow,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`pointer-events-auto rounded-full border border-black/8 bg-white/96 px-3 py-1.5 backdrop-blur-xl transition-[box-shadow,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               showStickyHeader
                 ? "shadow-[0_20px_60px_rgba(0,0,0,0.22)]"
                 : "shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
@@ -220,29 +220,29 @@ export function SiteHeader() {
 
               <nav
                 aria-label="Sticky navigation"
-                className="flex items-center justify-center gap-8"
+                className="flex items-center justify-center gap-7"
               >
                 {navItems.map((item) => (
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="text-[0.95rem] font-semibold text-[#343434] transition hover:text-[#ef242a]"
+                    className="text-[0.89rem] font-semibold text-[#343434] transition hover:text-[#ef242a]"
                   >
                     {item.label}
                   </Link>
                 ))}
               </nav>
 
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-4">
                 <Link
                   href="#login"
-                  className="text-[0.95rem] font-semibold text-[#2b2b2b] transition hover:text-[#ef242a]"
+                  className="text-[0.89rem] font-semibold text-[#2b2b2b] transition hover:text-[#ef242a]"
                 >
                   Login
                 </Link>
                 <Link
                   href="#create-account"
-                  className="inline-flex h-11 items-center rounded-full bg-[#ef242a] px-6 text-[0.95rem] font-bold text-white shadow-[0_12px_30px_rgba(239,36,42,0.24)] transition hover:bg-[#ff343a]"
+                  className="inline-flex h-10 items-center rounded-full bg-[#ef242a] px-5 text-[0.89rem] font-bold text-white shadow-[0_12px_30px_rgba(239,36,42,0.24)] transition hover:bg-[#ff343a]"
                 >
                   Create Account
                 </Link>
