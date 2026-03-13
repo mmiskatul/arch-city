@@ -25,7 +25,7 @@ export function TutorsCTASection() {
           </Link>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[42rem]">
+        <div className="relative mx-auto w-full max-w-[34rem] lg:ml-auto">
           <div className="relative aspect-[16/10] w-full">
             <Image
               src="/home-06-builder-tools.webp"

@@ -47,18 +47,24 @@ export function FaqAccordionSection({
   title,
   faqs,
   pricingLink,
+  reverse = false,
 }: {
   id: string;
   title: string;
   faqs: FaqItem[];
   pricingLink?: string;
+  reverse?: boolean;
 }) {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
     <section id={id} className="px-4 pb-24 pt-12 text-[#111111] sm:px-6 sm:pt-16 lg:px-8">
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12">
-        <div className="max-w-xl lg:sticky lg:top-28 lg:self-start">
+        <div
+          className={`max-w-xl lg:sticky lg:top-28 lg:self-start ${
+            reverse ? "lg:order-2" : ""
+          }`}
+        >
           <div className="inline-flex items-center gap-2 rounded-full border border-[#dfdfdf] bg-white px-5 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[#2e2e2e] shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#df1620]" />
             FAQs
@@ -79,7 +85,7 @@ export function FaqAccordionSection({
           </Link>
         </div>
 
-        <div className="space-y-4">
+        <div className={`space-y-4 ${reverse ? "lg:order-1" : ""}`}>
           {faqs.map((item, index) => {
             const isOpen = openIndex === index;
 

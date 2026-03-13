@@ -57,7 +57,7 @@ export function FooterSection() {
                 alt="Arch City Tutors"
                 width={220}
                 height={64}
-                className="h-auto w-[220px]"
+                className="h-auto w-[196px]"
               />
             </Link>
 

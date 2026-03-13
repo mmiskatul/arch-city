@@ -25,6 +25,7 @@ export function FaqsPage() {
         id="tutor-faqs"
         title="Tutor - Frequently Asked Questions"
         faqs={tutorFaqs}
+        reverse
       />
       <CTASection />
       <FooterSection />

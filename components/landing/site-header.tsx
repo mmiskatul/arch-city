@@ -13,7 +13,7 @@ function SiteLogo({ sticky = false }: { sticky?: boolean }) {
       width={130}
       height={40}
       priority
-      className="h-auto w-[148px] sm:w-[164px]"
+      className="h-auto w-[136px] sm:w-[152px]"
     />
   );
 }
