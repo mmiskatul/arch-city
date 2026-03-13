@@ -203,7 +203,7 @@ export function SiteHeader() {
       >
         <div className="mx-auto max-w-[1040px]">
           <div
-            className={`pointer-events-auto rounded-full border border-black/8 bg-white/96 px-3 py-1.5 backdrop-blur-xl transition-[box-shadow,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`pointer-events-auto rounded-full border border-black/8 bg-white/96 px-5 py-1.5 backdrop-blur-xl transition-[box-shadow,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               showStickyHeader
                 ? "shadow-[0_20px_60px_rgba(0,0,0,0.22)]"
                 : "shadow-[0_6px_20px_rgba(0,0,0,0.08)]"

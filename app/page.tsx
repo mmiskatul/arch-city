@@ -1,5 +1,7 @@
+import { CTASection } from "@/components/landing/cta-section";
 import { FAQSection } from "@/components/landing/faq-section";
 import { FeaturesSection } from "@/components/landing/features-section";
+import { FooterSection } from "@/components/landing/footer-section";
 import { HeroSection } from "@/components/landing/hero-section";
 import { KeyFeaturesSection } from "@/components/landing/key-features-section";
 import { PricingSection } from "@/components/landing/pricing-section";
@@ -18,6 +20,8 @@ export default function Home() {
         <PricingSection />
       </section>
       <FAQSection />
+      <CTASection />
+      <FooterSection />
     </main>
   );
 }

@@ -80,7 +80,7 @@ export function FAQSection() {
       className=" px-4 pb-28 pt-12 text-[#111111] sm:px-6 sm:pt-16 lg:px-8"
     >
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12">
-        <div className="max-w-xl">
+        <div className="max-w-xl lg:sticky lg:top-28 lg:self-start">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#dfdfdf] bg-white px-5 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[#2e2e2e] shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#df1620]" />
             FAQs
@@ -125,26 +125,41 @@ export function FAQSection() {
                   <span className="text-2xl font-bold leading-[1.22] tracking-[-0.04em] text-[#1a1a1a]">
                     {item.question}
                   </span>
-                  <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f0f0f0] text-[#454545]">
+                  <span
+                    className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f0f0f0] text-[#454545] transition-transform duration-300 ease-out ${
+                      isOpen ? "rotate-90" : "rotate-0"
+                    }`}
+                  >
                     {isOpen ? <CloseIcon /> : <PlusIcon />}
                   </span>
                 </button>
 
-                {isOpen ? (
-                  <div className="mt-5 pr-12 text-lg leading-8 text-[#4a4a4a]">
-                    {index === 0 ? (
-                      <>
-                        Student memberships can be purchased by clicking{" "}
-                        <Link href="#pricing" className="underline underline-offset-4">
-                          here
-                        </Link>
-                        .
-                      </>
-                    ) : (
-                      item.answer
-                    )}
+                <div
+                  className={`grid transition-[grid-template-rows,opacity,margin-top] duration-300 ease-out ${
+                    isOpen
+                      ? "mt-5 grid-rows-[1fr] opacity-100"
+                      : "mt-0 grid-rows-[0fr] opacity-0"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="pr-12 text-lg leading-8 text-[#4a4a4a]">
+                      {index === 0 ? (
+                        <>
+                          Student memberships can be purchased by clicking{" "}
+                          <Link
+                            href="#pricing"
+                            className="underline underline-offset-4"
+                          >
+                            here
+                          </Link>
+                          .
+                        </>
+                      ) : (
+                        item.answer
+                      )}
+                    </div>
                   </div>
-                ) : null}
+                </div>
               </article>
             );
           })}
