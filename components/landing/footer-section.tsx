@@ -29,13 +29,13 @@ const companyLinks = [
   { label: "Home", href: "/" },
   { label: "Pricing", href: "/pricing" },
   { label: "About us", href: "/about" },
-  { label: "Contact us", href: "/#contact" },
+  { label: "Contact us", href: "/contact" },
 ];
 
 const navLinks = [
   { label: "Students", href: "/students" },
   { label: "Tutors", href: "/tutors" },
-  { label: "FAQs", href: "/tutors#faqs" },
+  { label: "FAQs", href: "/contact#faqs" },
 ];
 
 const resourceLinks = [

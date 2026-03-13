@@ -32,13 +32,16 @@ export function SiteHeader({
     { label: "About Us", href: "/about" },
     { label: "Students", href: "/students" },
     { label: "Tutors", href: "/tutors" },
-    { label: "Contact Us", href: "/#contact" },
+    { label: "Contact Us", href: "/contact" },
     {
       label: "FAQs",
       href:
-        pathname === "/pricing" || pathname === "/students" || pathname === "/tutors"
+        pathname === "/pricing" ||
+        pathname === "/students" ||
+        pathname === "/tutors" ||
+        pathname === "/contact"
           ? "#faqs"
-          : "/tutors#faqs",
+          : "/contact#faqs",
     },
   ];
 
