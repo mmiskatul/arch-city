@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
+import { ArrowIcon } from "@/components/landing/shared/arrow-icon";
+
 const processItems = [
   {
     key: "recruit",
@@ -136,30 +138,12 @@ export function AboutProcessSection() {
                 className="mt-8 inline-flex items-center gap-2 text-sm font-bold text-[#ef242a] transition hover:text-[#c8141a]"
               >
                 Get started
-                <ArrowIcon />
+                <ArrowIcon className="h-4 w-4" />
               </Link>
             </div>
           </div>
         </div>
       </div>
     </section>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M5 12h14" />
-      <path d="m13 5 7 7-7 7" />
-    </svg>
   );
 }

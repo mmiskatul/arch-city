@@ -1,20 +1,19 @@
+import { CTASection } from "@/components/landing/cta-section";
 import {
   FaqAccordionSection,
   studentFaqs,
   tutorFaqs,
 } from "@/components/landing/faq-accordion-section";
 import { FaqsHeroSection } from "@/components/landing/faqs-hero-section";
-import { CTASection } from "@/components/landing/cta-section";
 import { FooterSection } from "@/components/landing/footer-section";
-import { SiteHeader } from "@/components/landing/site-header";
+import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 
 export function FaqsPage() {
   return (
-    <main className="min-h-screen bg-white">
-      <section className="mx-2 mt-3 overflow-hidden rounded-[28px] bg-[#050505] text-white sm:mx-3">
-        <SiteHeader thresholdId="faqs-sticky-threshold" />
-        <FaqsHeroSection thresholdId="faqs-sticky-threshold" />
-      </section>
+    <MarketingPageShell
+      thresholdId="faqs-sticky-threshold"
+      hero={<FaqsHeroSection thresholdId="faqs-sticky-threshold" />}
+    >
       <FaqAccordionSection
         id="student-faqs"
         title="Student - Frequently Asked Questions"
@@ -29,6 +28,6 @@ export function FaqsPage() {
       />
       <CTASection />
       <FooterSection />
-    </main>
+    </MarketingPageShell>
   );
 }

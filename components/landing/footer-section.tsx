@@ -45,6 +45,8 @@ const resourceLinks = [
   { label: "Privacy Policy", href: "#privacy" },
 ];
 
+const currentYear = new Date().getFullYear();
+
 export function FooterSection() {
   return (
     <footer className="mx-3 my-4 overflow-hidden rounded-[28px] bg-[#050505] px-6 py-10 text-white sm:px-8 sm:py-12 lg:px-12 lg:py-14">
@@ -62,7 +64,8 @@ export function FooterSection() {
             </Link>
 
             <p className="mt-6 text-[1.05rem] leading-9 text-white/82">
-              Flexible scheduling, personalized learning, and safety-first tutoring for students of all ages.
+              Flexible scheduling, personalized learning, and safety-first
+              tutoring for students of all ages.
             </p>
           </div>
 
@@ -118,7 +121,7 @@ export function FooterSection() {
         <div className="mt-14 border-t border-white/10 pt-8">
           <div className="flex flex-col gap-6 text-white/62 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[1.05rem] font-medium">
-              Arch City Tutors © 2025, All rights reserved.
+              Arch City Tutors Copyright {currentYear}, All rights reserved.
             </p>
 
             <div className="flex items-center gap-5 text-white/62">

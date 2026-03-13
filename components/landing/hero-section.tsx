@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { ArrowIcon } from "@/components/landing/shared/arrow-icon";
+
 export function HeroSection({
   thresholdId,
 }: {
@@ -14,7 +16,7 @@ export function HeroSection({
 
       <div className="relative mx-auto flex max-w-5xl flex-col items-center text-center">
         <div className="inline-flex items-center rounded-full border border-[#ef242a]/25 bg-white/6 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.24em] text-white/78 space-x-[-0.06em]">
-          <span className="mr-2 h-2 w-2 rounded-full bg-[#48d597] " />
+          <span className="mr-2 h-2 w-2 rounded-full bg-[#48d597]" />
           Beta 1.0 Available Now
         </div>
 
@@ -38,7 +40,7 @@ export function HeroSection({
             className="inline-flex items-center gap-3 rounded-full bg-red-600 px-8 py-4 text-xl font-bold text-white shadow-[0_18px_45px_rgba(239,36,42,0.33)] transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300/50 active:bg-red-800"
           >
             Get started
-            <span aria-hidden="true">→</span>
+            <ArrowIcon />
           </Link>
           <p className="text-sm text-white/55">
             Get started for just $10/month. Cancel anytime.

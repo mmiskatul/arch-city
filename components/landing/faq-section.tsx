@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { ArrowIcon } from "@/components/landing/shared/arrow-icon";
+
 const faqs = [
   {
     question: "How do I become a member?",
-    answer:
-      "Student memberships can be purchased by clicking here.",
+    answer: "Student memberships can be purchased by clicking here.",
   },
   {
     question:
@@ -77,7 +78,7 @@ export function FAQSection() {
   return (
     <section
       id="faqs"
-      className=" px-4 pb-28 pt-12 text-[#111111] sm:px-6 sm:pt-16 lg:px-8"
+      className="px-4 pb-28 pt-12 text-[#111111] sm:px-6 sm:pt-16 lg:px-8"
     >
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12">
         <div className="max-w-xl lg:sticky lg:top-28 lg:self-start">
@@ -98,12 +99,10 @@ export function FAQSection() {
 
           <Link
             href="#contact"
-            className="mt-10 inline-flex items-center rounded-full bg-[#df1620] px-7 py-4 text-xl font-bold text-white transition hover:bg-[#f02029]"
+            className="mt-10 inline-flex items-center gap-3 rounded-full bg-[#df1620] px-7 py-4 text-xl font-bold text-white transition hover:bg-[#f02029]"
           >
             Still have a question?
-            <span className="ml-3" aria-hidden="true">
-              →
-            </span>
+            <ArrowIcon />
           </Link>
         </div>
 

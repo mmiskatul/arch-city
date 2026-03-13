@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { ArrowIcon } from "@/components/landing/shared/arrow-icon";
+
 function FacebookIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
@@ -47,24 +49,6 @@ function MailIcon() {
     >
       <path d="M4 6h16v12H4z" />
       <path d="m4 7 8 6 8-6" />
-    </svg>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M5 12h14" />
-      <path d="m13 5 7 7-7 7" />
     </svg>
   );
 }
