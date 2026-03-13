@@ -9,20 +9,20 @@ export function FeaturesSection() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[#3d3d3d] shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#ef242a]" />
             Main Features
           </div>
 
-          <h2 className="mt-8 max-w-4xl text-4xl font-black tracking-[-0.06em] text-[#111111] sm:text-5xl lg:text-[4.5rem] lg:leading-[0.95]">
+          <h2 className="mt-8 max-w-4xl text-4xl font-bold tracking-[-0.06em] text-[#111111] sm:text-4xl lg:text-6xl lg:leading-[0.95]">
             Book
-            <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-[#fff1f1] px-4 py-1 text-[#ef242a] shadow-[0_8px_30px_rgba(239,36,42,0.08)]">
+            <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-[#f8d7d7] px-4 py-1 text-red-600 shadow-[0_8px_30px_rgba(239,36,42,0.08)]">
               Tutors
             </span>
             with Ease.
           </h2>
 
-          <p className="mt-6 max-w-2xl text-sm leading-7 text-[#6b6b6b] sm:text-base">
+          <p className="mt-6 max-w-2xl text-sm leading-7 text-[#6b6b6b] sm:text-lg">
             We understand that students and their families have busy
             schedules. This is why we provide flexible scheduling, allowing our
             students to receive tailored instruction that fits into their
@@ -41,7 +41,7 @@ export function FeaturesSection() {
               </p>
 
               <Link
-                href="#create-account"
+                href="/signup"
                 className="mt-6 inline-flex items-center rounded-full bg-[#ef242a] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#ff343a]"
               >
                 Try it now
@@ -84,7 +84,7 @@ export function FeaturesSection() {
 
             <div className="mt-auto pt-8">
               <Link
-                href="#create-account"
+                href="/signup"
                 className="inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-bold text-[#ef242a] transition hover:bg-[#f3f3f3]"
               >
                 Get started
@@ -120,7 +120,7 @@ export function FeaturesSection() {
 
             <div className="mt-auto pt-8">
               <Link
-                href="#create-account"
+                href="/signup"
                 className="inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-bold text-[#ef242a] transition hover:bg-[#f3f3f3]"
               >
                 Get started

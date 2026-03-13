@@ -87,7 +87,7 @@ export function FAQSection() {
             FAQs
           </div>
 
-          <h2 className="mt-6 text-4xl font-black tracking-[-0.06em] text-[#111111] sm:text-5xl lg:text-[4.2rem] lg:leading-[0.92]">
+          <h2 className="mt-6 text-4xl font-black tracking-[-0.06em] text-[#313030] sm:text-5xl lg:text-[4.2rem] lg:leading-[0.92]">
             Frequently Asked Questions
           </h2>
 
@@ -121,7 +121,7 @@ export function FAQSection() {
                   onClick={() => setOpenIndex(isOpen ? -1 : index)}
                   aria-expanded={isOpen}
                 >
-                  <span className="text-2xl font-bold leading-[1.22] tracking-[-0.04em] text-[#1a1a1a]">
+                  <span className="text-xl font-bold leading-[1.3] tracking-[-0.04em] text-[#333030]">
                     {item.question}
                   </span>
                   <span

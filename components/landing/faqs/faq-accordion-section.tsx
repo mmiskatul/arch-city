@@ -92,7 +92,7 @@ export function FaqAccordionSection({
             return (
               <article
                 key={item.question}
-                className="rounded-[1.3rem] border border-[#dddddd] bg-white px-7 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.03)]"
+                className="rounded-[1.3rem] text-lg border border-[#dddddd] bg-white px-7 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.03)]"
               >
                 <button
                   type="button"
@@ -100,7 +100,7 @@ export function FaqAccordionSection({
                   onClick={() => setOpenIndex(isOpen ? -1 : index)}
                   aria-expanded={isOpen}
                 >
-                  <span className="text-2xl font-bold leading-[1.22] tracking-[-0.04em] text-[#1a1a1a]">
+                  <span className="text-xl font-bold leading-[1.22] tracking-[-0.04em] text-gray-700">
                     {item.question}
                   </span>
                   <span
@@ -120,7 +120,7 @@ export function FaqAccordionSection({
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <div className="pr-12 text-lg leading-8 text-[#4a4a4a]">
+                    <div className="pr-12 text-base leading-8 text-[#4a4a4a]">
                       {index === 0 && pricingLink ? (
                         <>
                           Student memberships can be purchased by clicking{" "}

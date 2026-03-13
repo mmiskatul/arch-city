@@ -16,7 +16,6 @@ export function AboutPage() {
       <AboutSolutionsSection />
       <AboutProcessSection />
       <AboutBookingSection />
-      <AboutServicesSection />
       <CTASection />
       <FooterSection />
     </MarketingPageShell>

@@ -24,9 +24,9 @@ export function MarketingCTASection({
 }: MarketingCTASectionProps) {
   return (
     <section className="mx-3 my-4 overflow-hidden rounded-[28px] bg-[#efe4e1] px-6 py-10 text-[#111111] sm:px-8 sm:py-12 lg:px-12 lg:py-14">
-      <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1fr_0.95fr] lg:gap-12">
+      <div className="mx-auto grid max-w-7xl px-10 items-center gap-10 lg:grid-cols-[1fr_0.95fr] lg:gap-12">
         <div className="max-w-3xl">
-          <h2 className="text-4xl font-black tracking-[-0.06em] text-[#080808] sm:text-5xl lg:text-[5rem] lg:leading-[0.96]">
+          <h2 className="text-4xl font-bold tracking-[-0.06em] text-[#080808] sm:text-4xl lg:text-6xl lg:leading-[0.96]">
             {title}
           </h2>
 

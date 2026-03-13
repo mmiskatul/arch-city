@@ -94,12 +94,12 @@ export function KeyFeaturesSection() {
     <section className="bg-white px-4 pb-28 pt-8 text-[#111111] sm:px-6 sm:pt-12 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#e3d9d6] bg-white px-5 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[#2d2d2d] shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#e3d9d6] bg-white px-5 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#df1620]" />
             Key Features
           </div>
 
-          <p className="mt-8 max-w-5xl text-2xl leading-[1.45] tracking-[-0.04em] text-[#202020] sm:text-3xl lg:text-4xl lg:leading-[1.38]">
+          <p className="mt-8 max-w-5xl text-xl leading-[1.45] tracking-[-0.04em] text-[#202020] sm:text-2xl lg:text-3xl lg:leading-[1.38]">
             With an <span className="font-bold">easy-to-use</span> and advanced
             dashboard, Arch City Tutors is your gateway to finding the{" "}
             <span className="font-bold">perfect tutor</span> and{" "}

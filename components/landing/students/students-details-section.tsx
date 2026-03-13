@@ -75,11 +75,11 @@ export function StudentsDetailsSection() {
             </div>
 
             <div className="max-w-xl">
-              <h2 className="text-3xl font-black tracking-[-0.05em] text-[#111111] sm:text-4xl lg:text-[3.35rem] lg:leading-[0.98]">
+              <h2 className="text-xl font-bold tracking-[-0.05em] text-[#1b1b1b] sm:text-3xl lg:text-5xl lg:leading-[0.98]">
                 {section.title}
               </h2>
 
-              <p className="mt-6 text-base leading-8 text-[#5e5a5a] sm:text-lg">
+              <p className="mt-6 text-base leading-8 text-[#777171] sm:text-lg">
                 {section.description}
               </p>
             </div>

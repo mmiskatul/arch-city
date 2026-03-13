@@ -43,9 +43,9 @@ export function AboutSolutionsSection() {
             Our Solutions
           </div>
 
-          <h2 className="mt-8 max-w-4xl text-4xl font-black tracking-[-0.06em] text-[#111111] sm:text-5xl lg:text-[4.5rem] lg:leading-[0.95]">
+          <h2 className="mt-8 max-w-4xl text-2xl font-bold tracking-[-0.06em] text-[#111111] sm:text-3xl lg:text-5xl lg:leading-[0.95]">
             Why
-            <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-[#fff1f1] px-4 py-1 text-[#ef242a] shadow-[0_8px_30px_rgba(239,36,42,0.08)]">
+            <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-[#f5dcdc] px-4 py-1 text-[#da252b] shadow-[0_8px_30px_rgba(239,36,42,0.08)]">
               Arch City Tutors?
             </span>
           </h2>
@@ -66,7 +66,7 @@ export function AboutSolutionsSection() {
                 {card.icon}
               </div>
 
-              <h3 className="mt-6 max-w-xs text-[2rem] font-black tracking-[-0.05em] text-[#171717]">
+              <h3 className="mt-6 max-w-xs text-xl font-black tracking-[-0.05em] text-[#171717]">
                 {card.title}
               </h3>
 

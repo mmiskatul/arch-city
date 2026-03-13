@@ -48,9 +48,9 @@ export function AboutBookingSection() {
             Booking
           </div>
 
-          <h2 className="mt-8 max-w-4xl text-4xl font-black tracking-[-0.06em] text-[#111111] sm:text-5xl lg:text-[4.5rem] lg:leading-[0.95]">
+          <h2 className="mt-8 max-w-4xl text-3xl font-bold tracking-[-0.06em] text-[#111111] sm:text-4xl lg:text-5xl lg:leading-[0.95]">
             How
-            <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-[#fff1f1] px-4 py-1 text-[#ef242a] shadow-[0_8px_30px_rgba(239,36,42,0.08)]">
+            <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-[#f3d6d6e7] px-4 py-1 text-[#ef242a] shadow-[0_8px_30px_rgba(239,36,42,0.08)]">
               Booking
             </span>
             Works.
@@ -64,10 +64,10 @@ export function AboutBookingSection() {
               className="grid gap-8 border-b border-[#e6dddd] py-12 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:gap-12"
             >
               <div>
-                <p className="text-sm font-extrabold text-[#ef242a]">
+                <p className="text-sm font-bold text-[#ef242a]">
                   {step.number}
                 </p>
-                <h3 className="mt-4 text-3xl font-black tracking-[-0.05em] text-[#111111] sm:text-4xl">
+                <h3 className="mt-4 text-3xl font-bold tracking-[-0.05em] text-[#111111] sm:text-4xl">
                   {step.title}
                 </h3>
                 <p className="mt-5 max-w-xl text-base leading-8 text-[#5f5a5a]">

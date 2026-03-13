@@ -20,15 +20,15 @@ export function HeroSection({
           Beta 1.0 Available Now
         </div>
 
-        <h1 className="mt-8 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-5xl lg:text-[6.25rem] lg:leading-[0.92]">
-          Tutoring Made
+        <h1 className="mt-8 max-w-4xl text-5xl font-bold tracking-[-0.06em] text-white sm:text-9xl lg:text-8xl lg:leading-[0.92] space-x-0">
+          Tutoring Made <br />
           <span className="mx-3 inline-block rotate-[-2deg] rounded-[1.15rem] bg-white px-4 py-2 text-[#ef242a] shadow-[0_12px_60px_rgba(255,255,255,0.1)]">
             Easier
           </span>
           than Ever.
         </h1>
 
-        <p className="mt-8 max-w-3xl text-base leading-8 text-white/90 sm:text-lg">
+        <p className="mt-8 max-w-3xl text-[22px] leading-8 text-white/90 sm:text-xl">
           A concierge-style service that sources qualified tutors for students,
           providing an unmatched experience that changes the way families
           approach tutoring.
@@ -42,7 +42,7 @@ export function HeroSection({
             Get started
             <ArrowIcon />
           </Link>
-          <p className="text-sm text-white/55">
+          <p className="text-base text-white/55">
             Get started for just $10/month. Cancel anytime.
           </p>
         </div>

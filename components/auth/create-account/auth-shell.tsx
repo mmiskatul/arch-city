@@ -180,10 +180,10 @@ function AuthVisualPanel() {
             alt="Student learning with Arch City Tutors"
             width={900}
             height={900}
-            className="h-screen w-full rounded-[20px] object-cover"
+            className="h-screen w-full rounded-xl object-cover"
             priority
           />
-          <div className="absolute inset-x-9 bottom-6 rounded-xl bg-white px-7 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
+          <div className="absolute inset-x-9 bottom-3 rounded-xl bg-white px-7 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
             <ul className="space-y-3 text-sm font-medium text-[#111827]">
               {[
                 { icon: "check", text: "Trusted by students of Missouri" },

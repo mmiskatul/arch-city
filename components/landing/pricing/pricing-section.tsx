@@ -83,15 +83,15 @@ export function PricingSection({
             Pricing
           </div>
 
-          <h2 className="mt-7 max-w-3xl text-4xl font-black tracking-[-0.06em] text-white sm:text-5xl lg:text-[4.4rem] lg:leading-[0.95]">
+          <h2 className="mt-7 max-w-3xl text-3xl font-black tracking-[-0.06em] text-white sm:text-4xl lg:text-6xl lg:leading-[0.95]">
             Simple
             <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-white px-4 py-1 text-[#ef242a] shadow-[0_8px_28px_rgba(255,255,255,0.08)]">
-              Scalable
-            </span>
+              Scalable 
+            </span> <br />
             Pricing.
           </h2>
 
-          <p className="mt-6 max-w-3xl text-sm leading-7 text-white/78 sm:text-base">
+          <p className="mt-6 max-w-3xl text-xs leading-7 text-white/78 px-20 sm:text-sm sm:px-30">
             Students pay a fixed monthly membership fee to gain access to our
             vast network of tutors. Students pay a fixed scheduling fee each
             time they schedule a tutoring session. At the conclusion of each

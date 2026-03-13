@@ -62,9 +62,9 @@ export function AboutProcessSection() {
             Our Process
           </div>
 
-          <h2 className="mt-8 max-w-4xl text-4xl font-black tracking-[-0.06em] text-[#111111] sm:text-5xl lg:text-[4.5rem] lg:leading-[0.95]">
+          <h2 className="mt-8 max-w-4xl text-2xl font-bold tracking-[-0.06em] text-[#111111] sm:text-3xl lg:text-5xl lg:leading-[0.95]">
             What
-            <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-[#fff1f1] px-4 py-1 text-[#ef242a] shadow-[0_8px_30px_rgba(239,36,42,0.08)]">
+            <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-[#f5e0e0] px-4 py-1 text-[#f32f35] shadow-[0_8px_30px_rgba(239,36,42,0.08)]">
               Arch City Tutors
             </span>
             Does.
@@ -86,10 +86,10 @@ export function AboutProcessSection() {
                   key={item.key}
                   type="button"
                   onClick={() => setActiveKey(item.key)}
-                  className={`rounded-[1rem] border-b-2 px-4 py-4 text-center text-lg font-bold transition ${
+                  className={`rounded-[1rem] border-b-2 px-4 py-4 text-center text-lg font-medium transition ${
                     isActive
-                      ? "border-[#ef242a] bg-white/40 text-[#111111]"
-                      : "border-transparent text-[#2e2a2a] hover:bg-white/25"
+                      ? "border-[#ef242a] bg-white/40 text-[#272626]"
+                      : "border-transparent text-[#292727] hover:bg-white/25"
                   }`}
                 >
                   {item.label}
@@ -113,7 +113,7 @@ export function AboutProcessSection() {
             </div>
 
             <div>
-              <h3 className="text-4xl font-black tracking-[-0.05em] text-[#111111] sm:text-5xl">
+              <h3 className="text-3xl font-bold tracking-[-0.05em] text-[#111111] sm:text-4xl">
                 {activeItem.title}
               </h3>
 

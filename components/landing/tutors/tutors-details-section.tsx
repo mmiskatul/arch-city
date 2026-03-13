@@ -54,7 +54,7 @@ export function TutorsDetailsSection() {
             </div>
 
             <div className="max-w-xl">
-              <h2 className="text-3xl font-black tracking-[-0.05em] text-[#111111] sm:text-4xl lg:text-[3.35rem] lg:leading-[0.98]">
+              <h2 className="text-2xl font-bold tracking-[-0.05em] text-[#363434] sm:text-3xl lg:text-4xl lg:leading-[0.98]">
                 {section.title}
               </h2>
 

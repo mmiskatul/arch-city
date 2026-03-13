@@ -3,10 +3,10 @@ export function PricingDetailsSection() {
     <section className="px-4 pb-14 pt-6 text-[#111111] sm:px-6 sm:pt-8 lg:px-8">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
         <article className="rounded-[1.75rem] bg-[#efe4e1] p-7 shadow-[0_18px_50px_rgba(15,23,42,0.04)] sm:p-8">
-          <h3 className="text-2xl font-black tracking-[-0.04em] text-[#1a1a1a]">
+          <h3 className="text-xl font-bold tracking-[-0.04em] text-[#1a1a1a]">
             Tutor Fee - Varies
           </h3>
-          <div className="mt-6 space-y-6 text-[1.05rem] leading-9 text-[#4f4a49]">
+          <div className="mt-6 space-y-6 text-lg  leading-9 text-[#4f4a49]">
             <p>
               Each tutor determines their own rate and proudly displays it on
               their tutoring profile. By scheduling a tutoring session with a
@@ -25,10 +25,10 @@ export function PricingDetailsSection() {
         </article>
 
         <article className="rounded-[1.75rem] bg-[#efe4e1] p-7 shadow-[0_18px_50px_rgba(15,23,42,0.04)] sm:p-8">
-          <h3 className="text-2xl font-black tracking-[-0.04em] text-[#1a1a1a]">
+          <h3 className="text-2xl font-bold tracking-[-0.04em] text-[#1a1a1a]">
             Membership Agreement
           </h3>
-          <div className="mt-6 space-y-6 text-[1.05rem] leading-9 text-[#4f4a49]">
+          <div className="mt-6 space-y-6 text-lg leading-9 text-[#4f4a49]">
             <p>
               We require members to thoroughly review our membership agreement
               and scheduling fees, along with available services and

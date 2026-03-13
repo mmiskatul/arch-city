@@ -12,9 +12,9 @@ export function StudentsHeroSection({
       thresholdId={thresholdId}
       badge="Students"
       title={
-        <h1 className="mt-8 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-5xl lg:text-[5.3rem] lg:leading-[0.94]">
+        <h1 className="mt-8 max-w-4xl text-xl font-bold tracking-[-0.06em] text-white sm:text-[28px] lg:text-[40px] lg:leading-[0.94]">
           It&apos;s Your Day to
-          <span className="mx-3 inline-block rotate-[-2deg] rounded-[1rem] bg-white px-4 py-1 text-[#ef242a] shadow-[0_12px_60px_rgba(255,255,255,0.1)]">
+          <span className="mx-3 inline-block rotate-[-2deg] rounded-lg bg-[#f3d6d6e7] px-4 py-1 text-[#ef242a] shadow-[0_12px_60px_rgba(255,255,255,0.1)]">
             Shape.
           </span>
         </h1>
