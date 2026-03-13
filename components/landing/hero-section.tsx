@@ -1,7 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export function HeroSection() {
+export function HeroSection({
+  thresholdId,
+}: {
+  thresholdId: string;
+}) {
   return (
     <section className="relative overflow-hidden px-4 pb-16 pt-10 sm:px-6 lg:px-8">
       <div className="absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-[#a50f15]/35 blur-[120px]" />
@@ -41,7 +45,7 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div id="hero-cta-threshold" aria-hidden="true" className="h-px w-full" />
+        <div id={thresholdId} aria-hidden="true" className="h-px w-full" />
       </div>
 
       <div className="pointer-events-none relative z-10 mx-auto mt-24 w-full max-w-5xl px-3 sm:mt-28 sm:px-6">

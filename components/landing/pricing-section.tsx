@@ -66,7 +66,11 @@ function CheckIcon() {
   );
 }
 
-export function PricingSection() {
+export function PricingSection({
+  thresholdId,
+}: {
+  thresholdId?: string;
+}) {
   return (
     <section
       id="pricing"
@@ -94,6 +98,10 @@ export function PricingSection() {
             tutoring session, students pay an agreed upon tutoring fee directly
             to the tutor.
           </p>
+
+          {thresholdId ? (
+            <div id={thresholdId} aria-hidden="true" className="h-px w-full" />
+          ) : null}
         </div>
 
         <div className="mt-14 grid gap-6 lg:grid-cols-2">

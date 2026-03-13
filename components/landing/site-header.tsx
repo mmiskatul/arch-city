@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const navItems = [
-  { label: "Pricing", href: "#pricing" },
-  { label: "About Us", href: "#about" },
-  { label: "Students", href: "#students" },
-  { label: "Tutors", href: "#tutors" },
-  { label: "Contact Us", href: "#contact" },
-  { label: "FAQs", href: "#faqs" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "About Us", href: "/#about" },
+  { label: "Students", href: "/#students" },
+  { label: "Tutors", href: "/#tutors" },
+  { label: "Contact Us", href: "/#contact" },
+  { label: "FAQs", href: "/pricing#faqs" },
 ];
 
 function SiteLogo({ sticky = false }: { sticky?: boolean }) {
@@ -26,12 +26,16 @@ function SiteLogo({ sticky = false }: { sticky?: boolean }) {
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({
+  thresholdId,
+}: {
+  thresholdId: string;
+}) {
   const [open, setOpen] = useState(false);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
 
   useEffect(() => {
-    const marker = document.getElementById("hero-cta-threshold");
+    const marker = document.getElementById(thresholdId);
 
     if (!marker) {
       return;
@@ -66,7 +70,7 @@ export function SiteHeader() {
       window.removeEventListener("resize", syncStickyHeader);
       window.removeEventListener("load", syncStickyHeader);
     };
-  }, []);
+  }, [thresholdId]);
 
   return (
     <>
