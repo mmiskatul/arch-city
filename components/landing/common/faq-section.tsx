@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { AiOutlineMinus, AiOutlinePlus } from "react-icons/ai";
 import { ArrowIcon } from "@/components/landing/shared/arrow-icon";
 
 const faqs = [
@@ -39,37 +40,11 @@ const faqs = [
 ];
 
 function PlusIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
-    </svg>
-  );
+  return <AiOutlinePlus className="h-5 w-5" />;
 }
 
 function CloseIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 6 12 12" />
-      <path d="M18 6 6 18" />
-    </svg>
-  );
+  return <AiOutlineMinus className="h-5 w-5" />;
 }
 
 export function FAQSection() {

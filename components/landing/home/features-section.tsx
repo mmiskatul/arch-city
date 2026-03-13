@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { AiOutlineLaptop, AiOutlineSafety, AiOutlineMail, AiOutlineStar } from "react-icons/ai";
+
 export function FeaturesSection() {
   return (
     <section
@@ -33,6 +35,10 @@ export function FeaturesSection() {
         <div className="mt-14 grid gap-4 lg:grid-cols-2">
           <article className="flex min-h-[28rem] flex-col justify-between rounded-[1.6rem] bg-[#efe4e1] p-6 shadow-[0_18px_50px_rgba(15,23,42,0.05)] sm:p-8">
             <div className="max-w-lg">
+              <div className="mb-4 flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#3f3737]">
+                <AiOutlineMail className="h-5 w-5 text-[#df1620]" />
+                Personalized Support
+              </div>
               <p className="text-[0.95rem] font-semibold leading-8 text-[#3f3737]">
                 Whether our students prefer meeting with a tutor on a regular
                 basis, or just need guidance and support before an exam, we are
@@ -72,6 +78,10 @@ export function FeaturesSection() {
             </div>
 
             <div className="mt-6">
+              <div className="mb-4 flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
+                <AiOutlineSafety className="h-5 w-5" />
+                Vetting
+              </div>
               <h3 className="text-2xl font-bold tracking-[-0.04em]">
                 Qualified Educators
               </h3>
@@ -108,6 +118,10 @@ export function FeaturesSection() {
             </div>
 
             <div className="mt-6">
+              <div className="mb-4 flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
+                <AiOutlineLaptop className="h-5 w-5" />
+                Flexibility
+              </div>
               <h3 className="text-2xl font-bold tracking-[-0.04em]">
                 Safe, Flexible, and Tailored Tutoring
               </h3>
@@ -133,6 +147,10 @@ export function FeaturesSection() {
 
           <article className="flex min-h-[25rem] flex-col justify-between rounded-[1.6rem] bg-[#efe4e1] p-6 shadow-[0_18px_50px_rgba(15,23,42,0.05)] sm:p-8">
             <div className="mx-auto max-w-xl text-center">
+              <div className="mb-4 flex items-center justify-center gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#7a685c]">
+                <AiOutlineStar className="h-5 w-5" />
+                Growth
+              </div>
               <h3 className="text-3xl font-bold tracking-[-0.04em] text-[#232323]">
                 Empowering Students to Learn Beyond the Classroom
               </h3>

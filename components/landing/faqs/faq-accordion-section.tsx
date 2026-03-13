@@ -70,7 +70,7 @@ export function FaqAccordionSection({
             FAQs
           </div>
 
-          <h2 className="mt-6 text-4xl font-black tracking-[-0.06em] text-[#111111] sm:text-5xl lg:text-[4rem] lg:leading-[0.95]">
+          <h2 className="mt-6 text-2xl font-black tracking-[-0.06em] text-[#111111] sm:text-3xl lg:text-5xl lg:leading-[0.95]">
             {title}
           </h2>
 

@@ -6,6 +6,7 @@ import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 
 import { FormStatusMessage } from "@/components/shared/form-status-message";
+import { AiOutlineCheckCircle, AiOutlineDesktop, AiOutlineDollarCircle, AiOutlineHeart } from "react-icons/ai";
 import { submitPublicApi } from "@/lib/api/public-api";
 import { SIGNUP_ROUTE } from "@/lib/routes";
 
@@ -186,18 +187,17 @@ function AuthVisualPanel() {
           <div className="absolute inset-x-9 bottom-3 rounded-xl bg-white px-7 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
             <ul className="space-y-3 text-sm font-medium text-[#111827]">
               {[
-                { icon: "check", text: "Trusted by students of Missouri" },
-                { icon: "dollar", text: "No hidden fees, only $5 scheduling fee" },
-                { icon: "monitor", text: "Top class vetted tutors" },
-                { icon: "heart", text: "24/7 support from our dedicated team" },
-              ].map((item) => (
+            ].map((item, index) => {
+              const IconComponent = badgeIcons[index];
+              return (
                 <li key={item.text} className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fde7e7] text-[#df1620]">
-                    {renderBadgeIcon(item.icon)}
+                    <IconComponent className="h-4 w-4" />
                   </span>
                   <span>{item.text}</span>
                 </li>
-              ))}
+              );
+            })}
             </ul>
           </div>
         </div>
@@ -205,6 +205,13 @@ function AuthVisualPanel() {
     </aside>
   );
 }
+
+const badgeIcons = [
+  AiOutlineCheckCircle,
+  AiOutlineDollarCircle,
+  AiOutlineDesktop,
+  AiOutlineHeart,
+];
 
 const signupRoleOptions = [
   {
@@ -228,37 +235,6 @@ const signupRoleOptions = [
   },
 ];
 
-function renderBadgeIcon(type: "check" | "dollar" | "monitor" | "heart") {
-  switch (type) {
-    case "dollar":
-      return (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 5v14" />
-          <path d="M15.5 9.5c0-1.1-1.6-2-3.5-2s-3.5.9-3.5 2 1.6 2 3.5 2 3.5.9 3.5 2-1.6 2-3.5 2-3.5-.9-3.5-2" />
-        </svg>
-      );
-    case "monitor":
-      return (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="5" width="16" height="11" rx="2" />
-          <path d="M8 20h8" />
-          <path d="M12 16v4" />
-        </svg>
-      );
-    case "heart":
-      return (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m12 21-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3 9.24 3 10.91 3.81 12 5.09 13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.18z" />
-        </svg>
-      );
-    default:
-      return (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m5 13 4 4 10-10" />
-        </svg>
-      );
-  }
-}
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^[0-9+()\-\s]{10,}$/;

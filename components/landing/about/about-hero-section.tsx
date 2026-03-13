@@ -1,6 +1,3 @@
-import Link from "next/link";
-
-import { ArrowIcon } from "@/components/landing/shared/arrow-icon";
 import { MarketingHeroFrame } from "@/components/landing/shared/marketing-hero-frame";
 
 export function AboutHeroSection({
