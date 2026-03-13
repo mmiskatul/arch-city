@@ -27,20 +27,20 @@ function InstagramIcon() {
 
 const companyLinks = [
   { label: "Home", href: "/" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "About us", href: "#about" },
-  { label: "Contact us", href: "#contact" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "About us", href: "/about" },
+  { label: "Contact us", href: "/#contact" },
 ];
 
 const navLinks = [
-  { label: "Students", href: "#students" },
-  { label: "Tutors", href: "#tutors" },
-  { label: "FAQs", href: "#faqs" },
+  { label: "Students", href: "/#students" },
+  { label: "Tutors", href: "/#tutors" },
+  { label: "FAQs", href: "/pricing#faqs" },
 ];
 
 const resourceLinks = [
-  { label: "Join as a Student", href: "#create-account" },
-  { label: "Become a Tutor", href: "#tutors" },
+  { label: "Join as a Student", href: "/#create-account" },
+  { label: "Become a Tutor", href: "/#tutors" },
   { label: "Terms of Service", href: "#terms" },
   { label: "Privacy Policy", href: "#privacy" },
 ];
