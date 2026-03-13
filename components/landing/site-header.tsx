@@ -35,13 +35,7 @@ export function SiteHeader({
     { label: "Contact Us", href: "/contact" },
     {
       label: "FAQs",
-      href:
-        pathname === "/pricing" ||
-        pathname === "/students" ||
-        pathname === "/tutors" ||
-        pathname === "/contact"
-          ? "#faqs"
-          : "/contact#faqs",
+      href: pathname === "/faqs" ? "#student-faqs" : "/faqs",
     },
   ];
 
