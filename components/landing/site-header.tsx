@@ -109,13 +109,13 @@ export function SiteHeader({
 
             <div className="hidden items-center gap-4 lg:flex">
               <Link
-                href="#login"
+                href="/login"
                 className="text-[0.9rem] font-semibold text-white/92 transition hover:text-[#ef242a]"
               >
                 Login
               </Link>
               <Link
-                href="#create-account"
+                href="/signup"
                 className="inline-flex h-10 items-center rounded-full bg-[#ef242a] px-5 text-[0.9rem] font-bold text-white shadow-[0_14px_34px_rgba(239,36,42,0.3)] transition hover:bg-[#ff343a]"
               >
                 Create Account
@@ -184,14 +184,14 @@ export function SiteHeader({
               ))}
               <div className="mt-2 grid gap-2">
                 <Link
-                  href="#login"
+                  href="/login"
                   className="rounded-2xl px-4 py-3 text-sm font-semibold text-white/86 transition hover:bg-white/6 hover:text-white"
                   onClick={() => setOpen(false)}
                 >
                   Login
                 </Link>
                 <Link
-                  href="#create-account"
+                  href="/signup"
                   className="rounded-2xl bg-[#ef242a] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#ff343a]"
                   onClick={() => setOpen(false)}
                 >
@@ -244,13 +244,13 @@ export function SiteHeader({
 
               <div className="flex items-center gap-4">
                 <Link
-                  href="#login"
+                  href="/login"
                   className="text-[0.89rem] font-semibold text-[#2b2b2b] transition hover:text-[#ef242a]"
                 >
                   Login
                 </Link>
                 <Link
-                  href="#create-account"
+                  href="/signup"
                   className="inline-flex h-10 items-center rounded-full bg-[#ef242a] px-5 text-[0.89rem] font-bold text-white shadow-[0_12px_30px_rgba(239,36,42,0.24)] transition hover:bg-[#ff343a]"
                 >
                   Create Account

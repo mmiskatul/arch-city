@@ -15,7 +15,7 @@ export function StudentsCTASection() {
           </p>
 
           <Link
-            href="/#create-account"
+            href="/signup"
             className="mt-10 inline-flex items-center rounded-full bg-[#df1620] px-7 py-4 text-xl font-bold text-white transition hover:bg-[#f02029]"
           >
             Get started

@@ -39,7 +39,7 @@ const navLinks = [
 ];
 
 const resourceLinks = [
-  { label: "Join as a Student", href: "/#create-account" },
+  { label: "Join as a Student", href: "/signup" },
   { label: "Become a Tutor", href: "/tutors" },
   { label: "Terms of Service", href: "#terms" },
   { label: "Privacy Policy", href: "#privacy" },
