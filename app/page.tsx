@@ -1,6 +1,7 @@
 import { FeaturesSection } from "@/components/landing/features-section";
 import { HeroSection } from "@/components/landing/hero-section";
 import { KeyFeaturesSection } from "@/components/landing/key-features-section";
+import { PricingSection } from "@/components/landing/pricing-section";
 import { SiteHeader } from "@/components/landing/site-header";
 
 export default function Home() {
@@ -12,6 +13,9 @@ export default function Home() {
       </section>
       <FeaturesSection />
       <KeyFeaturesSection />
+      <section className="mx-3 my-4 overflow-hidden rounded-[28px] bg-[#050505] text-white shadow-[0_30px_120px_rgba(0,0,0,0.16)]">
+        <PricingSection />
+      </section>
     </main>
   );
 }

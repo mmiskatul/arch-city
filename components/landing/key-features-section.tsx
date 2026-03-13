@@ -112,7 +112,7 @@ export function KeyFeaturesSection() {
           {cards.slice(0, 4).map((card) => (
             <article
               key={card.title}
-              className="flex min-h-[17rem] flex-col rounded-[1.35rem] bg-[#efe4e1] p-7"
+              className="flex min-h-[17rem] flex-col rounded-xl bg-[#efe4e1] p-7 transition-transform duration-300 ease-out hover:scale-105"
             >
               <IconWrap>{card.icon}</IconWrap>
               <h3 className="mt-auto max-w-[10rem] text-[1.05rem] font-bold leading-[1.18] tracking-[-0.03em] text-[#111111]">
@@ -124,7 +124,7 @@ export function KeyFeaturesSection() {
           {cards.slice(4, 6).map((card) => (
             <article
               key={card.title}
-              className="flex min-h-[17rem] flex-col rounded-[1.35rem] bg-[#efe4e1] p-7 sm:col-span-1"
+              className="flex min-h-[17rem] flex-col rounded-xl bg-[#efe4e1] p-7 transition-transform duration-300 ease-out hover:scale-105 sm:col-span-1"
             >
               <IconWrap>{card.icon}</IconWrap>
               <h3 className="mt-auto max-w-[10rem] text-[1.05rem] font-bold leading-[1.18] tracking-[-0.03em] text-[#111111]">
@@ -133,7 +133,7 @@ export function KeyFeaturesSection() {
             </article>
           ))}
 
-          <div className="flex min-h-[17rem] flex-col items-center justify-center rounded-[1.35rem] bg-white p-7 text-center sm:col-span-2 xl:col-span-2">
+          <div className="flex min-h-[17rem] flex-col items-center justify-center rounded-xl bg-white p-7 text-center sm:col-span-2 xl:col-span-2">
             <Link
               href="#create-account"
               className="flex h-20 w-20 items-center justify-center rounded-full bg-[#efe4e1] text-[#df1620] transition hover:bg-[#e8d8d4]"
