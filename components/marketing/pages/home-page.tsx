@@ -1,11 +1,11 @@
-import { CTASection } from "@/components/landing/cta-section";
-import { FAQSection } from "@/components/landing/faq-section";
-import { FeaturesSection } from "@/components/landing/features-section";
-import { FooterSection } from "@/components/landing/footer-section";
-import { HeroSection } from "@/components/landing/hero-section";
-import { KeyFeaturesSection } from "@/components/landing/key-features-section";
-import { PricingDetailsSection } from "@/components/landing/pricing-details-section";
-import { PricingSection } from "@/components/landing/pricing-section";
+import { CTASection } from "@/components/landing/common/cta-section";
+import { FAQSection } from "@/components/landing/common/faq-section";
+import { FeaturesSection } from "@/components/landing/home/features-section";
+import { FooterSection } from "@/components/landing/common/footer-section";
+import { HeroSection } from "@/components/landing/home/hero-section";
+import { KeyFeaturesSection } from "@/components/landing/home/key-features-section";
+import { PricingDetailsSection } from "@/components/landing/pricing/pricing-details-section";
+import { PricingSection } from "@/components/landing/pricing/pricing-section";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 
 export function HomePage() {
@@ -26,3 +26,4 @@ export function HomePage() {
     </MarketingPageShell>
   );
 }
+

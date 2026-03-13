@@ -1,11 +1,11 @@
-import { CTASection } from "@/components/landing/cta-section";
+import { CTASection } from "@/components/landing/common/cta-section";
 import {
   FaqAccordionSection,
   studentFaqs,
   tutorFaqs,
-} from "@/components/landing/faq-accordion-section";
-import { FaqsHeroSection } from "@/components/landing/faqs-hero-section";
-import { FooterSection } from "@/components/landing/footer-section";
+} from "@/components/landing/faqs/faq-accordion-section";
+import { FaqsHeroSection } from "@/components/landing/faqs/faqs-hero-section";
+import { FooterSection } from "@/components/landing/common/footer-section";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 
 export function FaqsPage() {
@@ -31,3 +31,4 @@ export function FaqsPage() {
     </MarketingPageShell>
   );
 }
+

@@ -1,8 +1,8 @@
-import { FAQSection } from "@/components/landing/faq-section";
-import { FooterSection } from "@/components/landing/footer-section";
-import { StudentsCTASection } from "@/components/landing/students-cta-section";
-import { StudentsDetailsSection } from "@/components/landing/students-details-section";
-import { StudentsHeroSection } from "@/components/landing/students-hero-section";
+import { FAQSection } from "@/components/landing/common/faq-section";
+import { FooterSection } from "@/components/landing/common/footer-section";
+import { StudentsCTASection } from "@/components/landing/students/students-cta-section";
+import { StudentsDetailsSection } from "@/components/landing/students/students-details-section";
+import { StudentsHeroSection } from "@/components/landing/students/students-hero-section";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 
 export function StudentsPage() {
@@ -18,3 +18,4 @@ export function StudentsPage() {
     </MarketingPageShell>
   );
 }
+

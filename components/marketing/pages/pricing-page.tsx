@@ -1,8 +1,8 @@
-import { CTASection } from "@/components/landing/cta-section";
-import { FAQSection } from "@/components/landing/faq-section";
-import { FooterSection } from "@/components/landing/footer-section";
-import { PricingDetailsSection } from "@/components/landing/pricing-details-section";
-import { PricingSection } from "@/components/landing/pricing-section";
+import { CTASection } from "@/components/landing/common/cta-section";
+import { FAQSection } from "@/components/landing/common/faq-section";
+import { FooterSection } from "@/components/landing/common/footer-section";
+import { PricingDetailsSection } from "@/components/landing/pricing/pricing-details-section";
+import { PricingSection } from "@/components/landing/pricing/pricing-section";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 
 export function PricingPage() {
@@ -19,3 +19,4 @@ export function PricingPage() {
     </MarketingPageShell>
   );
 }
+

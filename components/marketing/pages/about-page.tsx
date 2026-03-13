@@ -1,10 +1,10 @@
-import { AboutBookingSection } from "@/components/landing/about-booking-section";
-import { AboutHeroSection } from "@/components/landing/about-hero-section";
-import { AboutProcessSection } from "@/components/landing/about-process-section";
-import { AboutServicesSection } from "@/components/landing/about-services-section";
-import { AboutSolutionsSection } from "@/components/landing/about-solutions-section";
-import { CTASection } from "@/components/landing/cta-section";
-import { FooterSection } from "@/components/landing/footer-section";
+import { AboutBookingSection } from "@/components/landing/about/about-booking-section";
+import { AboutHeroSection } from "@/components/landing/about/about-hero-section";
+import { AboutProcessSection } from "@/components/landing/about/about-process-section";
+import { AboutServicesSection } from "@/components/landing/about/about-services-section";
+import { AboutSolutionsSection } from "@/components/landing/about/about-solutions-section";
+import { CTASection } from "@/components/landing/common/cta-section";
+import { FooterSection } from "@/components/landing/common/footer-section";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 
 export function AboutPage() {
@@ -22,3 +22,4 @@ export function AboutPage() {
     </MarketingPageShell>
   );
 }
+

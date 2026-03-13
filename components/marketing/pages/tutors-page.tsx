@@ -1,8 +1,8 @@
-import { FooterSection } from "@/components/landing/footer-section";
-import { TutorsCTASection } from "@/components/landing/tutors-cta-section";
-import { TutorsDetailsSection } from "@/components/landing/tutors-details-section";
-import { TutorsFAQSection } from "@/components/landing/tutors-faq-section";
-import { TutorsHeroSection } from "@/components/landing/tutors-hero-section";
+import { FooterSection } from "@/components/landing/common/footer-section";
+import { TutorsCTASection } from "@/components/landing/tutors/tutors-cta-section";
+import { TutorsDetailsSection } from "@/components/landing/tutors/tutors-details-section";
+import { TutorsFAQSection } from "@/components/landing/tutors/tutors-faq-section";
+import { TutorsHeroSection } from "@/components/landing/tutors/tutors-hero-section";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 
 export function TutorsPage() {
@@ -18,3 +18,4 @@ export function TutorsPage() {
     </MarketingPageShell>
   );
 }
+

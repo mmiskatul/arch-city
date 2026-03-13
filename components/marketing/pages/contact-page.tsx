@@ -1,8 +1,8 @@
-import { ContactHeroSection } from "@/components/landing/contact-hero-section";
-import { ContactMethodsSection } from "@/components/landing/contact-methods-section";
-import { CTASection } from "@/components/landing/cta-section";
-import { FAQSection } from "@/components/landing/faq-section";
-import { FooterSection } from "@/components/landing/footer-section";
+import { ContactHeroSection } from "@/components/landing/contact/contact-hero-section";
+import { ContactMethodsSection } from "@/components/landing/contact/contact-methods-section";
+import { CTASection } from "@/components/landing/common/cta-section";
+import { FAQSection } from "@/components/landing/common/faq-section";
+import { FooterSection } from "@/components/landing/common/footer-section";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 
 export function ContactPage() {
@@ -18,3 +18,4 @@ export function ContactPage() {
     </MarketingPageShell>
   );
 }
+

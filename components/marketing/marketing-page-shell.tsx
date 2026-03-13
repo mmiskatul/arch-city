@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 
-import { SiteHeader } from "@/components/landing/site-header";
+import { SiteHeader } from "@/components/landing/common/site-header";
 
 type MarketingPageShellProps = {
   thresholdId: string;
@@ -28,3 +28,4 @@ export function MarketingPageShell({
     </main>
   );
 }
+
