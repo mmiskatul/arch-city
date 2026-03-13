@@ -5,9 +5,13 @@ import Link from "next/link";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 
+import { FormStatusMessage } from "@/components/shared/form-status-message";
+import { submitPublicApi } from "@/lib/api/public-api";
+
 type AuthMode = "login" | "signup";
 type SignupRole = "student" | "tutor" | "parent";
 type SmsConsent = "yes" | "no" | "";
+type SubmitState = "idle" | "submitting" | "success" | "error";
 
 type AuthShellProps = {
   mode: AuthMode;
@@ -312,6 +316,10 @@ export function AuthShell({ mode }: AuthShellProps) {
   const [smsConsent, setSmsConsent] = useState<SmsConsent>("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [signupTouched, setSignupTouched] = useState<TouchedFields>({});
+  const [loginSubmitState, setLoginSubmitState] = useState<SubmitState>("idle");
+  const [loginSubmitMessage, setLoginSubmitMessage] = useState("");
+  const [signupSubmitState, setSignupSubmitState] = useState<SubmitState>("idle");
+  const [signupSubmitMessage, setSignupSubmitMessage] = useState("");
   const isLogin = mode === "login";
 
   const loginErrors = useMemo(() => {
@@ -445,15 +453,41 @@ export function AuthShell({ mode }: AuthShellProps) {
     setSignupTouched((current) => ({ ...current, [field]: true }));
   }
 
-  function handleLoginSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleLoginSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoginTouched({
       identifier: true,
       password: true,
     });
+
+    if (!loginCanSubmit) {
+      setLoginSubmitState("error");
+      setLoginSubmitMessage("Please fix the highlighted fields before submitting.");
+      return;
+    }
+
+    setLoginSubmitState("submitting");
+    setLoginSubmitMessage("");
+
+    const response = await submitPublicApi({
+      endpoint: "login",
+      payload: {
+        identifier: loginIdentifier.trim(),
+        password: loginPassword,
+      },
+    });
+
+    if (!response.ok) {
+      setLoginSubmitState("error");
+      setLoginSubmitMessage(response.error);
+      return;
+    }
+
+    setLoginSubmitState("success");
+    setLoginSubmitMessage("Login request sent successfully.");
   }
 
-  function handleSignupSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSignupSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSignupTouched({
       firstName: true,
@@ -467,6 +501,41 @@ export function AuthShell({ mode }: AuthShellProps) {
       smsConsent: true,
       terms: true,
     });
+
+    if (!signupCanContinue) {
+      setSignupSubmitState("error");
+      setSignupSubmitMessage("Please complete all required fields before continuing.");
+      return;
+    }
+
+    setSignupSubmitState("submitting");
+    setSignupSubmitMessage("");
+
+    const response = await submitPublicApi({
+      endpoint: "signup",
+      payload: {
+        role: signupRole,
+        firstName: signupFirstName.trim(),
+        lastName: signupLastName.trim(),
+        email: signupEmail.trim(),
+        phone: signupPhone.trim(),
+        password: signupPassword,
+        confirmPassword: signupConfirmPassword,
+        heardFrom,
+        acceptedAgreement,
+        smsConsent,
+        acceptedTerms,
+      },
+    });
+
+    if (!response.ok) {
+      setSignupSubmitState("error");
+      setSignupSubmitMessage(response.error);
+      return;
+    }
+
+    setSignupSubmitState("success");
+    setSignupSubmitMessage("Signup request sent successfully.");
   }
 
   if (!isLogin && signupStep === "role") {
@@ -590,6 +659,16 @@ export function AuthShell({ mode }: AuthShellProps) {
 
             {isLogin ? (
               <form className="mt-12 space-y-5" onSubmit={handleLoginSubmit} noValidate>
+                <FormStatusMessage
+                  type={
+                    loginSubmitState === "success"
+                      ? "success"
+                      : loginSubmitState === "error"
+                        ? "error"
+                        : "idle"
+                  }
+                  message={loginSubmitMessage}
+                />
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#4b5563]">
                     Email address or student id
@@ -653,14 +732,14 @@ export function AuthShell({ mode }: AuthShellProps) {
 
                 <button
                   type="submit"
-                  disabled={!loginCanSubmit}
+                  disabled={!loginCanSubmit || loginSubmitState === "submitting"}
                   className={`inline-flex h-14 w-full items-center justify-center rounded-xl text-lg font-bold text-white transition ${
-                    loginCanSubmit
+                    loginCanSubmit && loginSubmitState !== "submitting"
                       ? "bg-[#df1620] shadow-[0_18px_40px_rgba(223,22,32,0.22)] hover:bg-[#f02029]"
                       : "bg-[#d8dde6]"
                   }`}
                 >
-                  Log in
+                  {loginSubmitState === "submitting" ? "Submitting..." : "Log in"}
                   <span className="ml-3" aria-hidden="true">
                     {"->"}
                   </span>
@@ -668,6 +747,16 @@ export function AuthShell({ mode }: AuthShellProps) {
               </form>
             ) : (
               <form className="mt-10 space-y-5" onSubmit={handleSignupSubmit} noValidate>
+                <FormStatusMessage
+                  type={
+                    signupSubmitState === "success"
+                      ? "success"
+                      : signupSubmitState === "error"
+                        ? "error"
+                        : "idle"
+                  }
+                  message={signupSubmitMessage}
+                />
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-[#4b5563]">
@@ -997,14 +1086,18 @@ export function AuthShell({ mode }: AuthShellProps) {
 
                 <button
                   type="submit"
-                  disabled={!signupCanContinue}
+                  disabled={
+                    !signupCanContinue || signupSubmitState === "submitting"
+                  }
                   className={`inline-flex h-14 w-full items-center justify-center rounded-xl text-lg font-bold transition ${
-                    signupCanContinue
+                    signupCanContinue && signupSubmitState !== "submitting"
                       ? "bg-[#df1620] text-white shadow-[0_18px_40px_rgba(223,22,32,0.22)] hover:bg-[#f02029]"
                       : "bg-[#d8dde6] text-white"
                   }`}
                 >
-                  Continue
+                  {signupSubmitState === "submitting"
+                    ? "Submitting..."
+                    : "Continue"}
                   <span className="ml-3" aria-hidden="true">
                     {"->"}
                   </span>

@@ -1,12 +1,69 @@
+"use client";
+
 import Link from "next/link";
+import type { FormEvent } from "react";
+import { useState } from "react";
 
 import { MarketingHeroFrame } from "@/components/landing/shared/marketing-hero-frame";
+import { FormStatusMessage } from "@/components/shared/form-status-message";
+import { submitPublicApi } from "@/lib/api/public-api";
+
+type SubmitState = "idle" | "submitting" | "success" | "error";
 
 export function ContactHeroSection({
   thresholdId,
 }: {
   thresholdId: string;
 }) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [submitMessage, setSubmitMessage] = useState("");
+
+  const canSubmit =
+    fullName.trim().length > 0 &&
+    email.trim().length > 0 &&
+    subject.trim().length > 0 &&
+    message.trim().length > 0;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canSubmit) {
+      setSubmitState("error");
+      setSubmitMessage("Please complete all contact form fields.");
+      return;
+    }
+
+    setSubmitState("submitting");
+    setSubmitMessage("");
+
+    const response = await submitPublicApi({
+      endpoint: "contact",
+      payload: {
+        fullName: fullName.trim(),
+        email: email.trim(),
+        subject: subject.trim(),
+        message: message.trim(),
+      },
+    });
+
+    if (!response.ok) {
+      setSubmitState("error");
+      setSubmitMessage(response.error);
+      return;
+    }
+
+    setSubmitState("success");
+    setSubmitMessage("Your message has been sent successfully.");
+    setFullName("");
+    setEmail("");
+    setSubject("");
+    setMessage("");
+  }
+
   return (
     <MarketingHeroFrame
       id="contact"
@@ -30,15 +87,30 @@ export function ContactHeroSection({
               we&apos;ll get back to you as soon as possible.
             </p>
 
-            <form className="mt-8 grid gap-4">
+            <form className="mt-8 grid gap-4" onSubmit={handleSubmit}>
+              <FormStatusMessage
+                type={
+                  submitState === "success"
+                    ? "success"
+                    : submitState === "error"
+                      ? "error"
+                      : "idle"
+                }
+                message={submitMessage}
+              />
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <input
                   type="text"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
                   placeholder="Full name"
                   className="h-14 rounded-xl border border-[#ece6e4] px-4 text-base text-[#111111] outline-none transition placeholder:text-[#b4b4b4] focus:border-[#ef242a]"
                 />
                 <input
                   type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   placeholder="Your email"
                   className="h-14 rounded-xl border border-[#ece6e4] px-4 text-base text-[#111111] outline-none transition placeholder:text-[#b4b4b4] focus:border-[#ef242a]"
                 />
@@ -46,21 +118,30 @@ export function ContactHeroSection({
 
               <input
                 type="text"
+                value={subject}
+                onChange={(event) => setSubject(event.target.value)}
                 placeholder="Subject"
                 className="h-14 rounded-xl border border-[#ece6e4] px-4 text-base text-[#111111] outline-none transition placeholder:text-[#b4b4b4] focus:border-[#ef242a]"
               />
 
               <textarea
                 rows={6}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
                 placeholder="Your message.."
                 className="rounded-xl border border-[#ece6e4] px-4 py-4 text-base text-[#111111] outline-none transition placeholder:text-[#b4b4b4] focus:border-[#ef242a]"
               />
 
               <button
-                type="button"
-                className="mt-2 inline-flex h-14 items-center justify-center rounded-full bg-[#df1620] px-8 text-lg font-bold text-white transition hover:bg-[#f02029]"
+                type="submit"
+                disabled={!canSubmit || submitState === "submitting"}
+                className={`mt-2 inline-flex h-14 items-center justify-center rounded-full px-8 text-lg font-bold text-white transition ${
+                  canSubmit && submitState !== "submitting"
+                    ? "bg-[#df1620] hover:bg-[#f02029]"
+                    : "bg-[#d8dde6]"
+                }`}
               >
-                Send message
+                {submitState === "submitting" ? "Sending..." : "Send message"}
               </button>
             </form>
 
