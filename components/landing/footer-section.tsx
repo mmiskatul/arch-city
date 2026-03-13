@@ -34,13 +34,13 @@ const companyLinks = [
 
 const navLinks = [
   { label: "Students", href: "/students" },
-  { label: "Tutors", href: "/#tutors" },
-  { label: "FAQs", href: "/students#faqs" },
+  { label: "Tutors", href: "/tutors" },
+  { label: "FAQs", href: "/tutors#faqs" },
 ];
 
 const resourceLinks = [
   { label: "Join as a Student", href: "/#create-account" },
-  { label: "Become a Tutor", href: "/#tutors" },
+  { label: "Become a Tutor", href: "/tutors" },
   { label: "Terms of Service", href: "#terms" },
   { label: "Privacy Policy", href: "#privacy" },
 ];

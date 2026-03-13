@@ -31,14 +31,14 @@ export function SiteHeader({
     { label: "Pricing", href: "/pricing" },
     { label: "About Us", href: "/about" },
     { label: "Students", href: "/students" },
-    { label: "Tutors", href: "/#tutors" },
+    { label: "Tutors", href: "/tutors" },
     { label: "Contact Us", href: "/#contact" },
     {
       label: "FAQs",
       href:
-        pathname === "/pricing" || pathname === "/students"
+        pathname === "/pricing" || pathname === "/students" || pathname === "/tutors"
           ? "#faqs"
-          : "/students#faqs",
+          : "/tutors#faqs",
     },
   ];
 
