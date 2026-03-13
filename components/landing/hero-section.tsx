@@ -22,7 +22,7 @@ export function HeroSection() {
           than Ever.
         </h1>
 
-        <p className="mt-8 max-w-3xl text-base leading-8 text-white/72 sm:text-lg">
+        <p className="mt-8 max-w-3xl text-base leading-8 text-white/90 sm:text-lg">
           A concierge-style service that sources qualified tutors for students,
           providing an unmatched experience that changes the way families
           approach tutoring.
@@ -31,7 +31,7 @@ export function HeroSection() {
         <div className="mt-10 flex flex-col items-center gap-5">
           <Link
             href="#create-account"
-            className="inline-flex items-center gap-3 rounded-full bg-[#ef242a] px-8 py-4 text-base font-bold text-white shadow-[0_18px_45px_rgba(239,36,42,0.33)] transition hover:bg-[#ff343a]"
+            className="inline-flex items-center gap-3 rounded-full bg-red-600 px-8 py-4 text-xl font-bold text-white shadow-[0_18px_45px_rgba(239,36,42,0.33)] transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300/50 active:bg-red-800"
           >
             Get started
             <span aria-hidden="true">→</span>

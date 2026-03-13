@@ -18,8 +18,8 @@ function SiteLogo({ sticky = false }: { sticky?: boolean }) {
     <Image
       src={sticky ? "/logo-light.svg" : "/logo-dark.svg"}
       alt="Arch City Tutors"
-      width={172}
-      height={48}
+      width={130}
+      height={40}
       priority
       className="h-auto w-[148px] sm:w-[164px]"
     />
