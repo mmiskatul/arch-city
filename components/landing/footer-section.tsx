@@ -33,9 +33,9 @@ const companyLinks = [
 ];
 
 const navLinks = [
-  { label: "Students", href: "/#students" },
+  { label: "Students", href: "/students" },
   { label: "Tutors", href: "/#tutors" },
-  { label: "FAQs", href: "/pricing#faqs" },
+  { label: "FAQs", href: "/students#faqs" },
 ];
 
 const resourceLinks = [

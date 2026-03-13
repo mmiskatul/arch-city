@@ -2,16 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-
-const navItems = [
-  { label: "Pricing", href: "/pricing" },
-  { label: "About Us", href: "/about" },
-  { label: "Students", href: "/#students" },
-  { label: "Tutors", href: "/#tutors" },
-  { label: "Contact Us", href: "/#contact" },
-  { label: "FAQs", href: "/pricing#faqs" },
-];
 
 function SiteLogo({ sticky = false }: { sticky?: boolean }) {
   return (
@@ -31,8 +23,24 @@ export function SiteHeader({
 }: {
   thresholdId: string;
 }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
+
+  const navItems = [
+    { label: "Pricing", href: "/pricing" },
+    { label: "About Us", href: "/about" },
+    { label: "Students", href: "/students" },
+    { label: "Tutors", href: "/#tutors" },
+    { label: "Contact Us", href: "/#contact" },
+    {
+      label: "FAQs",
+      href:
+        pathname === "/pricing" || pathname === "/students"
+          ? "#faqs"
+          : "/students#faqs",
+    },
+  ];
 
   useEffect(() => {
     const marker = document.getElementById(thresholdId);
