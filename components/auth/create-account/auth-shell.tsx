@@ -2,13 +2,23 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
+import { FaArrowRightLong } from "react-icons/fa6";
 
 import { FormStatusMessage } from "@/components/shared/form-status-message";
-import { AiOutlineCheckCircle, AiOutlineDesktop, AiOutlineDollarCircle, AiOutlineHeart } from "react-icons/ai";
+import {
+  AiOutlineArrowLeft,
+  AiOutlineCheckCircle,
+  AiOutlineDesktop,
+  AiOutlineDollarCircle,
+  AiOutlineEye,
+  AiOutlineEyeInvisible,
+  AiOutlineHeart,
+} from "react-icons/ai";
 import { submitPublicApi } from "@/lib/api/public-api";
-import { SIGNUP_ROUTE } from "@/lib/routes";
+import { ADMIN_DASHBOARD_ROUTE, SIGNUP_ROUTE } from "@/lib/routes";
 
 type AuthMode = "login" | "signup";
 type SignupRole = "student" | "tutor" | "parent";
@@ -21,38 +31,40 @@ type AuthShellProps = {
 
 type TouchedFields = Record<string, boolean>;
 
+const ADMIN_EMAIL = "admin@archcitytutors.com";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function readString(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function shouldRouteToAdminDashboard(identifier: string, data: unknown) {
+  const normalizedIdentifier = identifier.trim().toLowerCase();
+
+  if (normalizedIdentifier === ADMIN_EMAIL) {
+    return true;
+  }
+
+  if (!isRecord(data)) {
+    return false;
+  }
+
+  const role = readString(data.role);
+  const email = readString(data.email);
+  const user = isRecord(data.user) ? data.user : null;
+  const userRole = readString(user?.role);
+  const userEmail = readString(user?.email);
+
+  return [role, userRole].includes("admin") || [email, userEmail].includes(ADMIN_EMAIL);
+}
+
 function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ) : (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m3 3 18 18" />
-      <path d="M10.6 10.7a3 3 0 0 0 4.2 4.2" />
-      <path d="M9.9 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a18.8 18.8 0 0 1-3.2 4.2" />
-      <path d="M6.6 6.6C4.1 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.3-1.5" />
-    </svg>
-  );
+  const Icon = open ? AiOutlineEye : AiOutlineEyeInvisible;
+
+  return <Icon className="h-4 w-4" aria-hidden="true" />;
 }
 
 function GraduationCapIcon() {
@@ -111,20 +123,7 @@ function ParentIcon() {
 }
 
 function BackIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
+  return <AiOutlineArrowLeft className="h-5 w-5" aria-hidden="true" />;
 }
 
 function PasswordRule({
@@ -264,6 +263,7 @@ NOW THEREFORE, for and in consideration of the mutual covenants and benefits con
 6. Acceptance: Client acknowledges that reading and accepting this Agreement is required in order to create an account and use the Company's services.`;
 
 export function AuthShell({ mode }: AuthShellProps) {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loginIdentifier, setLoginIdentifier] = useState("admin@archcitytutors.com");
@@ -452,6 +452,13 @@ export function AuthShell({ mode }: AuthShellProps) {
     }
 
     setLoginSubmitState("success");
+
+    if (shouldRouteToAdminDashboard(loginIdentifier, response.data)) {
+      setLoginSubmitMessage("Login successful. Redirecting to admin dashboard...");
+      router.push(ADMIN_DASHBOARD_ROUTE);
+      return;
+    }
+
     setLoginSubmitMessage("Login request sent successfully.");
   }
 
@@ -567,8 +574,8 @@ export function AuthShell({ mode }: AuthShellProps) {
                 className="mt-10 inline-flex h-14 min-w-[10rem] items-center justify-center rounded-xl bg-[#df1620] px-8 text-lg font-bold text-white shadow-[0_18px_40px_rgba(223,22,32,0.22)] transition hover:bg-[#f02029]"
               >
                 Continue
-                <span className="ml-3" aria-hidden="true">
-                  {"->"}
+                <span className="flex item-center justify-center ml-3" aria-hidden="true">
+                  <FaArrowRightLong />
                 </span>
               </button>
 
@@ -728,8 +735,8 @@ export function AuthShell({ mode }: AuthShellProps) {
                   }`}
                 >
                   {loginSubmitState === "submitting" ? "Submitting..." : "Log in"}
-                  <span className="ml-3" aria-hidden="true">
-                    {"->"}
+                  <span className=" ml-3" aria-hidden="true">
+                    <FaArrowRightLong />
                   </span>
                 </button>
               </form>
