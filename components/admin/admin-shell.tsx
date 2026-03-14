@@ -38,7 +38,7 @@ const menuItems: NavItem[] = [
   { label: "Overview", href: "/admin-dashboard", icon: FiHome },
   { label: "Applications", href: "/admin-dashboard/applications", icon: FiFileText },
   { label: "Users", href: "/admin-dashboard/users", icon: FiUsers },
-  { label: "Schedules", href: "#", icon: FiCalendar },
+  { label: "Schedules", href: "/admin-dashboard/schedules", icon: FiCalendar },
   { label: "My Profile", href: "#", icon: FiUser },
 ];
 
