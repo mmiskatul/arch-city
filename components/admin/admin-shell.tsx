@@ -37,7 +37,7 @@ const hiddenScrollbarStyle: CSSProperties = {
 const menuItems: NavItem[] = [
   { label: "Overview", href: "/admin-dashboard", icon: FiHome },
   { label: "Applications", href: "/admin-dashboard/applications", icon: FiFileText },
-  { label: "Users", href: "#", icon: FiUsers },
+  { label: "Users", href: "/admin-dashboard/users", icon: FiUsers },
   { label: "Schedules", href: "#", icon: FiCalendar },
   { label: "My Profile", href: "#", icon: FiUser },
 ];
@@ -79,7 +79,7 @@ function SidebarLink({
       rel={item.external ? "noreferrer" : undefined}
       className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-medium transition ${
         active ? "bg-[#fde9ea] text-[#ef242a]" : "text-[#1f2937] hover:bg-[#f5f6f8]"
-      }`}
+      } active:scale-95`}
       aria-label={item.label}
       title={item.label}
     >
@@ -231,10 +231,14 @@ export function AdminShell({
           style={hiddenScrollbarStyle}
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="inline-flex w-fit items-center gap-2 rounded-2xl bg-white px-4 py-3 text-[18px] font-semibold shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
+            <Link
+              href="/admin-dashboard"
+              className="inline-flex w-fit items-center gap-2 rounded-2xl bg-white px-4 py-3 text-[18px] font-semibold shadow-[0_4px_14px_rgba(15,23,42,0.04)] transition-transform active:scale-95"
+              aria-label="Admin Dashboard home"
+            >
               <FiHome className="h-5 w-5 text-[#1f2937]" />
               <span>{breadcrumbLabel}</span>
-            </div>
+            </Link>
 
             <div className="flex flex-wrap items-center gap-3">
               <div className="inline-flex items-center gap-2 rounded-2xl bg-[#0d1d57] px-4 py-3 text-sm font-semibold text-white">

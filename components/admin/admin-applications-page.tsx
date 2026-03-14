@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { IconType } from "react-icons";
 import { FiCheckCircle, FiClock, FiEye, FiXCircle } from "react-icons/fi";
 
 import {
-  applicationRows,
   type ApplicationRow,
   type ApplicationStatus,
-} from "@/components/admin/applications-data";
+} from "@/lib/admin/types";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 type StatusTab = {
@@ -36,15 +35,41 @@ function getStatusPillClass(status: ApplicationStatus) {
   return "bg-[#fff3eb] text-[#c76b18]";
 }
 
-export function AdminApplicationsPage() {
+export function AdminApplicationsPage({ applicationRows }: { applicationRows: ApplicationRow[] }) {
   const [activeTab, setActiveTab] = useState<ApplicationStatus>("pending");
   const [approveTarget, setApproveTarget] = useState<ApplicationRow | null>(null);
   const [rejectTarget, setRejectTarget] = useState<ApplicationRow | null>(null);
+  const [rowsState, setRowsState] = useState(applicationRows);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const filteredRows = useMemo(
-    () => applicationRows.filter((row) => row.status === activeTab),
-    [activeTab],
-  );
+  const filteredRows = rowsState.filter((row) => row.status === activeTab);
+
+  const isApproving = approveTarget && loadingId === approveTarget.id;
+  const isRejecting = rejectTarget && loadingId === rejectTarget.id;
+
+  async function handleStatusChange(
+    target: ApplicationRow,
+    status: ApplicationStatus,
+    onSettled: () => void,
+  ) {
+    setLoadingId(target.id);
+    try {
+      const response = await fetch("/api/admin/applications/operate", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: target.id, status }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update");
+      }
+      setRowsState((current) =>
+        current.map((row) => (row.id === target.id ? { ...row, status } : row)),
+      );
+    } finally {
+      setLoadingId(null);
+      onSettled();
+    }
+  }
 
   return (
     <AdminShell breadcrumbLabel="Admin Dashboard">
@@ -164,7 +189,11 @@ export function AdminApplicationsPage() {
               <button
                 type="button"
                 className="rounded-xl bg-[#16a34a] px-6 py-3 text-sm font-semibold text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.12)] transition hover:bg-[#15803d]"
-                onClick={() => setApproveTarget(null)}
+                disabled={isApproving}
+                onClick={() =>
+                  approveTarget &&
+                  handleStatusChange(approveTarget, "approved", () => setApproveTarget(null))
+                }
               >
                 Confirm &amp; approve
               </button>
@@ -192,7 +221,11 @@ export function AdminApplicationsPage() {
               <button
                 type="button"
                 className="rounded-xl bg-[#dc2626] px-6 py-3 text-sm font-semibold text-white shadow-[inset_0_-2px_0_rgba(0,0,0,0.12)] transition hover:bg-[#b91c1c]"
-                onClick={() => setRejectTarget(null)}
+                disabled={isRejecting}
+                onClick={() =>
+                  rejectTarget &&
+                  handleStatusChange(rejectTarget, "rejected", () => setRejectTarget(null))
+                }
               >
                 Confirm &amp; reject
               </button>

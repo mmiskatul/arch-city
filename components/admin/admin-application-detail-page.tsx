@@ -1,11 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import { FiPaperclip } from "react-icons/fi";
+import { useState } from "react";
 
 import {
-  getApplicationDetail,
   type ApplicationDetail,
   type ApplicationSectionField,
-} from "@/components/admin/applications-data";
+  type ApplicationStatus,
+} from "@/lib/admin/types";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 function FieldView({ field }: { field: ApplicationSectionField }) {
@@ -72,10 +75,11 @@ function SectionCard({
   );
 }
 
-export function AdminApplicationDetailPage({ applicationId }: { applicationId: string }) {
-  const application = getApplicationDetail(applicationId);
+export function AdminApplicationDetailPage({ application }: { application: ApplicationDetail | null }) {
+  const [currentApplication, setCurrentApplication] = useState<ApplicationDetail | null>(application);
+  const [operating, setOperating] = useState(false);
 
-  if (!application) {
+  if (!currentApplication) {
     return (
       <AdminShell breadcrumbLabel="Admin Dashboard">
         <div className="mt-12">
@@ -94,27 +98,46 @@ export function AdminApplicationDetailPage({ applicationId }: { applicationId: s
     );
   }
 
-  const leftSections = application.sections.filter((_, index) => index % 2 === 0);
-  const rightSections = application.sections.filter((_, index) => index % 2 === 1);
+  const sections = currentApplication.sections;
+  const leftSections = sections.filter((_, index) => index % 2 === 0);
+  const rightSections = sections.filter((_, index) => index % 2 === 1);
+
+  async function handleAction(status: ApplicationStatus) {
+    setOperating(true);
+    try {
+      await fetch("/api/admin/applications/operate", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: currentApplication.id, status }),
+      });
+      setCurrentApplication({ ...currentApplication, status });
+    } finally {
+      setOperating(false);
+    }
+  }
 
   return (
     <AdminShell breadcrumbLabel="Admin Dashboard">
       <div className="mt-12 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-[28px] font-bold tracking-[-0.02em] text-[#111827]">{application.heading}</h1>
+          <h1 className="text-[28px] font-bold tracking-[-0.02em] text-[#111827]">{currentApplication.heading}</h1>
           <p className="mt-2 text-lg text-[#6b7280]">View your submitted information:</p>
         </div>
-        {application.status === "pending" ? (
+        {currentApplication.status === "pending" ? (
           <div className="flex items-center gap-3">
             <button
               type="button"
               className="rounded-xl bg-[#16a34a] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#15803d]"
+              onClick={() => handleAction("approved")}
+              disabled={operating}
             >
               Approve
             </button>
             <button
               type="button"
               className="rounded-xl bg-[#dc2626] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#b91c1c]"
+              onClick={() => handleAction("rejected")}
+              disabled={operating}
             >
               Reject
             </button>

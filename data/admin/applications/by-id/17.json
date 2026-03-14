@@ -1,0 +1,174 @@
+﻿{
+    "id":  "17",
+    "submittedOn":  "11-23-2025",
+    "status":  "approved",
+    "name":  "Stephanie Bess",
+    "heading":  "Application",
+    "sections":  [
+                     {
+                         "title":  "Tutor Profile",
+                         "fields":  [
+                                        {
+                                            "label":  "First name",
+                                            "value":  "Stephanie",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "Last name",
+                                            "value":  "Bess",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "Email address",
+                                            "value":  "stephanie.bess@archcitytutors.com",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "Have you ever been convicted of any sexual or criminal offenses?",
+                                            "value":  false,
+                                            "type":  "boolean"
+                                        }
+                                    ]
+                     },
+                     {
+                         "title":  "Tutor Contact Information",
+                         "fields":  [
+                                        {
+                                            "label":  "Mobile phone number",
+                                            "value":  "(314) 555-0017",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "Address",
+                                            "value":  "117 Clayton Road",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "City",
+                                            "value":  "St. Louis",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "State",
+                                            "value":  "Missouri",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "Postal code",
+                                            "value":  "63117",
+                                            "type":  "text"
+                                        }
+                                    ]
+                     },
+                     {
+                         "title":  "Teaching Experience",
+                         "fields":  [
+                                        {
+                                            "label":  "Are you a certified teacher in the state of Missouri?",
+                                            "value":  true,
+                                            "type":  "boolean"
+                                        },
+                                        {
+                                            "label":  "Are you currently employed as a teacher?",
+                                            "value":  true,
+                                            "type":  "boolean"
+                                        }
+                                    ]
+                     },
+                     {
+                         "title":  "Qualifications and Expertise",
+                         "fields":  [
+                                        {
+                                            "label":  "What degree(s) do you currently hold?",
+                                            "value":  "B.A. in Education",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "What certification(s) do you currently hold?",
+                                            "value":  "Missouri Teaching License",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "Are you currently working towards any additional degree(s)/certification(s)?",
+                                            "value":  false,
+                                            "type":  "boolean"
+                                        }
+                                    ]
+                     },
+                     {
+                         "title":  "Tutoring Preferences",
+                         "fields":  [
+                                        {
+                                            "label":  "Do you prefer to tutor in-person or remotely?",
+                                            "value":  "Remote and in-person",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "If you prefer tutoring in-person, where do you prefer meeting students?",
+                                            "value":  "Public library study rooms",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "If you prefer tutoring remotely, do you have a video conference subscription (i.e., Zoom, WebEx, Microsoft Teams, GoToMeeting)",
+                                            "value":  "Zoom Pro",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "Generally speaking, how many days per month do you plan to tutor?",
+                                            "value":  "12",
+                                            "type":  "text"
+                                        }
+                                    ]
+                     },
+                     {
+                         "title":  "Legal Information",
+                         "fields":  [
+                                        {
+                                            "label":  "Social security number (optional)",
+                                            "value":  "Provided securely",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "State or federally issued identification",
+                                            "value":  "Attachment 17",
+                                            "type":  "attachment"
+                                        }
+                                    ]
+                     },
+                     {
+                         "title":  "Tutoring Sessions",
+                         "fields":  [
+                                        {
+                                            "label":  "What grade level(s) will you provide tutoring services for?",
+                                            "value":  "Middle school and high school",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "What subjects will you provide tutoring services for?",
+                                            "value":  "Math, Science, English",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "How do you approach tutoring and adapting to different learning/teaching styles?",
+                                            "value":  "I tailor each lesson to the student\u0027s pace and learning goals.",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "What methods do you use to make lessons engaging and effective?",
+                                            "value":  "Practice sets, visuals, and short progress checkpoints.",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "How will you plan and structure tutoring sessions?",
+                                            "value":  "Warm-up, guided instruction, independent work, and recap.",
+                                            "type":  "text"
+                                        },
+                                        {
+                                            "label":  "How will you customize a lesson to fit a student\u0027s specific needs and learning style?",
+                                            "value":  "I adjust pacing, examples, and exercises after each session review.",
+                                            "type":  "text"
+                                        }
+                                    ]
+                     }
+                 ]
+}
