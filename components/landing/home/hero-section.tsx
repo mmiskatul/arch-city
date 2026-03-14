@@ -36,7 +36,8 @@ export function HeroSection({
 
         <div className="mt-10 flex flex-col items-center gap-5">
           <Link
-            href="#create-account"
+            href="/signup"
+            target="_blank"
             className="inline-flex items-center gap-3 rounded-full bg-red-600 px-8 py-4 text-xl font-bold text-white shadow-[0_18px_45px_rgba(239,36,42,0.33)] transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300/50 active:bg-red-800"
           >
             Get started

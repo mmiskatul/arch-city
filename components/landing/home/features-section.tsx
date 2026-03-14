@@ -48,6 +48,7 @@ export function FeaturesSection() {
 
               <Link
                 href="/signup"
+                target="_blank"
                 className="mt-6 inline-flex items-center rounded-full bg-[#ef242a] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#ff343a]"
               >
                 Try it now
@@ -95,6 +96,7 @@ export function FeaturesSection() {
             <div className="mt-auto pt-8">
               <Link
                 href="/signup"
+                target="_blank"
                 className="inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-bold text-[#ef242a] transition hover:bg-[#f3f3f3]"
               >
                 Get started
@@ -135,6 +137,7 @@ export function FeaturesSection() {
             <div className="mt-auto pt-8">
               <Link
                 href="/signup"
+                target="_blank"
                 className="inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-bold text-[#ef242a] transition hover:bg-[#f3f3f3]"
               >
                 Get started

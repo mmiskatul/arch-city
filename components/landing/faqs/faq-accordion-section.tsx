@@ -76,6 +76,7 @@ export function FaqAccordionSection({
 
           <Link
             href="/contact"
+            target="_blank"
             className="mt-10 inline-flex items-center rounded-full bg-[#df1620] px-7 py-4 text-xl font-bold text-white transition hover:bg-[#f02029]"
           >
             Still have a question?

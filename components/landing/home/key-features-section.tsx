@@ -65,7 +65,8 @@ export function KeyFeaturesSection() {
 
           <div className="flex min-h-[17rem] flex-col items-center justify-center rounded-xl bg-white p-7 text-center sm:col-span-2 xl:col-span-2">
               <Link
-                href="#create-account"
+                href="/signup"
+                target="_blank"
                 className="flex h-20 w-20 items-center justify-center rounded-full bg-[#efe4e1] text-[#df1620] transition hover:bg-[#e8d8d4]"
                 aria-label="Get started today"
               >
