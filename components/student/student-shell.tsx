@@ -17,6 +17,7 @@ import {
 import {
   STUDENT_DASHBOARD_ROUTE,
   STUDENT_FIND_TUTORS_ROUTE,
+  STUDENT_SCHEDULE_ROUTE,
 } from "@/lib/routes";
 
 type NavItem = {
@@ -34,7 +35,7 @@ const hiddenScrollbarStyle: CSSProperties = {
 const menuItems: NavItem[] = [
   { label: "Dashboard", href: STUDENT_DASHBOARD_ROUTE, icon: FiGrid },
   { label: "Find Tutors", href: STUDENT_FIND_TUTORS_ROUTE, icon: FiSearch },
-  { label: "My Schedule", href: "#", icon: FiCalendar },
+  { label: "My Schedule", href: STUDENT_SCHEDULE_ROUTE, icon: FiCalendar },
   { label: "Messages", href: "#", icon: FiMessageSquare, badge: "2" },
   { label: "Profile", href: "#", icon: FiUser },
   { label: "Settings", href: "#", icon: FiSettings },
