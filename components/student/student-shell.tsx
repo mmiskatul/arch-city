@@ -17,8 +17,10 @@ import {
 import {
   STUDENT_DASHBOARD_ROUTE,
   STUDENT_FIND_TUTORS_ROUTE,
+  STUDENT_MESSAGES_ROUTE,
   STUDENT_SCHEDULE_ROUTE,
 } from "@/lib/routes";
+import { studentMessagesUnreadCount } from "@/lib/student/messages-data";
 
 type NavItem = {
   label: string;
@@ -36,7 +38,12 @@ const menuItems: NavItem[] = [
   { label: "Dashboard", href: STUDENT_DASHBOARD_ROUTE, icon: FiGrid },
   { label: "Find Tutors", href: STUDENT_FIND_TUTORS_ROUTE, icon: FiSearch },
   { label: "My Schedule", href: STUDENT_SCHEDULE_ROUTE, icon: FiCalendar },
-  { label: "Messages", href: "#", icon: FiMessageSquare, badge: "2" },
+  {
+    label: "Messages",
+    href: STUDENT_MESSAGES_ROUTE,
+    icon: FiMessageSquare,
+    badge: studentMessagesUnreadCount > 0 ? String(studentMessagesUnreadCount) : undefined,
+  },
   { label: "Profile", href: "#", icon: FiUser },
   { label: "Settings", href: "#", icon: FiSettings },
 ];
@@ -71,7 +78,8 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const hideTopHeader =
     pathname.startsWith("/student-dashboard/find-tutors/") ||
-    pathname.startsWith("/student-dashboard/schedule");
+    pathname.startsWith("/student-dashboard/schedule") ||
+    pathname === STUDENT_MESSAGES_ROUTE;
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
