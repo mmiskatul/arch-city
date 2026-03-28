@@ -18,7 +18,11 @@ import {
   AiOutlineHeart,
 } from "react-icons/ai";
 import { submitPublicApi } from "@/lib/api/public-api";
-import { ADMIN_DASHBOARD_ROUTE, SIGNUP_ROUTE } from "@/lib/routes";
+import {
+  ADMIN_DASHBOARD_ROUTE,
+  SIGNUP_ROUTE,
+  STUDENT_DASHBOARD_ROUTE,
+} from "@/lib/routes";
 
 type AuthMode = "login" | "signup";
 type SignupRole = "student" | "tutor" | "parent";
@@ -59,6 +63,18 @@ function shouldRouteToAdminDashboard(identifier: string, data: unknown) {
   const userEmail = readString(user?.email);
 
   return [role, userRole].includes("admin") || [email, userEmail].includes(ADMIN_EMAIL);
+}
+
+function shouldRouteToStudentDashboard(data: unknown) {
+  if (!isRecord(data)) {
+    return false;
+  }
+
+  const role = readString(data.role);
+  const user = isRecord(data.user) ? data.user : null;
+  const userRole = readString(user?.role);
+
+  return ["student", "parent"].includes(role) || ["student", "parent"].includes(userRole);
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -456,6 +472,12 @@ export function AuthShell({ mode }: AuthShellProps) {
     if (shouldRouteToAdminDashboard(loginIdentifier, response.data)) {
       setLoginSubmitMessage("Login successful. Redirecting to admin dashboard...");
       router.push(ADMIN_DASHBOARD_ROUTE);
+      return;
+    }
+
+    if (shouldRouteToStudentDashboard(response.data)) {
+      setLoginSubmitMessage("Login successful. Redirecting to student dashboard...");
+      router.push(STUDENT_DASHBOARD_ROUTE);
       return;
     }
 
