@@ -1,4 +1,5 @@
 export type StudentTutor = {
+  id: string;
   slug: string;
   initials: string;
   name: string;
@@ -34,6 +35,7 @@ export type StudentTutor = {
 
 export const studentTutors: StudentTutor[] = [
   {
+    id: "101",
     slug: "marcus-thompson",
     initials: "MT",
     name: "Marcus Thompson",
@@ -72,6 +74,7 @@ export const studentTutors: StudentTutor[] = [
     inPersonAvailable: false,
   },
   {
+    id: "102",
     slug: "sandra-avery",
     initials: "SA",
     name: "Sandra Avery",
@@ -110,6 +113,7 @@ export const studentTutors: StudentTutor[] = [
     inPersonAvailable: true,
   },
   {
+    id: "103",
     slug: "rebecca-jones",
     initials: "RJ",
     name: "Rebecca Jones",
@@ -144,6 +148,7 @@ export const studentTutors: StudentTutor[] = [
     inPersonAvailable: false,
   },
   {
+    id: "104",
     slug: "derek-lewis",
     initials: "DL",
     name: "Derek Lewis",
@@ -178,6 +183,7 @@ export const studentTutors: StudentTutor[] = [
     inPersonAvailable: true,
   },
   {
+    id: "105",
     slug: "karen-wright",
     initials: "KW",
     name: "Karen Wright",
@@ -216,6 +222,7 @@ export const studentTutors: StudentTutor[] = [
     inPersonAvailable: true,
   },
   {
+    id: "106",
     slug: "james-morgan",
     initials: "JM",
     name: "James Morgan",
@@ -251,6 +258,6 @@ export const studentTutors: StudentTutor[] = [
   },
 ];
 
-export function getStudentTutorBySlug(slug: string) {
-  return studentTutors.find((tutor) => tutor.slug === slug);
+export function getStudentTutorById(id: string) {
+  return studentTutors.find((tutor) => tutor.id === id);
 }

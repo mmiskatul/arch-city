@@ -71,7 +71,7 @@ function FilterGroup({
 function TutorCardView({ tutor }: { tutor: StudentTutor }) {
   return (
     <Link
-      href={`${STUDENT_FIND_TUTORS_ROUTE}/${tutor.slug}`}
+      href={`${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}`}
       className="block rounded-[14px] border border-[#eceef2] bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition hover:border-[#e4e7ec] hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)]"
     >
       <div className="flex items-start gap-3">
@@ -221,7 +221,7 @@ export function StudentFindTutorsPage() {
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               {filteredTutors.map((tutor) => (
-                <TutorCardView key={tutor.slug} tutor={tutor} />
+                <TutorCardView key={tutor.id} tutor={tutor} />
               ))}
             </div>
 

@@ -1,15 +1,15 @@
 import { notFound } from "next/navigation";
 
 import { StudentTutorProfilePage } from "@/components/student/student-tutor-profile-page";
-import { getStudentTutorBySlug } from "@/lib/student/tutors-data";
+import { getStudentTutorById } from "@/lib/student/tutors-data";
 
 export default async function Page({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { slug } = await params;
-  const tutor = getStudentTutorBySlug(slug);
+  const { id } = await params;
+  const tutor = getStudentTutorById(id);
 
   if (!tutor) {
     notFound();
