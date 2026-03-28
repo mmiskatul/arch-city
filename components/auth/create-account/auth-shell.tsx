@@ -20,6 +20,7 @@ import {
 import { submitPublicApi } from "@/lib/api/public-api";
 import {
   ADMIN_DASHBOARD_ROUTE,
+  PARENT_DASHBOARD_ROUTE,
   SIGNUP_ROUTE,
   STUDENT_DASHBOARD_ROUTE,
   TUTOR_DASHBOARD_ROUTE,
@@ -75,7 +76,19 @@ function shouldRouteToStudentDashboard(data: unknown) {
   const user = isRecord(data.user) ? data.user : null;
   const userRole = readString(user?.role);
 
-  return ["student", "parent"].includes(role) || ["student", "parent"].includes(userRole);
+  return role === "student" || userRole === "student";
+}
+
+function shouldRouteToParentDashboard(data: unknown) {
+  if (!isRecord(data)) {
+    return false;
+  }
+
+  const role = readString(data.role);
+  const user = isRecord(data.user) ? data.user : null;
+  const userRole = readString(user?.role);
+
+  return role === "parent" || userRole === "parent";
 }
 
 function shouldRouteToTutorDashboard(data: unknown) {
@@ -491,6 +504,12 @@ export function AuthShell({ mode }: AuthShellProps) {
     if (shouldRouteToStudentDashboard(response.data)) {
       setLoginSubmitMessage("Login successful. Redirecting to student dashboard...");
       router.push(STUDENT_DASHBOARD_ROUTE);
+      return;
+    }
+
+    if (shouldRouteToParentDashboard(response.data)) {
+      setLoginSubmitMessage("Login successful. Redirecting to parent dashboard...");
+      router.push(PARENT_DASHBOARD_ROUTE);
       return;
     }
 

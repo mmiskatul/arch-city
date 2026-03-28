@@ -1,6 +1,13 @@
 export const SIGNUP_ROUTE = "/signup?step=role";
 export const ADMIN_DASHBOARD_ROUTE = "/admin-dashboard";
 export const STUDENT_DASHBOARD_ROUTE = "/student-dashboard";
+export const PARENT_DASHBOARD_ROUTE = "/parent-dashboard";
+export const PARENT_FIND_TUTORS_ROUTE = "/parent-dashboard/find-tutors";
+export const PARENT_SCHEDULE_ROUTE = "/parent-dashboard/schedule";
+export const PARENT_STUDENTS_ROUTE = "/parent-dashboard/students";
+export const PARENT_MESSAGES_ROUTE = "/parent-dashboard/messages";
+export const PARENT_PROFILE_ROUTE = "/parent-dashboard/profile";
+export const PARENT_SETTINGS_ROUTE = "/parent-dashboard/settings";
 export const STUDENT_FIND_TUTORS_ROUTE = "/student-dashboard/find-tutors";
 export const STUDENT_SCHEDULE_ROUTE = "/student-dashboard/schedule";
 export const STUDENT_MESSAGES_ROUTE = "/student-dashboard/messages";
