@@ -71,7 +71,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const hideTopHeader =
     pathname.startsWith("/student-dashboard/find-tutors/") ||
-    pathname === "/student-dashboard/schedule";
+    pathname.startsWith("/student-dashboard/schedule");
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
@@ -146,7 +146,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
             </header>
           ) : null}
 
-          <div className="px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-172px)]">
+          <div className="py-5 xl:max-w-[calc(100vw-172px)]">
             {children}
           </div>
         </section>

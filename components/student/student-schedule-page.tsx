@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { FiBell } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
-import { STUDENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
+import { STUDENT_FIND_TUTORS_ROUTE, STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
 import { studentScheduleItems, type StudentScheduleItem } from "@/lib/student/schedule-data";
 
 type ScheduleTab = "Upcoming" | "Completed" | "Cancelled";
@@ -160,7 +160,7 @@ export function StudentSchedulePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`${STUDENT_FIND_TUTORS_ROUTE}/${session.tutorId}`}
+                        href={`${STUDENT_SCHEDULE_ROUTE}/${session.id}`}
                         className="inline-flex rounded-full border border-[#d61c3f] px-4 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
                       >
                         View

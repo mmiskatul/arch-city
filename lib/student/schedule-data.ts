@@ -9,6 +9,14 @@ export type StudentScheduleItem = {
   duration: string;
   type: "Virtual" | "In-Person";
   status: "Upcoming" | "Completed" | "Cancelled";
+  fullDate: string;
+  sessionRate: number;
+  chat: Array<{
+    id: string;
+    sender: "tutor" | "student";
+    message: string;
+    timestamp: string;
+  }>;
 };
 
 export const studentScheduleItems: StudentScheduleItem[] = [
@@ -23,6 +31,31 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Upcoming",
+    fullDate: "Monday, March 30, 2026",
+    sessionRate: 45,
+    chat: [
+      {
+        id: "m1",
+        sender: "tutor",
+        message:
+          "Hi Jordan! Looking forward to our session on Monday. Do you have any specific topics you'd like to focus on in Algebra II?",
+        timestamp: "Mon 10:22 AM",
+      },
+      {
+        id: "m2",
+        sender: "student",
+        message:
+          "Hey! Yes, I'm struggling with polynomial functions and factoring. Can we start there?",
+        timestamp: "Mon 11:05 AM",
+      },
+      {
+        id: "m3",
+        sender: "tutor",
+        message:
+          "Absolutely! Polynomial factoring is a great topic to solidify. I'll prepare some examples and practice problems. See you Monday at 4 PM!",
+        timestamp: "Mon 11:30 AM",
+      },
+    ],
   },
   {
     id: "s2",
@@ -35,6 +68,16 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "45 min",
     type: "In-Person",
     status: "Upcoming",
+    fullDate: "Wednesday, April 1, 2026",
+    sessionRate: 40,
+    chat: [
+      {
+        id: "m4",
+        sender: "tutor",
+        message: "Let's use our next session to review your literary analysis outline and thesis clarity.",
+        timestamp: "Tue 4:15 PM",
+      },
+    ],
   },
   {
     id: "s3",
@@ -47,6 +90,16 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Upcoming",
+    fullDate: "Friday, April 3, 2026",
+    sessionRate: 40,
+    chat: [
+      {
+        id: "m5",
+        sender: "tutor",
+        message: "We can spend the first half on cell transport and the second half on practice questions.",
+        timestamp: "Wed 6:10 PM",
+      },
+    ],
   },
   {
     id: "s4",
@@ -59,6 +112,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Monday, March 23, 2026",
+    sessionRate: 55,
+    chat: [],
   },
   {
     id: "s5",
@@ -71,6 +127,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "45 min",
     type: "In-Person",
     status: "Completed",
+    fullDate: "Wednesday, March 18, 2026",
+    sessionRate: 28,
+    chat: [],
   },
   {
     id: "s6",
@@ -83,6 +142,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Tuesday, March 10, 2026",
+    sessionRate: 42,
+    chat: [],
   },
   {
     id: "s7",
@@ -95,6 +157,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "45 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Thursday, March 12, 2026",
+    sessionRate: 35,
+    chat: [],
   },
   {
     id: "s8",
@@ -107,6 +172,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "45 min",
     type: "In-Person",
     status: "Completed",
+    fullDate: "Friday, March 6, 2026",
+    sessionRate: 40,
+    chat: [],
   },
   {
     id: "s9",
@@ -119,6 +187,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Monday, February 24, 2026",
+    sessionRate: 40,
+    chat: [],
   },
   {
     id: "s10",
@@ -131,6 +202,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Tuesday, March 17, 2026",
+    sessionRate: 55,
+    chat: [],
   },
   {
     id: "s11",
@@ -143,6 +217,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "45 min",
     type: "In-Person",
     status: "Completed",
+    fullDate: "Thursday, February 20, 2026",
+    sessionRate: 28,
+    chat: [],
   },
   {
     id: "s12",
@@ -155,6 +232,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Tuesday, February 11, 2026",
+    sessionRate: 45,
+    chat: [],
   },
   {
     id: "s13",
@@ -167,6 +247,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "45 min",
     type: "In-Person",
     status: "Completed",
+    fullDate: "Monday, January 27, 2026",
+    sessionRate: 40,
+    chat: [],
   },
   {
     id: "s14",
@@ -179,6 +262,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Wednesday, January 15, 2026",
+    sessionRate: 40,
+    chat: [],
   },
   {
     id: "s15",
@@ -191,6 +277,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Thursday, January 9, 2026",
+    sessionRate: 55,
+    chat: [],
   },
   {
     id: "s16",
@@ -203,6 +292,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "45 min",
     type: "In-Person",
     status: "Completed",
+    fullDate: "Friday, January 3, 2026",
+    sessionRate: 28,
+    chat: [],
   },
   {
     id: "s17",
@@ -215,6 +307,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Wednesday, March 11, 2026",
+    sessionRate: 42,
+    chat: [],
   },
   {
     id: "s18",
@@ -227,6 +322,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Completed",
+    fullDate: "Friday, March 13, 2026",
+    sessionRate: 45,
+    chat: [],
   },
   {
     id: "s19",
@@ -239,6 +337,9 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "45 min",
     type: "In-Person",
     status: "Cancelled",
+    fullDate: "Tuesday, March 24, 2026",
+    sessionRate: 40,
+    chat: [],
   },
   {
     id: "s20",
@@ -251,5 +352,12 @@ export const studentScheduleItems: StudentScheduleItem[] = [
     duration: "60 min",
     type: "Virtual",
     status: "Cancelled",
+    fullDate: "Thursday, March 26, 2026",
+    sessionRate: 40,
+    chat: [],
   },
 ];
+
+export function getStudentScheduleItemById(id: string) {
+  return studentScheduleItems.find((item) => item.id === id);
+}
