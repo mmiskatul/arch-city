@@ -20,6 +20,7 @@ import {
   STUDENT_MESSAGES_ROUTE,
   STUDENT_PROFILE_ROUTE,
   STUDENT_SCHEDULE_ROUTE,
+  STUDENT_SETTINGS_ROUTE,
 } from "@/lib/routes";
 import { studentMessagesUnreadCount } from "@/lib/student/messages-data";
 
@@ -46,7 +47,7 @@ const menuItems: NavItem[] = [
     badge: studentMessagesUnreadCount > 0 ? String(studentMessagesUnreadCount) : undefined,
   },
   { label: "Profile", href: STUDENT_PROFILE_ROUTE, icon: FiUser },
-  { label: "Settings", href: "#", icon: FiSettings },
+  { label: "Settings", href: STUDENT_SETTINGS_ROUTE, icon: FiSettings },
 ];
 
 function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
@@ -81,7 +82,8 @@ export function StudentShell({ children }: { children: ReactNode }) {
     pathname.startsWith("/student-dashboard/find-tutors/") ||
     pathname.startsWith("/student-dashboard/schedule") ||
     pathname === STUDENT_MESSAGES_ROUTE ||
-    pathname === STUDENT_PROFILE_ROUTE;
+    pathname === STUDENT_PROFILE_ROUTE ||
+    pathname === STUDENT_SETTINGS_ROUTE;
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
