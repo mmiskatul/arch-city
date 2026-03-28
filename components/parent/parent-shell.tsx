@@ -41,7 +41,7 @@ const menuItems: NavItem[] = [
   { label: "Find Tutors", href: PARENT_FIND_TUTORS_ROUTE, icon: FiSearch },
   { label: "Schedule", href: PARENT_SCHEDULE_ROUTE, icon: FiCalendar },
   { label: "Students", href: PARENT_STUDENTS_ROUTE, icon: FiUsers },
-  { label: "Messages", href: PARENT_MESSAGES_ROUTE, icon: FiMessageSquare },
+  { label: "Messages", href: PARENT_MESSAGES_ROUTE, icon: FiMessageSquare, badge: "2" },
   { label: "Profile", href: PARENT_PROFILE_ROUTE, icon: FiUser },
   { label: "Settings", href: PARENT_SETTINGS_ROUTE, icon: FiSettings },
 ];
