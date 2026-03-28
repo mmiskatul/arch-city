@@ -10,18 +10,26 @@ import {
 } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
+import {
+  STUDENT_FIND_TUTORS_ROUTE,
+  STUDENT_SCHEDULE_ROUTE,
+} from "@/lib/routes";
+import { studentScheduleItems } from "@/lib/student/schedule-data";
 
 type SummaryCard = {
   title: string;
   value: string;
   subtitle: string;
   action: string;
+  href: string;
   icon: IconType;
   iconClassName: string;
   valueClassName?: string;
 };
 
 type SessionRow = {
+  id: string;
+  tutorId: string;
   initials: string;
   initialsClassName: string;
   tutor: string;
@@ -40,6 +48,7 @@ const summaryCards: SummaryCard[] = [
     value: "24",
     subtitle: "All-time tutoring sessions",
     action: "View all",
+    href: STUDENT_SCHEDULE_ROUTE,
     icon: FiCalendar,
     iconClassName: "bg-[#ffecef] text-[#d61c3f]",
   },
@@ -48,6 +57,7 @@ const summaryCards: SummaryCard[] = [
     value: "3",
     subtitle: "Scheduled sessions",
     action: "View upcoming",
+    href: STUDENT_SCHEDULE_ROUTE,
     icon: FiClock,
     iconClassName: "bg-[#fff6de] text-[#b58112]",
   },
@@ -56,6 +66,7 @@ const summaryCards: SummaryCard[] = [
     value: "19",
     subtitle: "Completed sessions",
     action: "View history",
+    href: STUDENT_SCHEDULE_ROUTE,
     icon: FiCheckCircle,
     iconClassName: "bg-[#ebf7ef] text-[#1b8a5a]",
     valueClassName: "text-[#1b8a5a]",
@@ -65,50 +76,33 @@ const summaryCards: SummaryCard[] = [
     value: "2",
     subtitle: "Cancelled sessions",
     action: "View cancelled",
+    href: STUDENT_SCHEDULE_ROUTE,
     icon: FiXCircle,
     iconClassName: "bg-[#ffecef] text-[#d94a62]",
     valueClassName: "text-[#d94a62]",
   },
 ];
 
-const sessionRows: SessionRow[] = [
-  {
-    initials: "MT",
+const sessionRows: SessionRow[] = studentScheduleItems
+  .filter((item) => item.status === "Upcoming")
+  .slice(0, 3)
+  .map((item) => ({
+    id: item.id,
+    tutorId: item.tutorId,
+    initials: item.tutorInitials,
     initialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    tutor: "Marcus Thompson",
-    subject: "Algebra II",
-    date: "Mon, Mar 30",
-    time: "4:00 PM",
-    duration: "60 min",
-    type: "Virtual",
-    typeClassName: "bg-[#ffecef] text-[#d94a62]",
-    status: "Upcoming",
-  },
-  {
-    initials: "SA",
-    initialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    tutor: "Sandra Avery",
-    subject: "English Literature",
-    date: "Wed, Apr 1",
-    time: "3:30 PM",
-    duration: "45 min",
-    type: "In-Person",
-    typeClassName: "bg-[#f1f1f1] text-[#6b7280]",
-    status: "Upcoming",
-  },
-  {
-    initials: "RJ",
-    initialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    tutor: "Rebecca Jones",
-    subject: "Biology",
-    date: "Fri, Apr 3",
-    time: "5:00 PM",
-    duration: "60 min",
-    type: "Virtual",
-    typeClassName: "bg-[#ffecef] text-[#d94a62]",
-    status: "Upcoming",
-  },
-];
+    tutor: item.tutorName,
+    subject: item.subject,
+    date: item.date,
+    time: item.time,
+    duration: item.duration,
+    type: item.type,
+    typeClassName:
+      item.type === "Virtual"
+        ? "bg-[#ffecef] text-[#d94a62]"
+        : "bg-[#f1f1f1] text-[#6b7280]",
+    status: item.status,
+  }));
 
 function SummaryCardView({ card }: { card: SummaryCard }) {
   const Icon = card.icon;
@@ -125,7 +119,7 @@ function SummaryCardView({ card }: { card: SummaryCard }) {
           </p>
           <p className="mt-1 text-[13px] text-[#6b7280]">{card.subtitle}</p>
           <Link
-            href="#"
+            href={card.href}
             className="mt-2 inline-flex text-[13px] font-semibold text-[#d61c3f] transition hover:text-[#b81636]"
           >
             {card.action} &#8594;
@@ -142,16 +136,16 @@ function SummaryCardView({ card }: { card: SummaryCard }) {
 export function StudentDashboardPage() {
   return (
     <StudentShell>
-      <div className="mx-auto max-w-[1200px]">
+      <div className="w-full px-2 sm:px-3 lg:px-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Hey, Jordan! 👋</h1>
+            <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Hey, Jordan!</h1>
             <p className="mt-1 text-[14px] text-[#6b7280]">Saturday, March 28, 2026</p>
           </div>
 
           <div className="flex justify-start lg:justify-end">
             <Link
-              href="#"
+              href={STUDENT_FIND_TUTORS_ROUTE}
               className="inline-flex h-11 items-center gap-3 rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#c11436]">
@@ -176,7 +170,7 @@ export function StudentDashboardPage() {
         <section className="mt-5">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-[17px] font-bold text-[#20242b]">Upcoming Sessions</h2>
-            <Link href="#" className="text-[13px] font-semibold text-[#d61c3f]">
+            <Link href={STUDENT_SCHEDULE_ROUTE} className="text-[13px] font-semibold text-[#d61c3f]">
               View all sessions
             </Link>
           </div>
@@ -195,7 +189,7 @@ export function StudentDashboardPage() {
             <div className="divide-y divide-[#eceef2]">
               {sessionRows.map((row) => (
                 <div
-                  key={`${row.tutor}-${row.date}`}
+                  key={row.id}
                   className="grid gap-4 px-4 py-4 md:grid-cols-[1.6fr_0.9fr_0.7fr_0.7fr_0.8fr_0.9fr_1fr] md:items-center"
                 >
                   <div className="flex items-center gap-3">
@@ -226,12 +220,15 @@ export function StudentDashboardPage() {
 
                   <div className="flex items-center gap-4">
                     <Link
-                      href="#"
+                      href={`${STUDENT_SCHEDULE_ROUTE}/${row.id}`}
                       className="inline-flex rounded-full border border-[#d61c3f] px-3.5 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
                     >
                       Details
                     </Link>
-                    <Link href="#" className="text-[12px] font-semibold text-[#d61c3f]">
+                    <Link
+                      href={`${STUDENT_FIND_TUTORS_ROUTE}/${row.tutorId}`}
+                      className="text-[12px] font-semibold text-[#d61c3f]"
+                    >
                       Cancel
                     </Link>
                   </div>
@@ -250,7 +247,7 @@ export function StudentDashboardPage() {
           </div>
 
           <Link
-            href="#"
+            href={STUDENT_FIND_TUTORS_ROUTE}
             className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-6 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
           >
             Find a Tutor

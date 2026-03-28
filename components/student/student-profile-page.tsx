@@ -234,8 +234,8 @@ export function StudentProfilePage() {
 
   return (
     <StudentShell>
-      <div className="mx-auto max-w-[1200px]">
-        <div className="flex items-center justify-between px-4 pb-5 lg:px-5">
+      <div className="w-full px-2 sm:px-3 lg:px-4">
+        <div className="flex items-center justify-between pb-5">
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Profile</h1>
           <div className="flex items-center gap-3">
             <button
@@ -251,7 +251,7 @@ export function StudentProfilePage() {
           </div>
         </div>
 
-        <div className="space-y-4 px-4 lg:px-5">
+        <div className="space-y-4">
           <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">

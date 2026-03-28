@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FiChevronRight, FiMail, FiPhone } from "react-icons/fi";
+import { FiChevronDown, FiChevronRight, FiMail, FiPhone } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
 
@@ -86,6 +86,7 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
 
 export function StudentSettingsPage() {
   const [preferences, setPreferences] = useState(initialPreferences);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(1);
 
   function togglePreference(key: string) {
     setPreferences((current) =>
@@ -95,17 +96,21 @@ export function StudentSettingsPage() {
     );
   }
 
+  function toggleFaq(index: number) {
+    setOpenFaqIndex((current) => (current === index ? null : index));
+  }
+
   return (
     <StudentShell>
-      <div className="mx-auto max-w-[820px]">
-        <div className="flex items-center justify-between px-4 pb-5 lg:px-5">
+      <div className="w-full px-2 sm:px-3 lg:px-4">
+        <div className="flex items-center justify-between pb-5">
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Settings</h1>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
             JD
           </div>
         </div>
 
-        <div className="space-y-4 px-4 lg:px-5">
+        <div className="space-y-4">
           <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <h2 className="text-[18px] font-bold text-[#20242b]">Notification Preferences</h2>
             <p className="mt-1 text-[13px] text-[#6b7280]">
@@ -169,17 +174,30 @@ export function StudentSettingsPage() {
             <h2 className="text-[18px] font-bold text-[#20242b]">Help & FAQ&apos;s</h2>
 
             <div className="mt-4 space-y-2">
-              {faqItems.map((item) => (
-                <div key={item.question} className="rounded-[12px] border border-[#eceef2] bg-[#fafafb] px-4 py-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-[14px] font-semibold text-[#20242b]">{item.question}</p>
-                    <FiChevronRight className="h-4 w-4 text-[#9ca3af]" />
-                  </div>
-                  {item.answer ? (
-                    <p className="mt-2 text-[12px] leading-6 text-[#6b7280]">{item.answer}</p>
-                  ) : null}
-                </div>
-              ))}
+              {faqItems.map((item, index) => {
+                const isOpen = openFaqIndex === index;
+
+                return (
+                  <button
+                    key={item.question}
+                    type="button"
+                    onClick={() => toggleFaq(index)}
+                    className="block w-full rounded-[12px] border border-[#eceef2] bg-[#fafafb] px-4 py-3 text-left"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-[14px] font-semibold text-[#20242b]">{item.question}</p>
+                      {isOpen ? (
+                        <FiChevronDown className="h-4 w-4 text-[#9ca3af]" />
+                      ) : (
+                        <FiChevronRight className="h-4 w-4 text-[#9ca3af]" />
+                      )}
+                    </div>
+                    {isOpen && item.answer ? (
+                      <p className="mt-2 text-[12px] leading-6 text-[#6b7280]">{item.answer}</p>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
           </section>
 
