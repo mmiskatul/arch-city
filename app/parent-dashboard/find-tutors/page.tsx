@@ -1,10 +1,5 @@
-import { ParentSectionPage } from "@/components/parent/parent-section-page";
+import { ParentFindTutorsPage } from "@/components/parent/parent-find-tutors-page";
 
 export default function ParentFindTutorsRoute() {
-  return (
-    <ParentSectionPage
-      title="Find Tutors"
-      description="Browse tutors for your child and book the first session from the parent portal."
-    />
-  );
+  return <ParentFindTutorsPage />;
 }
