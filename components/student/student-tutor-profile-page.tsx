@@ -1,44 +1,9 @@
 import Link from "next/link";
-import {
-  FiBriefcase,
-  FiCalendar,
-  FiClock,
-  FiStar,
-  FiUser,
-} from "react-icons/fi";
+import { FiBriefcase, FiCalendar, FiClock, FiStar, FiUser } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
 import { STUDENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
-
-const tutor = {
-  initials: "MT",
-  name: "Marcus Thompson",
-  modality: "Virtual",
-  certification: "Missouri Certified",
-  district: "Clayton School District",
-  location: "St. Louis, MO",
-};
-
-const education = [
-  {
-    degree: "B.S. Mathematics Education",
-    school: "University of Missouri",
-    year: "2015",
-  },
-  {
-    degree: "M.Ed. Curriculum & Instruction",
-    school: "Washington University in St. Louis",
-    year: "2018",
-  },
-];
-
-const availability = [
-  { day: "Mon, Mar 30", time: "4:00 PM - 5:00 PM" },
-  { day: "Wed, Apr 1", time: "3:30 PM - 5:00 PM" },
-  { day: "Thu, Apr 2", time: "5:00 PM - 6:00 PM" },
-];
-
-const subjects = ["Algebra II", "Pre-Calculus", "Geometry", "Algebra I", "Grades 6-8", "Grades 9-12"];
+import type { StudentTutor } from "@/lib/student/tutors-data";
 
 function InfoCard({
   title,
@@ -55,7 +20,7 @@ function InfoCard({
   );
 }
 
-export function StudentTutorProfilePage() {
+export function StudentTutorProfilePage({ tutor }: { tutor: StudentTutor }) {
   return (
     <StudentShell>
       <div className="mx-auto max-w-[1200px]">
@@ -65,7 +30,7 @@ export function StudentTutorProfilePage() {
               <Link href={STUDENT_FIND_TUTORS_ROUTE} className="hover:text-[#20242b]">
                 &#8592; Back to tutors
               </Link>
-              <span className="text-[#20242b] font-semibold">Tutor Profile</span>
+              <span className="font-semibold text-[#20242b]">Tutor Profile</span>
             </div>
 
             <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -77,7 +42,7 @@ export function StudentTutorProfilePage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-[18px] font-bold text-[#20242b]">{tutor.name}</h1>
                     <span className="rounded-full bg-[#ffecef] px-2 py-0.5 text-[10px] font-medium text-[#d94a62]">
-                      {tutor.modality}
+                      {tutor.mode}
                     </span>
                     <span className="rounded-full bg-[#eaf7ef] px-2 py-0.5 text-[10px] font-medium text-[#2d8f5f]">
                       {tutor.certification}
@@ -85,8 +50,8 @@ export function StudentTutorProfilePage() {
                   </div>
                   <div className="mt-2 flex items-center gap-1 text-[12px] text-[#f4b400]">
                     <FiStar className="h-3.5 w-3.5 fill-current" />
-                    <span className="font-semibold">4.8</span>
-                    <span className="text-[#6b7280]">(48 reviews)</span>
+                    <span className="font-semibold">{tutor.rating.toFixed(1)}</span>
+                    <span className="text-[#6b7280]">({tutor.reviews} reviews)</span>
                   </div>
                   <p className="mt-2 text-[12px] text-[#6b7280]">
                     {tutor.district} · {tutor.location}
@@ -96,18 +61,12 @@ export function StudentTutorProfilePage() {
             </section>
 
             <InfoCard title="About">
-              <p className="text-[12px] leading-6 text-[#4b5563]">
-                I am a Missouri-certified mathematics teacher with 8 years of classroom and
-                tutoring experience. I specialize in helping middle and high school students build
-                confidence in Algebra, and Pre-Calculus. My approach focuses on conceptual
-                understanding before procedural fluency, so students truly grasp the &quot;why&quot;
-                behind the math.
-              </p>
+              <p className="text-[12px] leading-6 text-[#4b5563]">{tutor.about}</p>
             </InfoCard>
 
             <InfoCard title="Education">
               <div className="space-y-3">
-                {education.map((item) => (
+                {tutor.education.map((item) => (
                   <div key={item.degree} className="flex items-start gap-3">
                     <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#fff4f6] text-[#d61c3f]">
                       <FiUser className="h-3.5 w-3.5" />
@@ -129,9 +88,9 @@ export function StudentTutorProfilePage() {
                   <FiBriefcase className="h-3.5 w-3.5" />
                 </span>
                 <div>
-                  <p className="text-[12px] font-semibold text-[#20242b]">8th Grade Math Teacher</p>
+                  <p className="text-[12px] font-semibold text-[#20242b]">{tutor.experience.title}</p>
                   <p className="text-[11px] text-[#6b7280]">
-                    Clayton Middle School · 2016 - Present
+                    {tutor.experience.organization} · {tutor.experience.years}
                   </p>
                 </div>
               </div>
@@ -139,7 +98,7 @@ export function StudentTutorProfilePage() {
 
             <InfoCard title="Subjects & Grade Levels">
               <div className="flex flex-wrap gap-2">
-                {subjects.map((subject, index) => (
+                {tutor.subjectTags.map((subject, index) => (
                   <span
                     key={subject}
                     className={`rounded-md px-2.5 py-1 text-[11px] font-medium ${
@@ -161,25 +120,30 @@ export function StudentTutorProfilePage() {
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-[#fafafb] p-3 text-center">
                   <p className="text-[10px] uppercase tracking-[0.04em] text-[#6b7280]">
-                    Virtual 45min
+                    {tutor.mode === "In-Person" ? "In-Person 45min" : "Virtual 45min"}
                   </p>
-                  <p className="mt-1 text-[22px] font-bold text-[#d61c3f]">$35</p>
+                  <p className="mt-1 text-[22px] font-bold text-[#d61c3f]">${tutor.price45}</p>
                 </div>
                 <div className="rounded-lg bg-[#fafafb] p-3 text-center">
                   <p className="text-[10px] uppercase tracking-[0.04em] text-[#6b7280]">
-                    Virtual 60min
+                    {tutor.mode === "In-Person" ? "In-Person 60min" : "Virtual 60min"}
                   </p>
-                  <p className="mt-1 text-[22px] font-bold text-[#d61c3f]">$45</p>
+                  <p className="mt-1 text-[22px] font-bold text-[#d61c3f]">${tutor.price60}</p>
                 </div>
               </div>
-              <p className="mt-3 text-center text-[11px] text-[#6b7280]">In-person not available</p>
+              <p className="mt-3 text-center text-[11px] text-[#6b7280]">
+                {tutor.inPersonAvailable ? "In-person available" : "In-person not available"}
+              </p>
             </section>
 
             <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <h2 className="text-[13px] font-bold text-[#20242b]">Next Available Slots</h2>
               <div className="mt-3 space-y-2">
-                {availability.map((slot) => (
-                  <div key={slot.day} className="flex items-center justify-between rounded-lg bg-[#fafafb] px-3 py-3">
+                {tutor.availability.map((slot) => (
+                  <div
+                    key={slot.day}
+                    className="flex items-center justify-between rounded-lg bg-[#fafafb] px-3 py-3"
+                  >
                     <div className="flex items-start gap-2">
                       <FiCalendar className="mt-0.5 h-3.5 w-3.5 text-[#6b7280]" />
                       <div>

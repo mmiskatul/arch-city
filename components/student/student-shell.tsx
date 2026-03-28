@@ -71,8 +71,8 @@ export function StudentShell({ children }: { children: ReactNode }) {
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
-      <div className="flex min-h-screen flex-col xl:flex-row">
-        <aside className="w-full border-b border-[#eceef2] bg-white xl:sticky xl:top-0 xl:h-screen xl:w-[172px] xl:shrink-0 xl:border-r xl:border-b-0">
+      <div className="min-h-screen xl:pl-[172px]">
+        <aside className="w-full border-b border-[#eceef2] bg-white xl:fixed xl:inset-y-0 xl:left-0 xl:z-30 xl:w-[172px] xl:border-r xl:border-b-0">
           <div className="border-b border-[#eceef2] px-4 py-5">
             <Link href="/" className="block">
               <p className="text-[14px] font-bold leading-none text-[#d61c3f]">Arch City Tutors</p>
@@ -113,8 +113,8 @@ export function StudentShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <section className="min-w-0 flex-1">
-          <header className="border-b border-[#eceef2] bg-white">
+        <section className="min-w-0 xl:min-h-screen">
+          <header className="border-b border-[#eceef2] bg-white xl:sticky xl:top-0 xl:z-20">
             <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
               <div className="relative w-full max-w-[560px]">
                 <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
@@ -140,7 +140,9 @@ export function StudentShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <div className="px-4 py-5 sm:px-5 lg:px-6">{children}</div>
+          <div className="px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-172px)]">
+            {children}
+          </div>
         </section>
       </div>
     </main>
