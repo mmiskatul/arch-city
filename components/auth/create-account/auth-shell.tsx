@@ -22,6 +22,7 @@ import {
   ADMIN_DASHBOARD_ROUTE,
   SIGNUP_ROUTE,
   STUDENT_DASHBOARD_ROUTE,
+  TUTOR_DASHBOARD_ROUTE,
 } from "@/lib/routes";
 
 type AuthMode = "login" | "signup";
@@ -75,6 +76,18 @@ function shouldRouteToStudentDashboard(data: unknown) {
   const userRole = readString(user?.role);
 
   return ["student", "parent"].includes(role) || ["student", "parent"].includes(userRole);
+}
+
+function shouldRouteToTutorDashboard(data: unknown) {
+  if (!isRecord(data)) {
+    return false;
+  }
+
+  const role = readString(data.role);
+  const user = isRecord(data.user) ? data.user : null;
+  const userRole = readString(user?.role);
+
+  return role === "tutor" || userRole === "tutor";
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -478,6 +491,12 @@ export function AuthShell({ mode }: AuthShellProps) {
     if (shouldRouteToStudentDashboard(response.data)) {
       setLoginSubmitMessage("Login successful. Redirecting to student dashboard...");
       router.push(STUDENT_DASHBOARD_ROUTE);
+      return;
+    }
+
+    if (shouldRouteToTutorDashboard(response.data)) {
+      setLoginSubmitMessage("Login successful. Redirecting to tutor dashboard...");
+      router.push(TUTOR_DASHBOARD_ROUTE);
       return;
     }
 
