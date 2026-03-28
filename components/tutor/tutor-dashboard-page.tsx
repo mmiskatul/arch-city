@@ -15,6 +15,7 @@ import {
   TUTOR_SCHEDULE_ROUTE,
 } from "@/lib/routes";
 import { tutorDashboardSessions } from "@/lib/tutor/dashboard-data";
+import { getTutorScheduleCounts } from "@/lib/tutor/schedule-data";
 
 type SummaryCard = {
   title: string;
@@ -26,38 +27,6 @@ type SummaryCard = {
   iconClassName: string;
   valueClassName?: string;
 };
-
-const summaryCards: SummaryCard[] = [
-  {
-    title: "Upcoming Sessions",
-    value: "5",
-    subtitle: "Sessions scheduled",
-    action: "View schedule",
-    href: TUTOR_SCHEDULE_ROUTE,
-    icon: FiCalendar,
-    iconClassName: "bg-[#fff6de] text-[#b58112]",
-  },
-  {
-    title: "Completed Sessions",
-    value: "47",
-    subtitle: "All-time completed",
-    action: "View history",
-    href: TUTOR_SCHEDULE_ROUTE,
-    icon: FiCheckCircle,
-    iconClassName: "bg-[#ebf7ef] text-[#1b8a5a]",
-    valueClassName: "text-[#1b8a5a]",
-  },
-  {
-    title: "Total Earnings",
-    value: "$2,115",
-    subtitle: "Earned all-time",
-    action: "View earnings",
-    href: TUTOR_EARNINGS_ROUTE,
-    icon: FiDollarSign,
-    iconClassName: "bg-[#ffecef] text-[#d94a62]",
-    valueClassName: "text-[#d61c3f]",
-  },
-];
 
 function SummaryCardView({ card }: { card: SummaryCard }) {
   const Icon = card.icon;
@@ -89,6 +58,39 @@ function SummaryCardView({ card }: { card: SummaryCard }) {
 }
 
 export function TutorDashboardPage() {
+  const counts = getTutorScheduleCounts();
+  const summaryCards: SummaryCard[] = [
+    {
+      title: "Upcoming Sessions",
+      value: String(counts.Upcoming),
+      subtitle: "Sessions scheduled",
+      action: "View schedule",
+      href: TUTOR_SCHEDULE_ROUTE,
+      icon: FiCalendar,
+      iconClassName: "bg-[#fff6de] text-[#b58112]",
+    },
+    {
+      title: "Completed Sessions",
+      value: String(counts.Completed),
+      subtitle: "All-time completed",
+      action: "View history",
+      href: TUTOR_SCHEDULE_ROUTE,
+      icon: FiCheckCircle,
+      iconClassName: "bg-[#ebf7ef] text-[#1b8a5a]",
+      valueClassName: "text-[#1b8a5a]",
+    },
+    {
+      title: "Total Earnings",
+      value: "$2,115",
+      subtitle: "Earned all-time",
+      action: "View earnings",
+      href: TUTOR_EARNINGS_ROUTE,
+      icon: FiDollarSign,
+      iconClassName: "bg-[#ffecef] text-[#d94a62]",
+      valueClassName: "text-[#d61c3f]",
+    },
+  ];
+
   return (
     <TutorShell>
       <div className="w-full px-2 sm:px-3 lg:px-4">

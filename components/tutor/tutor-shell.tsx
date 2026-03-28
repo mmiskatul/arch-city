@@ -81,6 +81,16 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
 
 export function TutorShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const useCompactHeader =
+    pathname.startsWith(`${TUTOR_SCHEDULE_ROUTE}/`) ||
+    [
+      TUTOR_SCHEDULE_ROUTE,
+      TUTOR_AVAILABILITY_ROUTE,
+      TUTOR_MESSAGES_ROUTE,
+      TUTOR_EARNINGS_ROUTE,
+      TUTOR_PROFILE_ROUTE,
+      TUTOR_SETTINGS_ROUTE,
+    ].includes(pathname);
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
@@ -128,15 +138,23 @@ export function TutorShell({ children }: { children: ReactNode }) {
 
         <section className="min-w-0 xl:min-h-screen">
           <header className="border-b border-[#eceef2] bg-white xl:sticky xl:top-0 xl:z-20">
-            <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-              <div className="relative w-full max-w-[560px]">
-                <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
-                <input
-                  type="text"
-                  placeholder="Search students, sessions..."
-                  className="h-11 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] pl-11 pr-4 text-[14px] outline-none placeholder:text-[#9ca3af] focus:border-[#d1d5db]"
-                />
-              </div>
+            <div
+              className={`flex px-4 py-4 sm:px-5 lg:px-6 ${
+                useCompactHeader
+                  ? "justify-end"
+                  : "flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+              }`}
+            >
+              {!useCompactHeader ? (
+                <div className="relative w-full max-w-[560px]">
+                  <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
+                  <input
+                    type="text"
+                    placeholder="Search students, sessions..."
+                    className="h-11 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] pl-11 pr-4 text-[14px] outline-none placeholder:text-[#9ca3af] focus:border-[#d1d5db]"
+                  />
+                </div>
+              ) : null}
 
               <div className="flex items-center justify-end gap-3">
                 <button
