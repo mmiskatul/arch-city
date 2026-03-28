@@ -17,6 +17,7 @@ import {
 } from "react-icons/fi";
 
 import {
+  TUTOR_APPLY_ROUTE,
   TUTOR_AVAILABILITY_ROUTE,
   TUTOR_DASHBOARD_ROUTE,
   TUTOR_EARNINGS_ROUTE,
@@ -135,6 +136,7 @@ export function TutorShell({
                   item={item}
                   active={
                     pathname === item.href ||
+                    (item.href === TUTOR_DASHBOARD_ROUTE && pathname === TUTOR_APPLY_ROUTE) ||
                     (item.href !== TUTOR_DASHBOARD_ROUTE && pathname.startsWith(`${item.href}/`))
                   }
                 />

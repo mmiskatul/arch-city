@@ -7,6 +7,7 @@ export const STUDENT_MESSAGES_ROUTE = "/student-dashboard/messages";
 export const STUDENT_PROFILE_ROUTE = "/student-dashboard/profile";
 export const STUDENT_SETTINGS_ROUTE = "/student-dashboard/settings";
 export const TUTOR_DASHBOARD_ROUTE = "/tutor-dashboard";
+export const TUTOR_APPLY_ROUTE = "/tutor-dashboard/apply";
 export const TUTOR_SCHEDULE_ROUTE = "/tutor-dashboard/schedule";
 export const TUTOR_AVAILABILITY_ROUTE = "/tutor-dashboard/availability";
 export const TUTOR_MESSAGES_ROUTE = "/tutor-dashboard/messages";
