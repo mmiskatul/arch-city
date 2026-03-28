@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { FiBell } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
 import { STUDENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
@@ -63,6 +64,16 @@ export function StudentSchedulePage() {
             >
               + Book Session
             </Link>
+            <button
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
+              aria-label="Notifications"
+            >
+              <FiBell className="h-4 w-4" />
+            </button>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
+              JD
+            </div>
           </div>
         </div>
 

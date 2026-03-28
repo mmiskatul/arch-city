@@ -69,7 +69,9 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
 
 export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const hideTopHeader = pathname.startsWith("/student-dashboard/find-tutors/");
+  const hideTopHeader =
+    pathname.startsWith("/student-dashboard/find-tutors/") ||
+    pathname === "/student-dashboard/schedule";
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
