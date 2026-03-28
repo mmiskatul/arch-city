@@ -68,6 +68,7 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
 
 export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const hideTopHeader = pathname.startsWith("/student-dashboard/find-tutors/");
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
@@ -114,31 +115,33 @@ export function StudentShell({ children }: { children: ReactNode }) {
         </aside>
 
         <section className="min-w-0 xl:min-h-screen">
-          <header className="border-b border-[#eceef2] bg-white xl:sticky xl:top-0 xl:z-20">
-            <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-              <div className="relative w-full max-w-[560px]">
-                <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
-                <input
-                  type="text"
-                  placeholder="Search tutors, subjects, sessions..."
-                  className="h-11 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] pl-11 pr-4 text-[14px] outline-none placeholder:text-[#9ca3af] focus:border-[#d1d5db]"
-                />
-              </div>
+          {!hideTopHeader ? (
+            <header className="border-b border-[#eceef2] bg-white xl:sticky xl:top-0 xl:z-20">
+              <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+                <div className="relative w-full max-w-[560px]">
+                  <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
+                  <input
+                    type="text"
+                    placeholder="Search tutors, subjects, sessions..."
+                    className="h-11 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] pl-11 pr-4 text-[14px] outline-none placeholder:text-[#9ca3af] focus:border-[#d1d5db]"
+                  />
+                </div>
 
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
-                  aria-label="Notifications"
-                >
-                  <FiBell className="h-4 w-4" />
-                </button>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
-                  JD
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
+                    aria-label="Notifications"
+                  >
+                    <FiBell className="h-4 w-4" />
+                  </button>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
+                    JD
+                  </div>
                 </div>
               </div>
-            </div>
-          </header>
+            </header>
+          ) : null}
 
           <div className="px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-172px)]">
             {children}

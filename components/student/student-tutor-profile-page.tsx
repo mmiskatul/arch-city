@@ -164,7 +164,7 @@ export function StudentTutorProfilePage({ tutor }: { tutor: StudentTutor }) {
             </div>
 
             <Link
-              href="#"
+              href={`${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session`}
               className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
             >
               <FiClock className="h-4 w-4" />
