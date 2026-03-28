@@ -165,7 +165,7 @@ export function TutorDashboardPage() {
                   <div className="text-[14px] font-semibold text-[#374151]">{session.rate}</div>
                   <div>
                     <Link
-                      href={TUTOR_SCHEDULE_ROUTE}
+                      href={`${TUTOR_SCHEDULE_ROUTE}/${session.id}`}
                       className="inline-flex rounded-full border border-[#d61c3f] px-3.5 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
                     >
                       Details
