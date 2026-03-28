@@ -36,14 +36,28 @@ function MessageBubble({
 }
 
 export function TutorMessagesPage() {
+  const [threads, setThreads] = useState(tutorMessageThreads);
   const [activeThreadId, setActiveThreadId] = useState(tutorMessageThreads[0]?.id ?? "");
   const activeThread = useMemo(
-    () => tutorMessageThreads.find((thread) => thread.id === activeThreadId) ?? tutorMessageThreads[0],
-    [activeThreadId],
+    () => threads.find((thread) => thread.id === activeThreadId) ?? threads[0],
+    [activeThreadId, threads],
+  );
+  const unreadTotal = useMemo(
+    () => threads.reduce((total, thread) => total + thread.unreadCount, 0),
+    [threads],
   );
 
+  function handleOpenThread(threadId: string) {
+    setActiveThreadId(threadId);
+    setThreads((current) =>
+      current.map((thread) =>
+        thread.id === threadId ? { ...thread, unreadCount: 0 } : thread,
+      ),
+    );
+  }
+
   return (
-    <TutorShell>
+    <TutorShell messagesUnreadCountOverride={unreadTotal}>
       <div className="w-full px-2 sm:px-3 lg:px-4">
         <h1 className="pb-5 text-[18px] font-bold text-[#20242b] sm:text-[22px]">Messages</h1>
 
@@ -61,14 +75,14 @@ export function TutorMessagesPage() {
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {tutorMessageThreads.map((thread) => {
+              {threads.map((thread) => {
                 const active = thread.id === activeThread?.id;
 
                 return (
                   <button
                     key={thread.id}
                     type="button"
-                    onClick={() => setActiveThreadId(thread.id)}
+                    onClick={() => handleOpenThread(thread.id)}
                     className={`flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left ${
                       active ? "border-[#d61c3f] bg-[#fff1f4]" : "border-transparent bg-white"
                     }`}

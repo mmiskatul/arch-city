@@ -79,7 +79,13 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function TutorShell({ children }: { children: ReactNode }) {
+export function TutorShell({
+  children,
+  messagesUnreadCountOverride,
+}: {
+  children: ReactNode;
+  messagesUnreadCountOverride?: number;
+}) {
   const pathname = usePathname();
   const useCompactHeader =
     pathname.startsWith(`${TUTOR_SCHEDULE_ROUTE}/`) ||
@@ -91,6 +97,19 @@ export function TutorShell({ children }: { children: ReactNode }) {
       TUTOR_PROFILE_ROUTE,
       TUTOR_SETTINGS_ROUTE,
     ].includes(pathname);
+  const resolvedMessagesUnreadCount =
+    messagesUnreadCountOverride ?? tutorMessagesUnreadCount;
+  const resolvedMenuItems: NavItem[] = menuItems.map((item) =>
+    item.href === TUTOR_MESSAGES_ROUTE
+      ? {
+          ...item,
+          badge:
+            resolvedMessagesUnreadCount > 0
+              ? String(resolvedMessagesUnreadCount)
+              : undefined,
+        }
+      : item,
+  );
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
@@ -110,7 +129,7 @@ export function TutorShell({ children }: { children: ReactNode }) {
             style={hiddenScrollbarStyle}
           >
             <nav className="space-y-1">
-              {menuItems.map((item) => (
+              {resolvedMenuItems.map((item) => (
                 <SidebarLink
                   key={item.label}
                   item={item}
