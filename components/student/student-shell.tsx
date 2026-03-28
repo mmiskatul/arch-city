@@ -18,6 +18,7 @@ import {
   STUDENT_DASHBOARD_ROUTE,
   STUDENT_FIND_TUTORS_ROUTE,
   STUDENT_MESSAGES_ROUTE,
+  STUDENT_PROFILE_ROUTE,
   STUDENT_SCHEDULE_ROUTE,
 } from "@/lib/routes";
 import { studentMessagesUnreadCount } from "@/lib/student/messages-data";
@@ -44,7 +45,7 @@ const menuItems: NavItem[] = [
     icon: FiMessageSquare,
     badge: studentMessagesUnreadCount > 0 ? String(studentMessagesUnreadCount) : undefined,
   },
-  { label: "Profile", href: "#", icon: FiUser },
+  { label: "Profile", href: STUDENT_PROFILE_ROUTE, icon: FiUser },
   { label: "Settings", href: "#", icon: FiSettings },
 ];
 
@@ -79,7 +80,8 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const hideTopHeader =
     pathname.startsWith("/student-dashboard/find-tutors/") ||
     pathname.startsWith("/student-dashboard/schedule") ||
-    pathname === STUDENT_MESSAGES_ROUTE;
+    pathname === STUDENT_MESSAGES_ROUTE ||
+    pathname === STUDENT_PROFILE_ROUTE;
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
