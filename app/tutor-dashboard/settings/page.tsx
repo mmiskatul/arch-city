@@ -1,10 +1,5 @@
-import { TutorSectionPage } from "@/components/tutor/tutor-section-page";
+import { TutorSettingsPage } from "@/components/tutor/tutor-settings-page";
 
 export default function TutorSettingsRoute() {
-  return (
-    <TutorSectionPage
-      title="Settings"
-      description="Adjust notification preferences, account controls, and other tutor-side portal settings."
-    />
-  );
+  return <TutorSettingsPage />;
 }
