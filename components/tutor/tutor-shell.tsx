@@ -25,7 +25,7 @@ import {
   TUTOR_SCHEDULE_ROUTE,
   TUTOR_SETTINGS_ROUTE,
 } from "@/lib/routes";
-import { tutorMessagesUnreadCount } from "@/lib/tutor/dashboard-data";
+import { tutorMessagesUnreadCount } from "@/lib/tutor/messages-data";
 
 type NavItem = {
   label: string;
