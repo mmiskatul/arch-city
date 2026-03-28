@@ -14,6 +14,11 @@ import {
   FiUser,
 } from "react-icons/fi";
 
+import {
+  STUDENT_DASHBOARD_ROUTE,
+  STUDENT_FIND_TUTORS_ROUTE,
+} from "@/lib/routes";
+
 type NavItem = {
   label: string;
   href: string;
@@ -27,8 +32,8 @@ const hiddenScrollbarStyle: CSSProperties = {
 };
 
 const menuItems: NavItem[] = [
-  { label: "Dashboard", href: "/student-dashboard", icon: FiGrid },
-  { label: "Find Tutors", href: "#", icon: FiSearch },
+  { label: "Dashboard", href: STUDENT_DASHBOARD_ROUTE, icon: FiGrid },
+  { label: "Find Tutors", href: STUDENT_FIND_TUTORS_ROUTE, icon: FiSearch },
   { label: "My Schedule", href: "#", icon: FiCalendar },
   { label: "Messages", href: "#", icon: FiMessageSquare, badge: "2" },
   { label: "Profile", href: "#", icon: FiUser },
@@ -83,7 +88,14 @@ export function StudentShell({ children }: { children: ReactNode }) {
           >
             <nav className="space-y-1">
               {menuItems.map((item) => (
-                <SidebarLink key={item.label} item={item} active={pathname === item.href} />
+                <SidebarLink
+                  key={item.label}
+                  item={item}
+                  active={
+                    pathname === item.href ||
+                    (item.href !== STUDENT_DASHBOARD_ROUTE && pathname.startsWith(`${item.href}/`))
+                  }
+                />
               ))}
             </nav>
 
