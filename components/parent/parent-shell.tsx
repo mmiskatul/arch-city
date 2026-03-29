@@ -23,6 +23,7 @@ import {
   PARENT_SETTINGS_ROUTE,
   PARENT_STUDENTS_ROUTE,
 } from "@/lib/routes";
+import { parentMessagesUnreadCount } from "@/lib/parent/messages-data";
 
 type NavItem = {
   label: string;
@@ -41,7 +42,12 @@ const menuItems: NavItem[] = [
   { label: "Find Tutors", href: PARENT_FIND_TUTORS_ROUTE, icon: FiSearch },
   { label: "Schedule", href: PARENT_SCHEDULE_ROUTE, icon: FiCalendar },
   { label: "Students", href: PARENT_STUDENTS_ROUTE, icon: FiUsers },
-  { label: "Messages", href: PARENT_MESSAGES_ROUTE, icon: FiMessageSquare, badge: "2" },
+  {
+    label: "Messages",
+    href: PARENT_MESSAGES_ROUTE,
+    icon: FiMessageSquare,
+    badge: parentMessagesUnreadCount > 0 ? String(parentMessagesUnreadCount) : undefined,
+  },
   { label: "Profile", href: PARENT_PROFILE_ROUTE, icon: FiUser },
   { label: "Settings", href: PARENT_SETTINGS_ROUTE, icon: FiSettings },
 ];
@@ -72,8 +78,27 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function ParentShell({ children }: { children: ReactNode }) {
+export function ParentShell({
+  children,
+  messagesUnreadCountOverride,
+}: {
+  children: ReactNode;
+  messagesUnreadCountOverride?: number;
+}) {
   const pathname = usePathname();
+  const resolvedMessagesUnreadCount =
+    messagesUnreadCountOverride ?? parentMessagesUnreadCount;
+  const resolvedMenuItems: NavItem[] = menuItems.map((item) =>
+    item.href === PARENT_MESSAGES_ROUTE
+      ? {
+          ...item,
+          badge:
+            resolvedMessagesUnreadCount > 0
+              ? String(resolvedMessagesUnreadCount)
+              : undefined,
+        }
+      : item,
+  );
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
@@ -93,7 +118,7 @@ export function ParentShell({ children }: { children: ReactNode }) {
             style={hiddenScrollbarStyle}
           >
             <nav className="space-y-1">
-              {menuItems.map((item) => (
+              {resolvedMenuItems.map((item) => (
                 <SidebarLink
                   key={item.label}
                   item={item}
