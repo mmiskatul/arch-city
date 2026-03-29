@@ -76,6 +76,9 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const searchPlaceholder = pathname.startsWith(ADMIN_MESSAGES_ROUTE)
+    ? "Search conversations..."
+    : "Search students, tutors, sessions...";
 
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-[#1f2937]">
@@ -129,7 +132,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
                 <input
                   type="text"
-                  placeholder="Search students, tutors, sessions..."
+                  placeholder={searchPlaceholder}
                   className="h-11 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] pl-11 pr-4 text-[14px] outline-none placeholder:text-[#9ca3af] focus:border-[#d1d5db]"
                 />
               </div>
