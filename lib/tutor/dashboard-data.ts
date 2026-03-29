@@ -68,6 +68,6 @@ export const tutorDashboardSessions: TutorDashboardSession[] = [
   },
 ];
 
-export const tutorApplicationStatus = "pending" as const;
+export const tutorApplicationStatus = "approved" as const;
 export const tutorPendingBanner =
   "Your application is in pending, admin will review the document that you send";
