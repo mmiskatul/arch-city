@@ -19,7 +19,6 @@ import {
 } from "react-icons/ai";
 import { submitPublicApi } from "@/lib/api/public-api";
 import {
-  ADMIN_DASHBOARD_ROUTE,
   PARENT_DASHBOARD_ROUTE,
   SIGNUP_ROUTE,
   STUDENT_DASHBOARD_ROUTE,
@@ -37,34 +36,12 @@ type AuthShellProps = {
 
 type TouchedFields = Record<string, boolean>;
 
-const ADMIN_EMAIL = "admin@archcitytutors.com";
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
 function readString(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
-
-function shouldRouteToAdminDashboard(identifier: string, data: unknown) {
-  const normalizedIdentifier = identifier.trim().toLowerCase();
-
-  if (normalizedIdentifier === ADMIN_EMAIL) {
-    return true;
-  }
-
-  if (!isRecord(data)) {
-    return false;
-  }
-
-  const role = readString(data.role);
-  const email = readString(data.email);
-  const user = isRecord(data.user) ? data.user : null;
-  const userRole = readString(user?.role);
-  const userEmail = readString(user?.email);
-
-  return [role, userRole].includes("admin") || [email, userEmail].includes(ADMIN_EMAIL);
 }
 
 function shouldRouteToStudentDashboard(data: unknown) {
@@ -308,18 +285,17 @@ export function AuthShell({ mode }: AuthShellProps) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loginIdentifier, setLoginIdentifier] = useState("admin@archcitytutors.com");
-  const [loginPassword, setLoginPassword] = useState("1234567891234");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [loginTouched, setLoginTouched] = useState<TouchedFields>({});
   const [signupRole, setSignupRole] = useState<SignupRole>("student");
   const [signupStep, setSignupStep] = useState<"role" | "form">("role");
   const [signupFirstName, setSignupFirstName] = useState("");
   const [signupLastName, setSignupLastName] = useState("");
-  const [signupEmail, setSignupEmail] = useState("admin@archcitytutors.com");
+  const [signupEmail, setSignupEmail] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
-  const [signupPassword, setSignupPassword] = useState("Password!234");
-  const [signupConfirmPassword, setSignupConfirmPassword] =
-    useState("Password!234");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [heardFrom, setHeardFrom] = useState("");
   const [agreementScrolledToEnd, setAgreementScrolledToEnd] = useState(false);
   const [acceptedAgreement, setAcceptedAgreement] = useState(false);
@@ -494,12 +470,6 @@ export function AuthShell({ mode }: AuthShellProps) {
     }
 
     setLoginSubmitState("success");
-
-    if (shouldRouteToAdminDashboard(loginIdentifier, response.data)) {
-      setLoginSubmitMessage("Login successful. Redirecting to admin dashboard...");
-      router.push(ADMIN_DASHBOARD_ROUTE);
-      return;
-    }
 
     if (shouldRouteToStudentDashboard(response.data)) {
       setLoginSubmitMessage("Login successful. Redirecting to student dashboard...");
