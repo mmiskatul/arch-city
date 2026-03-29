@@ -2,137 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FiChevronDown } from "react-icons/fi";
+import Link from "next/link";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import {
+  adminScheduleRows,
+  type AdminScheduleStatus,
+  type AdminScheduleType,
+} from "@/lib/admin/schedules-data";
+import { ADMIN_SCHEDULES_ROUTE } from "@/lib/routes";
 
-type SessionStatus = "Upcoming" | "Completed" | "Cancelled";
-type SessionType = "In-Person" | "Virtual";
 type RangeFilter = "Today" | "Week" | "Month";
-type StatusFilter = "All" | SessionStatus;
-
-type ScheduleRow = {
-  id: string;
-  studentInitials: string;
-  studentInitialsClassName: string;
-  student: string;
-  tutor: string;
-  subject: string;
-  dateTime: string;
-  duration: string;
-  type: SessionType;
-  status: SessionStatus;
-  fee: string;
-};
-
-const scheduleRows: ScheduleRow[] = [
-  {
-    id: "#SS-2043",
-    studentInitials: "JW",
-    studentInitialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    student: "Jordan Wilson",
-    tutor: "Marcus Reynolds",
-    subject: "Algebra II",
-    dateTime: "Mar 20 · 2:00 PM",
-    duration: "60 min",
-    type: "In-Person",
-    status: "Upcoming",
-    fee: "$45.00",
-  },
-  {
-    id: "#SS-2042",
-    studentInitials: "MW",
-    studentInitialsClassName: "bg-[#f1f1f1] text-[#6b7280]",
-    student: "Maya Wilson",
-    tutor: "Lisa Davis",
-    subject: "Reading",
-    dateTime: "Mar 20 · 3:30 PM",
-    duration: "45 min",
-    type: "Virtual",
-    status: "Upcoming",
-    fee: "$30.00",
-  },
-  {
-    id: "#SS-2041",
-    studentInitials: "AT",
-    studentInitialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    student: "Alex Thompson",
-    tutor: "David Kim",
-    subject: "SAT Prep",
-    dateTime: "Mar 20 · 10:00 AM",
-    duration: "90 min",
-    type: "Virtual",
-    status: "Completed",
-    fee: "$82.50",
-  },
-  {
-    id: "#SS-2040",
-    studentInitials: "SL",
-    studentInitialsClassName: "bg-[#ebf7ef] text-[#239157]",
-    student: "Sophie Lee",
-    tutor: "Priya Patel",
-    subject: "Chemistry",
-    dateTime: "Mar 19 · 5:00 PM",
-    duration: "60 min",
-    type: "In-Person",
-    status: "Completed",
-    fee: "$50.00",
-  },
-  {
-    id: "#SS-2039",
-    studentInitials: "RJ",
-    studentInitialsClassName: "bg-[#ffecef] text-[#d94a62]",
-    student: "Ryan Johnson",
-    tutor: "Marcus Reynolds",
-    subject: "Geometry",
-    dateTime: "Mar 19 · 1:00 PM",
-    duration: "60 min",
-    type: "In-Person",
-    status: "Cancelled",
-    fee: "—",
-  },
-  {
-    id: "#SS-2038",
-    studentInitials: "EC",
-    studentInitialsClassName: "bg-[#fff6de] text-[#b58112]",
-    student: "Emma Carter",
-    tutor: "Lisa Davis",
-    subject: "Pre-Algebra",
-    dateTime: "Mar 19 · 4:00 PM",
-    duration: "45 min",
-    type: "Virtual",
-    status: "Completed",
-    fee: "$30.00",
-  },
-  {
-    id: "#SS-2037",
-    studentInitials: "NB",
-    studentInitialsClassName: "bg-[#ebf7ef] text-[#239157]",
-    student: "Noah Baker",
-    tutor: "David Kim",
-    subject: "General Math",
-    dateTime: "Mar 20 · 5:00 PM",
-    duration: "60 min",
-    type: "In-Person",
-    status: "Upcoming",
-    fee: "$55.00",
-  },
-  {
-    id: "#SS-2036",
-    studentInitials: "OC",
-    studentInitialsClassName: "bg-[#ffecef] text-[#d94a62]",
-    student: "Olivia Clark",
-    tutor: "Nina Foster",
-    subject: "English",
-    dateTime: "Mar 20 · 6:00 PM",
-    duration: "60 min",
-    type: "Virtual",
-    status: "Upcoming",
-    fee: "$42.00",
-  },
-];
+type StatusFilter = "All" | AdminScheduleStatus;
 
 const pageSize = 6;
-const tutorFilters = ["All Tutors", ...Array.from(new Set(scheduleRows.map((item) => item.tutor)))];
+const tutorFilters = ["All Tutors", ...Array.from(new Set(adminScheduleRows.map((item) => item.tutor)))];
 const typeFilters = ["All Types", "In-Person", "Virtual"] as const;
 
 function FilterDropdown({
@@ -197,12 +81,12 @@ function FilterDropdown({
   );
 }
 
-function typeClassName(type: SessionType) {
+function typeClassName(type: AdminScheduleType) {
   if (type === "Virtual") return "bg-[#ffecef] text-[#d94a62]";
   return "bg-[#f1f1f1] text-[#6b7280]";
 }
 
-function statusClassName(status: SessionStatus) {
+function statusClassName(status: AdminScheduleStatus) {
   if (status === "Upcoming") return "bg-[#fff6de] text-[#9c7a1e]";
   if (status === "Completed") return "bg-[#ebf7ef] text-[#239157]";
   return "bg-[#ffecef] text-[#d94a62]";
@@ -216,7 +100,7 @@ export function AdminSchedulesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredRows = useMemo(() => {
-    return scheduleRows.filter((item) => {
+    return adminScheduleRows.filter((item) => {
       const statusMatch = statusFilter === "All" ? true : item.status === statusFilter;
       const tutorMatch = tutorFilter === "All Tutors" ? true : item.tutor === tutorFilter;
       const typeMatch = typeFilter === "All Types" ? true : item.type === typeFilter;
@@ -341,7 +225,7 @@ export function AdminSchedulesPage() {
                     key={row.id}
                     className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563]"
                   >
-                    <span className="font-semibold text-[#9ca3af]">{row.id}</span>
+                    <span className="font-semibold text-[#9ca3af]">#{row.sessionId}</span>
 
                     <div className="flex items-center gap-2.5">
                       <span
@@ -368,12 +252,12 @@ export function AdminSchedulesPage() {
                     </div>
                     <span className="font-semibold text-[#374151]">{row.fee}</span>
                     <div>
-                      <button
-                        type="button"
+                      <Link
+                        href={`${ADMIN_SCHEDULES_ROUTE}/${row.sessionId}`}
                         className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
                       >
                         View
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 ))}
