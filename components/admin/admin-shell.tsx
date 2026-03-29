@@ -78,6 +78,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchPlaceholder = pathname.startsWith(ADMIN_MESSAGES_ROUTE)
     ? "Search conversations..."
+    : pathname.startsWith(ADMIN_NOTIFICATIONS_ROUTE)
+      ? "Search notifications..."
     : "Search students, tutors, sessions...";
 
   return (
