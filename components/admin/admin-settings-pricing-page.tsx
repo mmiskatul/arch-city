@@ -9,6 +9,7 @@ type PricingTier = "Student" | "Tutor" | "Parent" | "Session";
 
 type TierContent = {
   fee: string;
+  parentFees?: [string, string, string, string];
   body: string;
   features: string[];
 };
@@ -33,12 +34,13 @@ const tierData: Record<PricingTier, TierContent> = {
     ],
   },
   Parent: {
-    fee: "12.00",
-    body: "Parent plans allow multi-student management, progress monitoring, and easy tutor communication from one dashboard.",
+    fee: "5.00",
+    parentFees: ["5.00", "5.00", "5.00", "5.00"],
+    body: "Only educators certified with the Missouri Department of Elementary and Secondary Education can apply and will be approved (pending the successful completion of our vetting process).",
     features: [
-      "Manage multiple students",
-      "Track student progress",
-      "Direct tutor messaging",
+      "Get paid directly by students",
+      "Market your services to our vast network of students",
+      "24/7 Customer Support",
     ],
   },
   Session: {
@@ -53,7 +55,7 @@ const tierData: Record<PricingTier, TierContent> = {
 };
 
 export function AdminSettingsPricingPage() {
-  const [activeTier, setActiveTier] = useState<PricingTier>("Tutor");
+  const [activeTier, setActiveTier] = useState<PricingTier>("Parent");
   const [draftData, setDraftData] = useState<Record<PricingTier, TierContent>>(tierData);
 
   const currentTier = draftData[activeTier];
@@ -71,6 +73,15 @@ export function AdminSettingsPricingPage() {
         ...next,
       },
     }));
+  };
+
+  const updateParentFee = (index: 0 | 1 | 2 | 3, value: string) => {
+    if (activeTier !== "Parent") return;
+
+    const current = currentTier.parentFees ?? ["5.00", "5.00", "5.00", "5.00"];
+    const next: [string, string, string, string] = [...current] as [string, string, string, string];
+    next[index] = value;
+    updateCurrentTier({ parentFees: next });
   };
 
   return (
@@ -104,17 +115,40 @@ export function AdminSettingsPricingPage() {
         </div>
 
         <div className="px-5 py-5">
-          <label className="block">
-            <span className="mb-1.5 block text-[20px] font-semibold text-[#4b5563]">Fee/month</span>
-            <span className="flex h-11 items-center gap-2 rounded-xl bg-[#f7f7fb] px-4 text-[14px] text-[#5b5b99]">
-              <span className="text-[34px] leading-none text-[#4b5563]">$</span>
-              <input
-                value={currentTier.fee}
-                onChange={(event) => updateCurrentTier({ fee: event.target.value })}
-                className="w-full bg-transparent text-[22px] font-semibold outline-none"
-              />
-            </span>
-          </label>
+          {activeTier === "Parent" ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {[
+                "Fee/month for 1 student",
+                "Fee/month for 2 student",
+                "Fee/month for 3 student",
+                "Fee/month for 4 student",
+              ].map((label, index) => (
+                <label key={label} className="block">
+                  <span className="mb-1.5 block text-[16px] font-semibold text-[#4b5563]">{label}</span>
+                  <span className="flex h-11 items-center gap-2 rounded-xl bg-[#f7f7fb] px-4 text-[14px] text-[#5b5b99]">
+                    <span className="text-[34px] leading-none text-[#4b5563]">$</span>
+                    <input
+                      value={(currentTier.parentFees ?? ["5.00", "5.00", "5.00", "5.00"])[index]}
+                      onChange={(event) => updateParentFee(index as 0 | 1 | 2 | 3, event.target.value)}
+                      className="w-full bg-transparent text-[22px] font-semibold outline-none"
+                    />
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <label className="block">
+              <span className="mb-1.5 block text-[20px] font-semibold text-[#4b5563]">Fee/month</span>
+              <span className="flex h-11 items-center gap-2 rounded-xl bg-[#f7f7fb] px-4 text-[14px] text-[#5b5b99]">
+                <span className="text-[34px] leading-none text-[#4b5563]">$</span>
+                <input
+                  value={currentTier.fee}
+                  onChange={(event) => updateCurrentTier({ fee: event.target.value })}
+                  className="w-full bg-transparent text-[22px] font-semibold outline-none"
+                />
+              </span>
+            </label>
+          )}
 
           <label className="mt-4 block">
             <span className="mb-1.5 block text-[20px] font-semibold text-[#4b5563]">Body</span>
