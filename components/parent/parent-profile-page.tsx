@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FiEdit2, FiMail, FiPhone } from "react-icons/fi";
+import { FiCheck, FiEdit2, FiMail, FiPhone } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
-import { parentBillingHistory, parentPlan, parentProfile } from "@/lib/parent/profile-data";
+import {
+  parentBillingHistory,
+  parentPlan,
+  parentPlanOptions,
+  parentProfile,
+} from "@/lib/parent/profile-data";
 import { parentStudentsData } from "@/lib/parent/students-data";
 import { PARENT_STUDENTS_ROUTE } from "@/lib/routes";
 
@@ -65,42 +70,73 @@ function PlanAndBillingSection() {
     <section className="p-5">
       <h3 className="text-[18px] font-bold text-[#20242b]">Plan & Billing</h3>
 
-      <div className="mt-5 rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[16px] font-bold text-[#d61c3f]">{parentPlan.name}</p>
-            <p className="mt-1 text-[13px] text-[#6b7280]">{parentPlan.summary}</p>
-          </div>
-          <span className="inline-flex rounded-full bg-[#dff2e5] px-3 py-1 text-[11px] font-semibold text-[#3d9b68]">
-            Active
-          </span>
-        </div>
+      <div className="mt-5 rounded-[12px] bg-[#fff0f3] px-4 py-4">
+        <p className="text-[16px] font-bold text-[#d61c3f]">
+          {parentPlan.name} - Currently Active
+        </p>
+        <p className="mt-1 text-[13px] text-[#6b7280]">
+          {parentPlan.enrolledStudents} students enrolled - Unlimited sessions - Member since{" "}
+          {parentPlan.memberSince}
+        </p>
+      </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Billing Cycle" value={parentPlan.billingCycle} />
-          <ReadOnlyField label="Renewal Date" value={parentPlan.renewalDate} />
-          <div className="md:col-span-2">
-            <ReadOnlyField label="Payment Method" value={parentPlan.paymentMethod} />
-          </div>
-        </div>
+      <div className="mt-6">
+        <h4 className="text-[18px] font-bold text-[#20242b]">Available Plans</h4>
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          {parentPlanOptions.map((plan) => {
+            const current = plan.id === parentPlan.currentTierId;
+            const buttonClassName = current
+              ? "bg-[#eceef2] text-[#9ca3af]"
+              : plan.actionLabel === "Downgrade"
+                ? "border border-[#d61c3f] text-[#d61c3f] hover:bg-[#fff4f6]"
+                : "bg-[#d61c3f] text-white hover:bg-[#be1837]";
 
-        <div className="mt-5 rounded-[12px] bg-[#fff6f7] px-4 py-4 text-[13px] leading-6 text-[#6b7280]">
-          Your parent plan covers up to 3 students and supports unlimited session booking through the portal.
-        </div>
+            return (
+              <article
+                key={plan.id}
+                className={`relative rounded-[16px] border bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ${
+                  current ? "border-[#d61c3f]" : "border-[#eceef2]"
+                }`}
+              >
+                {current ? (
+                  <span className="absolute right-5 top-[-11px] inline-flex rounded-full bg-[#d61c3f] px-4 py-1 text-[11px] font-semibold text-white">
+                    Current Plan
+                  </span>
+                ) : null}
 
-        <div className="mt-5 flex justify-end gap-3">
-          <button
-            type="button"
-            className="inline-flex h-11 items-center rounded-full border border-[#d61c3f] px-5 text-[14px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
-          >
-            Cancel Plan
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
-          >
-            Manage Billing
-          </button>
+                <p className="text-[16px] font-bold text-[#20242b]">{plan.name}</p>
+                <p className="mt-3 max-w-[280px] text-[13px] leading-5 text-[#6b7280]">
+                  Fixed monthly fee based on the number Students included in a parent&apos;s profile
+                </p>
+                <p className="mt-4 text-[18px] font-bold text-[#20242b]">{plan.price}</p>
+                {current ? (
+                  <p className="mt-1 text-[12px] font-semibold text-[#6b7280]">Active</p>
+                ) : null}
+
+                <div className="mt-4 space-y-2">
+                  {[
+                    plan.studentLimitLabel,
+                    "Top Class vetted tutors",
+                    "Access to our vast network of tutors",
+                    "24/7 support from our team",
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-2 text-[13px] text-[#4b5563]">
+                      <FiCheck className="h-4 w-4 text-[#3d9b68]" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={current}
+                  className={`mt-6 inline-flex h-11 w-full items-center justify-center rounded-full text-[14px] font-semibold transition ${buttonClassName}`}
+                >
+                  {plan.actionLabel}
+                </button>
+              </article>
+            );
+          })}
         </div>
       </div>
 
@@ -156,7 +192,7 @@ function HistorySection() {
                 <div>
                   <p className="text-[15px] font-semibold text-[#20242b]">{student.name}</p>
                   <p className="text-[13px] text-[#6b7280]">
-                    {student.grade} · {student.school}
+                    {student.grade} - {student.school}
                   </p>
                   <p className="mt-1 text-[12px] text-[#6b7280]">{student.addedLabel}</p>
                 </div>
@@ -233,7 +269,7 @@ export function ParentProfilePage() {
                 href={PARENT_STUDENTS_ROUTE}
                 className="mt-3 inline-flex text-[13px] font-semibold text-[#d61c3f] transition hover:text-[#be1837]"
               >
-                Manage students →
+                Manage students -&gt;
               </Link>
             </div>
 
@@ -247,7 +283,7 @@ export function ParentProfilePage() {
                 type="button"
                 className="mt-3 text-[13px] font-semibold text-[#d61c3f] transition hover:text-[#be1837]"
               >
-                Manage plan →
+                Manage plan -&gt;
               </button>
             </div>
           </aside>
