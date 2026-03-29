@@ -7,6 +7,7 @@ import { FiCheck, FiEdit2, FiMail, FiPhone } from "react-icons/fi";
 import { ParentShell } from "@/components/parent/parent-shell";
 import {
   parentBillingHistory,
+  parentProfileHistoryItems,
   parentPlan,
   parentPlanOptions,
   parentProfile,
@@ -174,40 +175,90 @@ function PlanAndBillingSection() {
 }
 
 function HistorySection() {
+  const [historyFilter, setHistoryFilter] = useState<"All" | "Jordan" | "Maya">("All");
+
+  const filteredItems =
+    historyFilter === "All"
+      ? parentProfileHistoryItems
+      : parentProfileHistoryItems.filter((item) => item.student === historyFilter);
+
+  const groupedItems = filteredItems.reduce<Record<string, typeof filteredItems>>((groups, item) => {
+    if (!groups[item.monthLabel]) {
+      groups[item.monthLabel] = [];
+    }
+    groups[item.monthLabel].push(item);
+    return groups;
+  }, {});
+
   return (
     <section className="p-5">
       <h3 className="text-[18px] font-bold text-[#20242b]">History</h3>
-      <div className="mt-5 rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <h4 className="text-[16px] font-bold text-[#20242b]">Student Enrollment History</h4>
-        <div className="mt-4 space-y-4">
-          {parentStudentsData.map((student) => (
-            <div
-              key={student.id}
-              className="flex items-center justify-between gap-4 rounded-[12px] border border-[#eceef2] px-4 py-4"
+      <div className="mt-5 flex items-center gap-3 border-b border-[#eceef2] pb-4">
+        {(["All", "Jordan", "Maya"] as const).map((filter) => {
+          const active = historyFilter === filter;
+          return (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setHistoryFilter(filter)}
+              className={`inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-medium transition ${
+                active
+                  ? "border-[#d61c3f] bg-[#fff4f6] text-[#d61c3f]"
+                  : "border-[#d1d5db] bg-white text-[#4b5563] hover:border-[#d61c3f] hover:text-[#d61c3f]"
+              }`}
             >
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d94a62]">
-                  {student.initials}
-                </span>
-                <div>
-                  <p className="text-[15px] font-semibold text-[#20242b]">{student.name}</p>
-                  <p className="text-[13px] text-[#6b7280]">
-                    {student.grade} - {student.school}
-                  </p>
-                  <p className="mt-1 text-[12px] text-[#6b7280]">{student.addedLabel}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[13px] font-semibold text-[#20242b]">
-                  {student.sessionsTotal} total sessions
-                </p>
-                <p className="mt-1 text-[12px] text-[#6b7280]">
-                  Active tutor: {student.activeTutorName}
-                </p>
-              </div>
+              {filter}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 space-y-5">
+        {Object.entries(groupedItems).map(([monthLabel, items]) => (
+          <section key={monthLabel}>
+            <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#5f6673]">
+              {monthLabel}
+            </p>
+            <div className="mt-3 space-y-4">
+              {items.map((item) => (
+                <article
+                  key={item.id}
+                  className="flex items-center justify-between gap-4 rounded-[14px] border border-[#eceef2] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[16px] font-bold text-[#d94a62]">
+                      {item.tutorInitials}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[16px] font-bold text-[#20242b]">{item.tutorName}</p>
+                      <p className="text-[13px] text-[#6b7280]">
+                        {item.subject} - {item.dateLabel}
+                      </p>
+                      <div className="mt-3 flex items-center gap-2 text-[12px] text-[#6b7280]">
+                        <span className="font-semibold text-[#d61c3f]">{item.studentInitials}</span>
+                        <span>{item.student}</span>
+                        <span>-</span>
+                        <span>{item.duration}</span>
+                        <span>-</span>
+                        <span>{item.type}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <p className="text-[12px] font-medium text-[#4b5563]">{item.status}</p>
+                    <p className="mt-4 text-[24px] font-bold text-[#20242b]">{item.amount}</p>
+                  </div>
+                </article>
+              ))}
             </div>
-          ))}
-        </div>
+          </section>
+        ))}
+        {filteredItems.length === 0 ? (
+          <div className="rounded-[14px] border border-dashed border-[#d1d5db] bg-white px-5 py-10 text-center text-[14px] text-[#6b7280]">
+            No history found for this student.
+          </div>
+        ) : null}
       </div>
     </section>
   );
