@@ -1,10 +1,5 @@
-import { ParentSectionPage } from "@/components/parent/parent-section-page";
+import { ParentSchedulePage } from "@/components/parent/parent-schedule-page";
 
 export default function ParentScheduleRoute() {
-  return (
-    <ParentSectionPage
-      title="Schedule"
-      description="Review upcoming and completed tutoring sessions for the students linked to your account."
-    />
-  );
+  return <ParentSchedulePage />;
 }

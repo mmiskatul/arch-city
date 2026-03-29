@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FiCheck, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
@@ -100,6 +101,7 @@ export function ParentBookSessionPage({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const subjectOptions = tutor.subjects.filter(
     (subject) => !["Math", "Science", "English", "History"].includes(subject),
@@ -112,6 +114,7 @@ export function ParentBookSessionPage({
   const selectedDate = searchParams.get("date") ?? "Mon, Mar 2";
   const selectedTime = searchParams.get("time") ?? "4:00 PM";
   const notes = searchParams.get("notes") ?? "";
+  const confirmed = searchParams.get("confirmed") === "1";
   const selectedStudentData =
     students.find((student) => student.key === selectedStudent) ?? students[0];
   const totalDue =
@@ -158,9 +161,47 @@ export function ParentBookSessionPage({
     router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
   }
 
+  function handleConfirmBooking() {
+    setShowConfirmModal(true);
+  }
+
+  function handleApproveBooking() {
+    setShowConfirmModal(false);
+    updateCurrentStep({ confirmed: "1" });
+  }
+
   return (
     <ParentShell>
       <div className="w-full">
+        {showConfirmModal ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/45 px-4">
+            <div className="w-full max-w-[440px] rounded-[20px] bg-white p-6 shadow-[0_20px_70px_rgba(15,23,42,0.25)]">
+              <h2 className="text-[22px] font-bold text-[#20242b]">Confirm Booking</h2>
+              <p className="mt-3 text-[14px] leading-6 text-[#4b5563]">
+                Confirm booking for {selectedStudentData.name} with {tutor.name} on {selectedDate} at{" "}
+                {selectedTime}?
+              </p>
+
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="inline-flex h-11 items-center rounded-full border border-[#d61c3f] px-5 text-[14px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApproveBooking}
+                  className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex items-center gap-4 border-b border-[#eceef2] bg-white px-4 py-4 sm:px-5 lg:px-6">
           <Link
             href={
@@ -416,6 +457,12 @@ export function ParentBookSessionPage({
                       <p className="mt-2 text-[14px] text-[#4b5563]">{notes}</p>
                     </div>
                   ) : null}
+
+                  {confirmed ? (
+                    <div className="mt-4 rounded-[12px] border border-[#cde8da] bg-[#edf8f1] px-4 py-3 text-[14px] font-medium text-[#2e8b61]">
+                      Booking confirmed for {selectedStudentData.name}.
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
             </div>
@@ -442,9 +489,12 @@ export function ParentBookSessionPage({
               ) : (
                 <button
                   type="button"
-                  className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-6 text-[15px] font-semibold text-white transition hover:bg-[#be1837]"
+                  onClick={handleConfirmBooking}
+                  className={`inline-flex h-11 items-center rounded-full px-6 text-[15px] font-semibold text-white transition ${
+                    confirmed ? "bg-[#2e8b61]" : "bg-[#d61c3f] hover:bg-[#be1837]"
+                  }`}
                 >
-                  Confirm Booking
+                  {confirmed ? "Confirmed" : "Confirm Booking"}
                 </button>
               )}
             </div>
