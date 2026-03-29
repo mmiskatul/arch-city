@@ -1,173 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/admin-shell";
-
-type StudentStatus = "Active" | "Inactive";
-
-type StudentRow = {
-  id: string;
-  initials: string;
-  initialsClassName: string;
-  name: string;
-  email: string;
-  grade: string;
-  guardian: string;
-  sessions: number;
-  lastSession: string;
-  subjects: string[];
-  status: StudentStatus;
-};
-
-const students: StudentRow[] = [
-  {
-    id: "ST-1001",
-    initials: "JW",
-    initialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    name: "Jordan Wilson",
-    email: "jordan.wilson@email.com",
-    grade: "11th Grade",
-    guardian: "Sarah Wilson",
-    sessions: 24,
-    lastSession: "Mar 22, 2026",
-    subjects: ["Algebra II"],
-    status: "Active",
-  },
-  {
-    id: "ST-1002",
-    initials: "MW",
-    initialsClassName: "bg-[#f1f1f1] text-[#6b7280]",
-    name: "Maya Wilson",
-    email: "maya.wilson@email.com",
-    grade: "8th Grade",
-    guardian: "Sarah Wilson",
-    sessions: 16,
-    lastSession: "Mar 18, 2026",
-    subjects: ["Reading"],
-    status: "Active",
-  },
-  {
-    id: "ST-1003",
-    initials: "AT",
-    initialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    name: "Alex Thompson",
-    email: "alex.t@email.com",
-    grade: "12th Grade",
-    guardian: "Michael Thompson",
-    sessions: 38,
-    lastSession: "Mar 20, 2026",
-    subjects: ["SAT Prep"],
-    status: "Active",
-  },
-  {
-    id: "ST-1004",
-    initials: "SL",
-    initialsClassName: "bg-[#ebf7ef] text-[#239157]",
-    name: "Sophie Lee",
-    email: "sophie.lee@email.com",
-    grade: "10th Grade",
-    guardian: "James Lee",
-    sessions: 12,
-    lastSession: "Mar 19, 2026",
-    subjects: ["Chemistry"],
-    status: "Active",
-  },
-  {
-    id: "ST-1005",
-    initials: "RJ",
-    initialsClassName: "bg-[#ffecef] text-[#d94a62]",
-    name: "Ryan Johnson",
-    email: "ryan.j@email.com",
-    grade: "9th Grade",
-    guardian: "Patricia Johnson",
-    sessions: 7,
-    lastSession: "Mar 15, 2026",
-    subjects: ["Geometry"],
-    status: "Inactive",
-  },
-  {
-    id: "ST-1006",
-    initials: "EC",
-    initialsClassName: "bg-[#fff6de] text-[#b58112]",
-    name: "Emma Carter",
-    email: "emma.carter@email.com",
-    grade: "7th Grade",
-    guardian: "Linda Carter",
-    sessions: 5,
-    lastSession: "Mar 10, 2026",
-    subjects: ["Pre-Algebra"],
-    status: "Active",
-  },
-  {
-    id: "ST-1007",
-    initials: "NB",
-    initialsClassName: "bg-[#ebf7ef] text-[#239157]",
-    name: "Noah Baker",
-    email: "noah.baker@email.com",
-    grade: "5th Grade",
-    guardian: "Tom Baker",
-    sessions: 9,
-    lastSession: "Mar 17, 2026",
-    subjects: ["Math"],
-    status: "Active",
-  },
-  {
-    id: "ST-1008",
-    initials: "LH",
-    initialsClassName: "bg-[#f1f1f1] text-[#6b7280]",
-    name: "Liam Harris",
-    email: "liam.harris@email.com",
-    grade: "6th Grade",
-    guardian: "Monica Harris",
-    sessions: 11,
-    lastSession: "Mar 14, 2026",
-    subjects: ["Science"],
-    status: "Active",
-  },
-  {
-    id: "ST-1009",
-    initials: "OC",
-    initialsClassName: "bg-[#ffecef] text-[#d94a62]",
-    name: "Olivia Clark",
-    email: "olivia.clark@email.com",
-    grade: "9th Grade",
-    guardian: "David Clark",
-    sessions: 14,
-    lastSession: "Mar 21, 2026",
-    subjects: ["English"],
-    status: "Active",
-  },
-  {
-    id: "ST-1010",
-    initials: "EM",
-    initialsClassName: "bg-[#fff6de] text-[#b58112]",
-    name: "Ethan Moore",
-    email: "ethan.moore@email.com",
-    grade: "8th Grade",
-    guardian: "Rachel Moore",
-    sessions: 6,
-    lastSession: "Mar 11, 2026",
-    subjects: ["Reading"],
-    status: "Inactive",
-  },
-];
+import { adminStudents, type AdminStudentStatus } from "@/lib/admin/students-data";
+import { ADMIN_STUDENTS_ROUTE } from "@/lib/routes";
 
 const pageSize = 7;
-const gradeFilters = ["All Grades", ...Array.from(new Set(students.map((item) => item.grade)))];
+const gradeFilters = ["All Grades", ...Array.from(new Set(adminStudents.map((item) => item.grade)))];
 
-function statusClassName(status: StudentStatus) {
+function statusClassName(status: AdminStudentStatus) {
   if (status === "Active") return "bg-[#ebf7ef] text-[#239157]";
   return "bg-[#fff6de] text-[#9c7a1e]";
 }
 
 export function AdminStudentsPage() {
-  const [statusFilter, setStatusFilter] = useState<"All" | StudentStatus>("All");
+  const [statusFilter, setStatusFilter] = useState<"All" | AdminStudentStatus>("All");
   const [gradeFilter, setGradeFilter] = useState<string>("All Grades");
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const filteredStudents = useMemo(() => {
-    return students.filter((item) => {
+    return adminStudents.filter((item) => {
       const statusMatch = statusFilter === "All" ? true : item.status === statusFilter;
       const gradeMatch = gradeFilter === "All Grades" ? true : item.grade === gradeFilter;
       return statusMatch && gradeMatch;
@@ -180,7 +34,7 @@ export function AdminStudentsPage() {
   const startIndex = filteredStudents.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const endIndex = Math.min(safePage * pageSize, filteredStudents.length);
 
-  const handleStatusFilter = (value: "All" | StudentStatus) => {
+  const handleStatusFilter = (value: "All" | AdminStudentStatus) => {
     setStatusFilter(value);
     setCurrentPage(1);
   };
@@ -281,12 +135,12 @@ export function AdminStudentsPage() {
                       </span>
                     </div>
                     <div>
-                      <button
-                        type="button"
+                      <Link
+                        href={`${ADMIN_STUDENTS_ROUTE}/${student.id}`}
                         className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
                       >
                         View
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 ))}
