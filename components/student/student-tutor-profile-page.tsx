@@ -23,7 +23,7 @@ function InfoCard({
 export function StudentTutorProfilePage({ tutor }: { tutor: StudentTutor }) {
   return (
     <StudentShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-[12px] text-[#6b7280]">

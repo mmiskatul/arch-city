@@ -43,7 +43,7 @@ function MessageBubble({
 export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem }) {
   return (
     <TutorShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <div className="grid gap-0 rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] xl:grid-cols-[310px_minmax(0,1fr)]">
           <aside className="border-b border-[#eceef2] p-4 xl:border-r xl:border-b-0">
             <div className="flex items-center gap-3 text-[12px] text-[#6b7280]">

@@ -118,7 +118,7 @@ export function TutorApplicationPage() {
 
   return (
     <TutorShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-[22px] font-bold text-[#20242b] sm:text-[24px]">Apply as a Tutor</h1>

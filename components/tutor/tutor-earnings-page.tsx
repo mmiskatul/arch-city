@@ -86,7 +86,7 @@ function statusClass(status: TutorEarningRow["status"]) {
 export function TutorEarningsPage() {
   return (
     <TutorShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Earnings</h1>
 

@@ -234,7 +234,7 @@ export function StudentProfilePage() {
 
   return (
     <StudentShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <div className="flex items-center justify-between pb-5">
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Profile</h1>
           <div className="flex items-center gap-3">

@@ -171,7 +171,7 @@ export function StudentFindTutorsPage() {
 
   return (
     <StudentShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <div className="grid gap-0 xl:grid-cols-[204px_minmax(0,1fr)]">
           <aside className="border-b border-[#eceef2] pb-6 xl:border-r xl:border-b-0 xl:pb-0 xl:pr-4">
             <div className="pr-4">

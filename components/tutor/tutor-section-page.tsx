@@ -12,7 +12,7 @@ type TutorSectionPageProps = {
 export function TutorSectionPage({ title, description }: TutorSectionPageProps) {
   return (
     <TutorShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <div className="rounded-[16px] border border-[#eceef2] bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#9ca3af]">
             Tutor Portal

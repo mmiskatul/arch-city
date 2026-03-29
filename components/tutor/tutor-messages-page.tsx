@@ -58,7 +58,7 @@ export function TutorMessagesPage() {
 
   return (
     <TutorShell messagesUnreadCountOverride={unreadTotal}>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <h1 className="pb-5 text-[18px] font-bold text-[#20242b] sm:text-[22px]">Messages</h1>
 
         <div className="grid min-h-[720px] border-y border-[#e7e7eb] bg-white xl:grid-cols-[360px_minmax(0,1fr)] xl:border">

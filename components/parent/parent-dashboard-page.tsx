@@ -350,7 +350,7 @@ function ActiveDashboard() {
 export function ParentDashboardPage() {
   return (
     <ParentShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         {parentDashboardState === "empty" ? <EmptyDashboard /> : <ActiveDashboard />}
       </div>
     </ParentShell>

@@ -47,7 +47,7 @@ export function TutorSchedulePage() {
 
   return (
     <TutorShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Schedule</h1>
 
         <div className="mt-5 overflow-hidden rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">

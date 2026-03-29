@@ -97,7 +97,7 @@ export function ParentFindTutorsPage() {
 
   return (
     <ParentShell>
-      <div className="w-full px-2 sm:px-3 lg:px-4">
+      <div className="w-full">
         <div className="border-b border-[#eceef2] bg-white px-4 py-4 sm:px-5 lg:px-6">
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Find Tutors</h1>
         </div>
@@ -303,7 +303,7 @@ export function ParentFindTutorsPage() {
                   </div>
 
                   <Link
-                    href={PARENT_FIND_TUTORS_ROUTE}
+                    href={`${PARENT_FIND_TUTORS_ROUTE}/${tutor.id}`}
                     className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
                   >
                     View Profile
