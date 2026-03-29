@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { FiBell, FiChevronLeft } from "react-icons/fi";
 
@@ -16,6 +19,14 @@ function historyStatusClassName(status: "Completed" | "No-Show") {
 }
 
 export function AdminStudentDetailPage({ student }: { student: AdminStudentDetail }) {
+  const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
+
+  const handleSuspendConfirm = () => {
+    setIsSuspended(true);
+    setShowSuspendConfirm(false);
+  };
+
   return (
     <AdminShell>
       <div className="w-full">
@@ -50,9 +61,11 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
 
             <button
               type="button"
-              className="inline-flex h-8 items-center rounded-lg border border-[#f2c3cc] bg-[#ffecef] px-3 text-[12px] font-semibold text-[#d94a62]"
+              onClick={() => setShowSuspendConfirm(true)}
+              disabled={isSuspended}
+              className="inline-flex h-8 items-center rounded-lg border border-[#f2c3cc] bg-[#ffecef] px-3 text-[12px] font-semibold text-[#d94a62] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Suspend
+              {isSuspended ? "Suspended" : "Suspend"}
             </button>
           </div>
 
@@ -308,6 +321,34 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
           </div>
         </section>
       </div>
+
+      {showSuspendConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/40 px-4">
+          <div className="w-full max-w-md rounded-[14px] border border-[#e7e7eb] bg-white p-5 shadow-xl">
+            <h3 className="text-[18px] font-bold text-[#20242b]">Suspend This Student?</h3>
+            <p className="mt-2 text-[14px] leading-6 text-[#6b7280]">
+              This action will suspend the student account from active scheduling until manually reactivated.
+            </p>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSuspendConfirm(false)}
+                className="inline-flex h-9 items-center rounded-full border border-[#d1d5db] bg-white px-4 text-[13px] font-semibold text-[#374151] transition hover:bg-[#f9fafb]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSuspendConfirm}
+                className="inline-flex h-9 items-center rounded-full bg-[#d94a62] px-4 text-[13px] font-semibold text-white transition hover:bg-[#bf3d53]"
+              >
+                Confirm Suspend
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AdminShell>
   );
 }
