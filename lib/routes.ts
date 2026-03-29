@@ -1,5 +1,12 @@
 export const SIGNUP_ROUTE = "/signup?step=role";
 export const ADMIN_DASHBOARD_ROUTE = "/admin-dashboard";
+export const ADMIN_STUDENTS_ROUTE = "/admin-dashboard/students";
+export const ADMIN_TUTORS_ROUTE = "/admin-dashboard/tutors";
+export const ADMIN_SCHEDULES_ROUTE = "/admin-dashboard/schedules";
+export const ADMIN_FINANCES_ROUTE = "/admin-dashboard/finances";
+export const ADMIN_MESSAGES_ROUTE = "/admin-dashboard/messages";
+export const ADMIN_NOTIFICATIONS_ROUTE = "/admin-dashboard/notifications";
+export const ADMIN_SETTINGS_ROUTE = "/admin-dashboard/settings";
 export const ADMIN_TUTOR_APPLICATIONS_ROUTE = "/admin-dashboard/tutor-applications";
 export const ADMIN_DISPUTE_REPORTS_ROUTE = "/admin-dashboard/dispute-reports";
 export const ADMIN_PAYOUT_QUEUE_ROUTE = "/admin-dashboard/payout-queue";

@@ -16,7 +16,16 @@ import {
   FiUsers,
 } from "react-icons/fi";
 
-import { ADMIN_DASHBOARD_ROUTE } from "@/lib/routes";
+import {
+  ADMIN_DASHBOARD_ROUTE,
+  ADMIN_FINANCES_ROUTE,
+  ADMIN_MESSAGES_ROUTE,
+  ADMIN_NOTIFICATIONS_ROUTE,
+  ADMIN_SCHEDULES_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+  ADMIN_STUDENTS_ROUTE,
+  ADMIN_TUTORS_ROUTE,
+} from "@/lib/routes";
 
 type NavItem = {
   label: string;
@@ -32,13 +41,13 @@ const hiddenScrollbarStyle: CSSProperties = {
 
 const menuItems: NavItem[] = [
   { label: "Dashboard", href: ADMIN_DASHBOARD_ROUTE, icon: FiGrid },
-  { label: "Students", href: `${ADMIN_DASHBOARD_ROUTE}#students`, icon: FiUsers },
-  { label: "Tutors", href: `${ADMIN_DASHBOARD_ROUTE}#tutors`, icon: FiUser },
-  { label: "Schedules", href: `${ADMIN_DASHBOARD_ROUTE}#schedules`, icon: FiCalendar },
-  { label: "Finances", href: `${ADMIN_DASHBOARD_ROUTE}#finances`, icon: FiDollarSign },
-  { label: "Messages", href: `${ADMIN_DASHBOARD_ROUTE}#messages`, icon: FiMessageSquare, badge: "5" },
-  { label: "Notifications", href: `${ADMIN_DASHBOARD_ROUTE}#notifications`, icon: FiBell, badge: "3" },
-  { label: "Settings", href: `${ADMIN_DASHBOARD_ROUTE}#settings`, icon: FiSettings },
+  { label: "Students", href: ADMIN_STUDENTS_ROUTE, icon: FiUsers },
+  { label: "Tutors", href: ADMIN_TUTORS_ROUTE, icon: FiUser },
+  { label: "Schedules", href: ADMIN_SCHEDULES_ROUTE, icon: FiCalendar },
+  { label: "Finances", href: ADMIN_FINANCES_ROUTE, icon: FiDollarSign },
+  { label: "Messages", href: ADMIN_MESSAGES_ROUTE, icon: FiMessageSquare, badge: "5" },
+  { label: "Notifications", href: ADMIN_NOTIFICATIONS_ROUTE, icon: FiBell, badge: "3" },
+  { label: "Settings", href: ADMIN_SETTINGS_ROUTE, icon: FiSettings },
 ];
 
 function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
@@ -90,7 +99,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <SidebarLink
                   key={item.label}
                   item={item}
-                  active={item.href === ADMIN_DASHBOARD_ROUTE && pathname.startsWith(ADMIN_DASHBOARD_ROUTE)}
+                  active={
+                    item.href === ADMIN_DASHBOARD_ROUTE
+                      ? pathname === ADMIN_DASHBOARD_ROUTE
+                      : pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  }
                 />
               ))}
             </nav>
