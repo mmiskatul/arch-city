@@ -80,6 +80,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
     ? "Search conversations..."
     : pathname.startsWith(ADMIN_NOTIFICATIONS_ROUTE)
       ? "Search notifications..."
+      : pathname.startsWith(ADMIN_SETTINGS_ROUTE)
+        ? ""
     : "Search students, tutors, sessions...";
 
   return (

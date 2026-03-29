@@ -1,10 +1,5 @@
-import { AdminSectionPage } from "@/components/admin/admin-section-page";
+import { AdminSettingsGeneralPage } from "@/components/admin/admin-settings-general-page";
 
 export default function AdminSettingsRoute() {
-  return (
-    <AdminSectionPage
-      title="Settings"
-      description="Configure admin portal preferences, platform defaults, and account-level security settings."
-    />
-  );
+  return <AdminSettingsGeneralPage />;
 }
