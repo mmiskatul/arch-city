@@ -37,3 +37,7 @@ export const parentStudentsData: ParentStudentRecord[] = [
     sessionsTotal: 4,
   },
 ];
+
+export function getParentStudentById(id: string) {
+  return parentStudentsData.find((student) => student.id === id);
+}

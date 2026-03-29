@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { ParentShell } from "@/components/parent/parent-shell";
 import { parentStudentsData, type ParentStudentRecord } from "@/lib/parent/students-data";
-import { PARENT_SCHEDULE_ROUTE } from "@/lib/routes";
 
 type StudentFormState = {
   firstName: string;
@@ -220,17 +219,17 @@ export function ParentStudentsPage() {
 
                   <div className="flex items-center gap-2.5">
                     <Link
-                      href={PARENT_SCHEDULE_ROUTE}
+                      href={`/parent-dashboard/students/${student.id}/schedule`}
                       className="inline-flex h-8 items-center rounded-full border border-[#d61c3f] px-4 text-[13px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
                     >
                       Schedule
                     </Link>
-                    <button
-                      type="button"
+                    <Link
+                      href={`/parent-dashboard/students/${student.id}/edit`}
                       className="inline-flex h-8 items-center rounded-full border border-[#d61c3f] px-4 text-[13px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
                     >
                       Edit
-                    </button>
+                    </Link>
                   </div>
                 </div>
               ))}
