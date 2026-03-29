@@ -5,166 +5,20 @@ import { useMemo, useState } from "react";
 import { FiDownload, FiStar } from "react-icons/fi";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { adminTutors, type AdminTutorStatus, type AdminTutorRow } from "@/lib/admin/tutors-data";
+import { ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
-type TutorStatus = "Approved" | "Pending" | "Suspended";
 type TutorFilter = "All Tutors" | "Approved" | "Pending Review" | "Suspended";
-
-type TutorRow = {
-  id: string;
-  initials: string;
-  initialsClassName: string;
-  name: string;
-  email: string;
-  subjects: string[];
-  sessions: number | null;
-  rating: string;
-  hourlyRate: string;
-  earnedMtd: string | null;
-  status: TutorStatus;
-};
-
-const initialTutors: TutorRow[] = [
-  {
-    id: "TU-2001",
-    initials: "MR",
-    initialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    name: "Marcus Reynolds",
-    email: "m.reynolds@email.com",
-    subjects: ["Algebra", "Geometry"],
-    sessions: 142,
-    rating: "4.9",
-    hourlyRate: "$45/hr",
-    earnedMtd: "$2,340",
-    status: "Approved",
-  },
-  {
-    id: "TU-2002",
-    initials: "LD",
-    initialsClassName: "bg-[#ffe7eb] text-[#d94a62]",
-    name: "Lisa Davis",
-    email: "l.davis@email.com",
-    subjects: ["Reading", "Writing"],
-    sessions: 98,
-    rating: "4.8",
-    hourlyRate: "$40/hr",
-    earnedMtd: "$1,950",
-    status: "Approved",
-  },
-  {
-    id: "TU-2003",
-    initials: "DK",
-    initialsClassName: "bg-[#ebf7ef] text-[#239157]",
-    name: "David Kim",
-    email: "d.kim@email.com",
-    subjects: ["SAT Prep", "Math"],
-    sessions: 210,
-    rating: "4.9",
-    hourlyRate: "$55/hr",
-    earnedMtd: "$1,820",
-    status: "Approved",
-  },
-  {
-    id: "TU-2004",
-    initials: "PP",
-    initialsClassName: "bg-[#fff6de] text-[#b58112]",
-    name: "Priya Patel",
-    email: "p.patel@email.com",
-    subjects: ["Chemistry", "Biology"],
-    sessions: 74,
-    rating: "4.7",
-    hourlyRate: "$50/hr",
-    earnedMtd: "$1,540",
-    status: "Approved",
-  },
-  {
-    id: "TU-2005",
-    initials: "JM",
-    initialsClassName: "bg-[#f1f1f1] text-[#6b7280]",
-    name: "James Miller",
-    email: "j.miller@email.com",
-    subjects: ["Physics", "Calculus"],
-    sessions: null,
-    rating: "New",
-    hourlyRate: "$60/hr",
-    earnedMtd: null,
-    status: "Pending",
-  },
-  {
-    id: "TU-2006",
-    initials: "AR",
-    initialsClassName: "bg-[#ffecef] text-[#d94a62]",
-    name: "Alicia Ruiz",
-    email: "a.ruiz@email.com",
-    subjects: ["Spanish", "ESL"],
-    sessions: null,
-    rating: "New",
-    hourlyRate: "$45/hr",
-    earnedMtd: null,
-    status: "Pending",
-  },
-  {
-    id: "TU-2007",
-    initials: "TC",
-    initialsClassName: "bg-[#f1f1f1] text-[#6b7280]",
-    name: "Thomas Clark",
-    email: "t.clark@email.com",
-    subjects: ["History", "Civics"],
-    sessions: 31,
-    rating: "4.4",
-    hourlyRate: "$35/hr",
-    earnedMtd: "$640",
-    status: "Suspended",
-  },
-  {
-    id: "TU-2008",
-    initials: "NF",
-    initialsClassName: "bg-[#ebf7ef] text-[#239157]",
-    name: "Nina Foster",
-    email: "n.foster@email.com",
-    subjects: ["English", "Writing"],
-    sessions: 57,
-    rating: "4.6",
-    hourlyRate: "$42/hr",
-    earnedMtd: "$1,140",
-    status: "Approved",
-  },
-  {
-    id: "TU-2009",
-    initials: "RJ",
-    initialsClassName: "bg-[#ffecef] text-[#d94a62]",
-    name: "Robert James",
-    email: "r.james@email.com",
-    subjects: ["Physics"],
-    sessions: null,
-    rating: "New",
-    hourlyRate: "$48/hr",
-    earnedMtd: null,
-    status: "Pending",
-  },
-  {
-    id: "TU-2010",
-    initials: "SK",
-    initialsClassName: "bg-[#fff6de] text-[#b58112]",
-    name: "Sana Khan",
-    email: "s.khan@email.com",
-    subjects: ["Biology", "Science"],
-    sessions: 44,
-    rating: "4.5",
-    hourlyRate: "$46/hr",
-    earnedMtd: "$980",
-    status: "Approved",
-  },
-];
 
 const pageSize = 6;
 
-function statusClassName(status: TutorStatus) {
+function statusClassName(status: AdminTutorStatus) {
   if (status === "Approved") return "bg-[#ebf7ef] text-[#239157]";
   if (status === "Pending") return "bg-[#fff6de] text-[#9c7a1e]";
   return "bg-[#ffecef] text-[#d94a62]";
 }
 
-function toStatus(filter: TutorFilter): TutorStatus | null {
+function toStatus(filter: TutorFilter): AdminTutorStatus | null {
   if (filter === "Approved") return "Approved";
   if (filter === "Pending Review") return "Pending";
   if (filter === "Suspended") return "Suspended";
@@ -172,7 +26,7 @@ function toStatus(filter: TutorFilter): TutorStatus | null {
 }
 
 export function AdminTutorsPage() {
-  const [tutors, setTutors] = useState<TutorRow[]>(initialTutors);
+  const [tutors, setTutors] = useState<AdminTutorRow[]>(adminTutors);
   const [filter, setFilter] = useState<TutorFilter>("All Tutors");
   const [currentPage, setCurrentPage] = useState(1);
   const [approveTargetId, setApproveTargetId] = useState<string | null>(null);
@@ -198,7 +52,7 @@ export function AdminTutorsPage() {
     setCurrentPage(1);
   };
 
-  const updateTutorStatus = (id: string, status: TutorStatus) => {
+  const updateTutorStatus = (id: string, status: AdminTutorStatus) => {
     setTutors((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)));
   };
 
@@ -337,7 +191,7 @@ export function AdminTutorsPage() {
                         </div>
                       ) : (
                         <Link
-                          href="#"
+                          href={`${ADMIN_TUTORS_ROUTE}/${tutor.id}`}
                           className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
                         >
                           View
