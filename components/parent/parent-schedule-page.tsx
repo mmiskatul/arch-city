@@ -120,7 +120,7 @@ export function ParentSchedulePage() {
                   </div>
                   <div>
                     <Link
-                      href={PARENT_SCHEDULE_ROUTE}
+                      href={`${PARENT_SCHEDULE_ROUTE}/${session.id}`}
                       className="text-[14px] font-semibold text-[#d61c3f] transition hover:text-[#be1837]"
                     >
                       View
