@@ -193,7 +193,7 @@ export function TutorShell({
             </div>
           </header>
 
-          <div className="py-5 xl:max-w-[calc(100vw-182px)]">{children}</div>
+          <div className="px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-182px)]">{children}</div>
         </section>
       </div>
     </main>

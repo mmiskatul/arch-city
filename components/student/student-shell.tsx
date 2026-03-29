@@ -158,7 +158,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
             </header>
           ) : null}
 
-          <div className="py-5 xl:max-w-[calc(100vw-172px)]">
+          <div className="px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-172px)]">
             {children}
           </div>
         </section>
