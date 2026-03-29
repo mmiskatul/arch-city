@@ -115,6 +115,11 @@ const transactions: TransactionRow[] = [
 
 const pageSize = 6;
 
+function escapeCsvValue(value: string) {
+  const safe = value.replace(/"/g, '""');
+  return `"${safe}"`;
+}
+
 function typeClassName(type: TransactionType) {
   if (type === "Payment") return "bg-[#ebf7ef] text-[#239157]";
   if (type === "Payout") return "bg-[#ffecef] text-[#d94a62]";
@@ -154,6 +159,46 @@ export function AdminFinancesPage() {
     setCurrentPage(1);
   };
 
+  const handleExportCsv = () => {
+    const headers = [
+      "Transaction ID",
+      "Date",
+      "Description",
+      "Payer / Recipient",
+      "Type",
+      "Amount",
+      "Platform Fee",
+      "Status",
+    ];
+
+    const rows = filteredRows.map((item) => [
+      `#${item.id}`,
+      item.date,
+      item.description,
+      item.payerRecipient,
+      item.type,
+      item.amount,
+      item.platformFee,
+      item.status,
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => escapeCsvValue(cell)).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const filePrefix = activeTab.toLowerCase().replace(/\s+/g, "-");
+
+    link.href = url;
+    link.download = `finance-${filePrefix}-transactions.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AdminShell>
       <div className="w-full">
@@ -164,6 +209,7 @@ export function AdminFinancesPage() {
             <div className="h-10 w-[110px] rounded-xl border border-[#e5e7eb] bg-white" />
             <button
               type="button"
+              onClick={handleExportCsv}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-4 text-[13px] font-semibold text-[#4b5563]"
             >
               <FiDownload className="h-4 w-4" />
