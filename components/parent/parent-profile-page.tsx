@@ -1,0 +1,287 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { FiEdit2, FiMail, FiPhone } from "react-icons/fi";
+
+import { ParentShell } from "@/components/parent/parent-shell";
+import { parentBillingHistory, parentPlan, parentProfile } from "@/lib/parent/profile-data";
+import { parentStudentsData } from "@/lib/parent/students-data";
+import { PARENT_STUDENTS_ROUTE } from "@/lib/routes";
+
+type ParentProfileTab = "Personal Info" | "Plan & Billing" | "History";
+
+const profileTabs: ParentProfileTab[] = ["Personal Info", "Plan & Billing", "History"];
+
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <label className="mb-2 block text-[12px] font-semibold text-[#20242b]">{label}</label>
+      <div className="flex min-h-11 items-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#4b5563]">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function PersonalInfoSection() {
+  return (
+    <section className="p-5">
+      <h3 className="text-[18px] font-bold text-[#20242b]">Personal Information</h3>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <ReadOnlyField label="First Name" value={parentProfile.firstName} />
+        <ReadOnlyField label="Last Name" value={parentProfile.lastName} />
+        <ReadOnlyField label="Email Address" value={parentProfile.email} />
+        <ReadOnlyField label="Phone Number" value={parentProfile.phone} />
+        <div className="md:col-span-2">
+          <ReadOnlyField label="Street Address" value={parentProfile.streetAddress} />
+        </div>
+        <ReadOnlyField label="City" value={parentProfile.city} />
+        <ReadOnlyField label="State" value={parentProfile.state} />
+        <ReadOnlyField label="ZIP Code" value={parentProfile.zipCode} />
+      </div>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          className="inline-flex h-11 items-center rounded-full border border-[#d61c3f] px-5 text-[14px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
+        >
+          Discard
+        </button>
+        <button
+          type="button"
+          className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+        >
+          Save Personal Info
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function PlanAndBillingSection() {
+  return (
+    <section className="p-5">
+      <h3 className="text-[18px] font-bold text-[#20242b]">Plan & Billing</h3>
+
+      <div className="mt-5 rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[16px] font-bold text-[#d61c3f]">{parentPlan.name}</p>
+            <p className="mt-1 text-[13px] text-[#6b7280]">{parentPlan.summary}</p>
+          </div>
+          <span className="inline-flex rounded-full bg-[#dff2e5] px-3 py-1 text-[11px] font-semibold text-[#3d9b68]">
+            Active
+          </span>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <ReadOnlyField label="Billing Cycle" value={parentPlan.billingCycle} />
+          <ReadOnlyField label="Renewal Date" value={parentPlan.renewalDate} />
+          <div className="md:col-span-2">
+            <ReadOnlyField label="Payment Method" value={parentPlan.paymentMethod} />
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[12px] bg-[#fff6f7] px-4 py-4 text-[13px] leading-6 text-[#6b7280]">
+          Your parent plan covers up to 3 students and supports unlimited session booking through the portal.
+        </div>
+
+        <div className="mt-5 flex justify-end gap-3">
+          <button
+            type="button"
+            className="inline-flex h-11 items-center rounded-full border border-[#d61c3f] px-5 text-[14px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
+          >
+            Cancel Plan
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+          >
+            Manage Billing
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <h4 className="text-[16px] font-bold text-[#20242b]">Recent Charges</h4>
+        <div className="mt-4 overflow-hidden rounded-[12px] border border-[#eceef2]">
+          <table className="min-w-full table-fixed border-collapse">
+            <thead className="bg-[#fafbfc] text-left text-[12px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">
+              <tr>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Description</th>
+                <th className="px-4 py-3">Amount</th>
+                <th className="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white text-[14px] text-[#374151]">
+              {parentBillingHistory.map((entry) => (
+                <tr key={entry.id} className="border-t border-[#eceef2]">
+                  <td className="px-4 py-3">{entry.date}</td>
+                  <td className="px-4 py-3">{entry.description}</td>
+                  <td className="px-4 py-3 font-semibold text-[#20242b]">{entry.amount}</td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex rounded-full bg-[#dff2e5] px-3 py-1 text-[11px] font-semibold text-[#3d9b68]">
+                      {entry.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HistorySection() {
+  return (
+    <section className="p-5">
+      <h3 className="text-[18px] font-bold text-[#20242b]">History</h3>
+      <div className="mt-5 rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <h4 className="text-[16px] font-bold text-[#20242b]">Student Enrollment History</h4>
+        <div className="mt-4 space-y-4">
+          {parentStudentsData.map((student) => (
+            <div
+              key={student.id}
+              className="flex items-center justify-between gap-4 rounded-[12px] border border-[#eceef2] px-4 py-4"
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d94a62]">
+                  {student.initials}
+                </span>
+                <div>
+                  <p className="text-[15px] font-semibold text-[#20242b]">{student.name}</p>
+                  <p className="text-[13px] text-[#6b7280]">
+                    {student.grade} · {student.school}
+                  </p>
+                  <p className="mt-1 text-[12px] text-[#6b7280]">{student.addedLabel}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[13px] font-semibold text-[#20242b]">
+                  {student.sessionsTotal} total sessions
+                </p>
+                <p className="mt-1 text-[12px] text-[#6b7280]">
+                  Active tutor: {student.activeTutorName}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function ParentProfilePage() {
+  const [activeTab, setActiveTab] = useState<ParentProfileTab>("Personal Info");
+
+  return (
+    <ParentShell>
+      <div className="w-full">
+        <div className="border-b border-[#eceef2] bg-white px-4 py-4 sm:px-5 lg:px-6">
+          <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Profile</h1>
+        </div>
+
+        <div className="grid rounded-b-[12px] border border-t-0 border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] xl:grid-cols-[250px_minmax(0,1fr)]">
+          <aside className="border-b border-[#eceef2] p-4 xl:border-r xl:border-b-0">
+            <div className="flex flex-col items-center border-b border-[#eceef2] pb-4 text-center">
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-[#ffe7eb] text-[40px] font-bold text-[#d61c3f]">
+                {parentProfile.initials}
+                <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#d61c3f] text-white">
+                  <FiEdit2 className="h-3.5 w-3.5" />
+                </span>
+              </div>
+              <h2 className="mt-5 text-[18px] font-bold text-[#20242b]">
+                {parentProfile.firstName} {parentProfile.lastName}
+              </h2>
+              <p className="text-[14px] text-[#6b7280]">{parentProfile.title}</p>
+              <div className="mt-3 inline-flex rounded-full bg-[#dff2e5] px-3 py-1 text-[11px] font-semibold text-[#3d9b68]">
+                {parentProfile.status}
+              </div>
+            </div>
+
+            <div className="space-y-3 border-b border-[#eceef2] py-4 text-[13px] text-[#4b5563]">
+              <div className="flex items-center gap-2">
+                <FiMail className="h-4 w-4 text-[#6b7280]" />
+                <span>{parentProfile.email}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <FiPhone className="h-4 w-4 text-[#6b7280]" />
+                <span>{parentProfile.phone}</span>
+              </div>
+            </div>
+
+            <div className="border-b border-[#eceef2] py-4">
+              <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">My Students</p>
+              <div className="mt-3 space-y-3">
+                {parentStudentsData.map((student) => (
+                  <div key={student.id} className="flex items-start gap-2">
+                    <span className="mt-0.5 text-[11px] font-bold text-[#d61c3f]">{student.initials}</span>
+                    <div>
+                      <p className="text-[14px] font-semibold text-[#20242b]">{student.name}</p>
+                      <p className="text-[12px] text-[#6b7280]">{student.grade}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href={PARENT_STUDENTS_ROUTE}
+                className="mt-3 inline-flex text-[13px] font-semibold text-[#d61c3f] transition hover:text-[#be1837]"
+              >
+                Manage students →
+              </Link>
+            </div>
+
+            <div className="pt-4">
+              <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">Current Plan</p>
+              <div className="mt-3 rounded-[12px] bg-[#fff0f3] px-4 py-4">
+                <p className="text-[16px] font-bold text-[#d61c3f]">{parentPlan.name}</p>
+                <p className="mt-1 text-[12px] text-[#6b7280]">{parentPlan.summary}</p>
+              </div>
+              <button
+                type="button"
+                className="mt-3 text-[13px] font-semibold text-[#d61c3f] transition hover:text-[#be1837]"
+              >
+                Manage plan →
+              </button>
+            </div>
+          </aside>
+
+          <section className="min-w-0">
+            <div className="border-b border-[#eceef2] px-4">
+              <div className="flex flex-wrap items-center gap-8 overflow-x-auto">
+                {profileTabs.map((tab) => {
+                  const active = tab === activeTab;
+
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveTab(tab)}
+                      className={`border-b-2 px-1 py-4 text-[15px] font-medium transition ${
+                        active
+                          ? "border-[#d61c3f] text-[#d61c3f]"
+                          : "border-transparent text-[#4b5563] hover:text-[#20242b]"
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {activeTab === "Personal Info" ? <PersonalInfoSection /> : null}
+            {activeTab === "Plan & Billing" ? <PlanAndBillingSection /> : null}
+            {activeTab === "History" ? <HistorySection /> : null}
+          </section>
+        </div>
+      </div>
+    </ParentShell>
+  );
+}
