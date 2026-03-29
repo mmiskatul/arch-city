@@ -240,11 +240,14 @@ export function AdminScheduleDetailPage({ session }: { session: AdminScheduleDet
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">
                 Session Timeline
               </h2>
-              <div className="mt-3 space-y-3">
+              <div className="mt-4 space-y-3">
                 {session.timeline.map((item, index) => (
-                  <div key={`${item.title}-${index}`} className="flex gap-2.5">
-                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[#239157]" />
-                    <div>
+                  <div key={`${item.title}-${index}`} className="relative pl-7">
+                    <span className="absolute left-0 top-1 h-3.5 w-3.5 rounded-full bg-[#239157]" />
+                    {index < session.timeline.length - 1 ? (
+                      <span className="absolute left-[6px] top-5 h-[calc(100%-6px)] w-[2px] bg-[#d9dee5]" />
+                    ) : null}
+                    <div className="pb-1">
                       <p className="text-[13px] font-semibold text-[#20242b]">{item.title}</p>
                       <p className="text-[12px] text-[#6b7280]">{item.meta}</p>
                     </div>
