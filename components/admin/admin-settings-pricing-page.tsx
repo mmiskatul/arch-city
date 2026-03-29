@@ -111,7 +111,9 @@ export function AdminSettingsPricingPage() {
 
       <article className="mt-4 overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white">
         <div className="border-b border-[#eceef2] px-5 py-4">
-          <h2 className="text-[36px] font-bold leading-none text-[#20242b]">{activeTier}</h2>
+          <h2 className="text-[36px] font-bold leading-none text-[#20242b]">
+            {activeTier === "Session" ? "Scheduling Fee" : activeTier}
+          </h2>
         </div>
 
         <div className="px-5 py-5">
@@ -138,7 +140,9 @@ export function AdminSettingsPricingPage() {
             </div>
           ) : (
             <label className="block">
-              <span className="mb-1.5 block text-[20px] font-semibold text-[#4b5563]">Fee/month</span>
+              <span className="mb-1.5 block text-[20px] font-semibold text-[#4b5563]">
+                {activeTier === "Session" ? "Fee/session" : "Fee/month"}
+              </span>
               <span className="flex h-11 items-center gap-2 rounded-xl bg-[#f7f7fb] px-4 text-[14px] text-[#5b5b99]">
                 <span className="text-[34px] leading-none text-[#4b5563]">$</span>
                 <input

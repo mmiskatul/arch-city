@@ -222,7 +222,7 @@ export function AdminSchedulesPage() {
               <div className="divide-y divide-[#eceef2]">
                 {pagedRows.map((row) => (
                   <div
-                    key={row.id}
+                    key={row.sessionId}
                     className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563]"
                   >
                     <span className="font-semibold text-[#9ca3af]">#{row.sessionId}</span>

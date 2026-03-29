@@ -204,8 +204,7 @@ function AuthVisualPanel() {
           />
           <div className="absolute inset-x-9 bottom-3 rounded-xl bg-white px-7 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
             <ul className="space-y-3 text-sm font-medium text-[#111827]">
-              {[
-            ].map((item, index) => {
+              {authVisualBadges.map((item, index) => {
               const IconComponent = badgeIcons[index];
               return (
                 <li key={item.text} className="flex items-center gap-3">
@@ -230,6 +229,12 @@ const badgeIcons = [
   AiOutlineDesktop,
   AiOutlineHeart,
 ];
+const authVisualBadges = [
+  { text: "Personalized 1:1 tutoring plans" },
+  { text: "Flexible scheduling that fits your week" },
+  { text: "Secure online and in-person sessions" },
+  { text: "Progress updates for families" },
+] as const;
 
 const signupRoleOptions = [
   {
