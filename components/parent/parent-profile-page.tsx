@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiCheck, FiEdit2, FiMail, FiPhone } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
@@ -17,49 +17,231 @@ import { PARENT_STUDENTS_ROUTE } from "@/lib/routes";
 
 type ParentProfileTab = "Personal Info" | "Plan & Billing" | "History";
 
+type ParentProfileData = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  initials: string;
+  title: string;
+  status: string;
+};
+
+type ParentProfileForm = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+};
+
 const profileTabs: ParentProfileTab[] = ["Personal Info", "Plan & Billing", "History"];
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const encodedName = `${encodeURIComponent(name)}=`;
+  const parts = document.cookie.split(";");
+
+  for (const part of parts) {
+    const cookie = part.trim();
+    if (cookie.startsWith(encodedName)) {
+      return decodeURIComponent(cookie.slice(encodedName.length));
+    }
+  }
+
+  return null;
+}
+
+function normalizeBaseUrl(url: string) {
+  return url.endsWith("/") ? url.slice(0, -1) : url;
+}
+
+function resolveApiBaseUrl() {
+  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  return url ? normalizeBaseUrl(url) : null;
+}
+
+function deriveInitials(firstName: string, lastName: string): string {
+  const first = firstName.trim();
+  const last = lastName.trim();
+  if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+  if (first) return first.slice(0, 2).toUpperCase();
+  return "PA";
+}
+
+function mapParentProfile(data: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  street_address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  initials: string;
+  title: string;
+  status: string;
+}): ParentProfileData {
+  return {
+    firstName: data.first_name,
+    lastName: data.last_name,
+    email: data.email,
+    phone: data.phone_number,
+    streetAddress: data.street_address,
+    city: data.city,
+    state: data.state,
+    zipCode: data.zip_code,
+    initials: data.initials || deriveInitials(data.first_name, data.last_name),
+    title: data.title,
+    status: data.status,
+  };
+}
+
+async function getParentProfile(token: string): Promise<ParentProfileData> {
+  const baseUrl = resolveApiBaseUrl();
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+  }
+
+  const response = await fetch(`${baseUrl}/parent/profile`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load profile (${response.status}).`);
+  }
+
+  return mapParentProfile((await response.json()) as never);
+}
+
+async function saveParentProfile(token: string, values: ParentProfileForm): Promise<ParentProfileData> {
+  const baseUrl = resolveApiBaseUrl();
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+  }
+
+  const response = await fetch(`${baseUrl}/parent/profile`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      first_name: values.firstName.trim(),
+      last_name: values.lastName.trim(),
+      phone_number: values.phone.trim(),
+      street_address: values.streetAddress.trim(),
+      city: values.city.trim(),
+      state: values.state.trim(),
+      zip_code: values.zipCode.trim(),
+    }),
+  });
+
+  if (!response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+
+    throw new Error(detail ?? `Failed to save profile (${response.status}).`);
+  }
+
+  return mapParentProfile((await response.json()) as never);
+}
+
+function InputField({
+  label,
+  value,
+  onChange,
+  readOnly = false,
+}: {
+  label: string;
+  value: string;
+  onChange?: (value: string) => void;
+  readOnly?: boolean;
+}) {
   return (
     <div>
       <label className="mb-2 block text-[12px] font-semibold text-[#20242b]">{label}</label>
-      <div className="flex min-h-11 items-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#4b5563]">
-        {value}
-      </div>
+      <input
+        value={value}
+        readOnly={readOnly}
+        onChange={(event) => onChange?.(event.target.value)}
+        className={`h-11 w-full rounded-lg border border-[#e5e7eb] px-4 text-[14px] ${
+          readOnly ? "bg-[#fafafa] text-[#6b7280]" : "bg-white text-[#20242b]"
+        }`}
+      />
     </div>
   );
 }
 
-function PersonalInfoSection() {
+function PersonalInfoSection({
+  values,
+  onChange,
+  onSave,
+  onDiscard,
+  isSaving,
+  error,
+  success,
+}: {
+  values: ParentProfileForm;
+  onChange: (field: keyof ParentProfileForm, value: string) => void;
+  onSave: () => void;
+  onDiscard: () => void;
+  isSaving: boolean;
+  error: string | null;
+  success: string | null;
+}) {
   return (
     <section className="p-5">
       <h3 className="text-[18px] font-bold text-[#20242b]">Personal Information</h3>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <ReadOnlyField label="First Name" value={parentProfile.firstName} />
-        <ReadOnlyField label="Last Name" value={parentProfile.lastName} />
-        <ReadOnlyField label="Email Address" value={parentProfile.email} />
-        <ReadOnlyField label="Phone Number" value={parentProfile.phone} />
+        <InputField label="First Name" value={values.firstName} onChange={(value) => onChange("firstName", value)} />
+        <InputField label="Last Name" value={values.lastName} onChange={(value) => onChange("lastName", value)} />
+        <InputField label="Email Address" value={values.email} readOnly />
+        <InputField label="Phone Number" value={values.phone} onChange={(value) => onChange("phone", value)} />
         <div className="md:col-span-2">
-          <ReadOnlyField label="Street Address" value={parentProfile.streetAddress} />
+          <InputField
+            label="Street Address"
+            value={values.streetAddress}
+            onChange={(value) => onChange("streetAddress", value)}
+          />
         </div>
-        <ReadOnlyField label="City" value={parentProfile.city} />
-        <ReadOnlyField label="State" value={parentProfile.state} />
-        <ReadOnlyField label="ZIP Code" value={parentProfile.zipCode} />
+        <InputField label="City" value={values.city} onChange={(value) => onChange("city", value)} />
+        <InputField label="State" value={values.state} onChange={(value) => onChange("state", value)} />
+        <InputField label="ZIP Code" value={values.zipCode} onChange={(value) => onChange("zipCode", value)} />
       </div>
+
+      {error ? <p className="mt-4 text-[13px] text-[#d61c3f]">{error}</p> : null}
+      {success ? <p className="mt-4 text-[13px] text-[#1b8a5a]">{success}</p> : null}
 
       <div className="mt-6 flex justify-end gap-3">
         <button
           type="button"
+          onClick={onDiscard}
           className="inline-flex h-11 items-center rounded-full border border-[#d61c3f] px-5 text-[14px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
         >
           Discard
         </button>
         <button
           type="button"
-          className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+          onClick={onSave}
+          disabled={isSaving}
+          className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Save Personal Info
+          {isSaving ? "Saving..." : "Save Personal Info"}
         </button>
       </div>
     </section>
@@ -266,6 +448,87 @@ function HistorySection() {
 
 export function ParentProfilePage() {
   const [activeTab, setActiveTab] = useState<ParentProfileTab>("Personal Info");
+  const [currentProfile, setCurrentProfile] = useState<ParentProfileData>(parentProfile);
+  const [formValues, setFormValues] = useState<ParentProfileForm>(parentProfile);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = readCookie("arch_access_token");
+    if (!token) return;
+
+    getParentProfile(token)
+      .then((profileData) => {
+        setCurrentProfile(profileData);
+        setFormValues({
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          email: profileData.email,
+          phone: profileData.phone,
+          streetAddress: profileData.streetAddress,
+          city: profileData.city,
+          state: profileData.state,
+          zipCode: profileData.zipCode,
+        });
+      })
+      .catch(() => {
+        // Keep existing fallback data.
+      });
+  }, []);
+
+  const handleFormChange = (field: keyof ParentProfileForm, value: string) => {
+    setFormValues((previous) => ({ ...previous, [field]: value }));
+    setSaveError(null);
+    setSaveSuccess(null);
+  };
+
+  const handleDiscard = () => {
+    setFormValues({
+      firstName: currentProfile.firstName,
+      lastName: currentProfile.lastName,
+      email: currentProfile.email,
+      phone: currentProfile.phone,
+      streetAddress: currentProfile.streetAddress,
+      city: currentProfile.city,
+      state: currentProfile.state,
+      zipCode: currentProfile.zipCode,
+    });
+    setSaveError(null);
+    setSaveSuccess(null);
+  };
+
+  const handleSave = async () => {
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setSaveError("Authentication required. Please login again.");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    try {
+      const updated = await saveParentProfile(token, formValues);
+      setCurrentProfile(updated);
+      setFormValues({
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        email: updated.email,
+        phone: updated.phone,
+        streetAddress: updated.streetAddress,
+        city: updated.city,
+        state: updated.state,
+        zipCode: updated.zipCode,
+      });
+      setSaveSuccess("Profile updated successfully.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to save profile.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <ParentShell>
@@ -278,28 +541,28 @@ export function ParentProfilePage() {
           <aside className="border-b border-[#eceef2] p-4 xl:border-r xl:border-b-0">
             <div className="flex flex-col items-center border-b border-[#eceef2] pb-4 text-center">
               <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-[#ffe7eb] text-[40px] font-bold text-[#d61c3f]">
-                {parentProfile.initials}
+                {currentProfile.initials}
                 <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#d61c3f] text-white">
                   <FiEdit2 className="h-3.5 w-3.5" />
                 </span>
               </div>
               <h2 className="mt-5 text-[18px] font-bold text-[#20242b]">
-                {parentProfile.firstName} {parentProfile.lastName}
+                {currentProfile.firstName} {currentProfile.lastName}
               </h2>
-              <p className="text-[14px] text-[#6b7280]">{parentProfile.title}</p>
+              <p className="text-[14px] text-[#6b7280]">{currentProfile.title}</p>
               <div className="mt-3 inline-flex rounded-full bg-[#dff2e5] px-3 py-1 text-[11px] font-semibold text-[#3d9b68]">
-                {parentProfile.status}
+                {currentProfile.status}
               </div>
             </div>
 
             <div className="space-y-3 border-b border-[#eceef2] py-4 text-[13px] text-[#4b5563]">
               <div className="flex items-center gap-2">
                 <FiMail className="h-4 w-4 text-[#6b7280]" />
-                <span>{parentProfile.email}</span>
+                <span>{currentProfile.email}</span>
               </div>
               <div className="flex items-center gap-2">
                 <FiPhone className="h-4 w-4 text-[#6b7280]" />
-                <span>{parentProfile.phone}</span>
+                <span>{currentProfile.phone}</span>
               </div>
             </div>
 
@@ -363,7 +626,17 @@ export function ParentProfilePage() {
               </div>
             </div>
 
-            {activeTab === "Personal Info" ? <PersonalInfoSection /> : null}
+            {activeTab === "Personal Info" ? (
+              <PersonalInfoSection
+                values={formValues}
+                onChange={handleFormChange}
+                onSave={handleSave}
+                onDiscard={handleDiscard}
+                isSaving={isSaving}
+                error={saveError}
+                success={saveSuccess}
+              />
+            ) : null}
             {activeTab === "Plan & Billing" ? <PlanAndBillingSection /> : null}
             {activeTab === "History" ? <HistorySection /> : null}
           </section>

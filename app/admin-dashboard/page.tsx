@@ -1,8 +1,8 @@
 ﻿import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import {
   AdminDashboardPage,
-  defaultAdminDashboardOverviewData,
   type AdminDashboardOverviewData,
 } from "@/components/admin/admin-dashboard-page";
 
@@ -15,53 +15,37 @@ function resolveApiBaseUrl() {
   return url ? normalizeBaseUrl(url) : null;
 }
 
-async function fetchAdminDashboardOverview(): Promise<{
-  data: AdminDashboardOverviewData;
-  loadError?: string;
-}> {
+async function fetchAdminDashboardOverview(): Promise<AdminDashboardOverviewData> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
-    return {
-      data: defaultAdminDashboardOverviewData,
-      loadError: "NEXT_PUBLIC_API_BASE_URL is not configured. Showing fallback data.",
-    };
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
   const token = (await cookies()).get("arch_access_token")?.value;
   if (!token) {
-    return {
-      data: defaultAdminDashboardOverviewData,
-      loadError: "Missing admin session token. Showing fallback data.",
-    };
+    redirect("/login");
   }
 
-  try {
-    const response = await fetch(`${baseUrl}/admin-dashboard/overview`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-    });
+  const response = await fetch(`${baseUrl}/admin-dashboard/overview`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
 
-    if (!response.ok) {
-      return {
-        data: defaultAdminDashboardOverviewData,
-        loadError: `Dashboard API failed (${response.status}). Showing fallback data.`,
-      };
-    }
-
-    const data = (await response.json()) as AdminDashboardOverviewData;
-    return { data };
-  } catch {
-    return {
-      data: defaultAdminDashboardOverviewData,
-      loadError: "Dashboard API request failed. Showing fallback data.",
-    };
+  if (response.status === 401 || response.status === 403) {
+    redirect("/login");
   }
+
+  if (!response.ok) {
+    throw new Error(`Dashboard API failed (${response.status}).`);
+  }
+
+  return (await response.json()) as AdminDashboardOverviewData;
 }
 
 export default async function AdminDashboardRoute() {
-  const { data, loadError } = await fetchAdminDashboardOverview();
-  return <AdminDashboardPage data={data} loadError={loadError} />;
+  const data = await fetchAdminDashboardOverview();
+  return <AdminDashboardPage data={data} />;
 }

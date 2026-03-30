@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { IconType } from "react-icons";
 import {
@@ -9,6 +10,7 @@ import {
   FiCalendar,
   FiDollarSign,
   FiGrid,
+  FiLogOut,
   FiMessageSquare,
   FiSearch,
   FiSettings,
@@ -74,15 +76,81 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
+function readCookie(name: string) {
+  if (typeof document === "undefined") return "";
+  const prefix = `${name}=`;
+  const parts = document.cookie.split(";").map((part) => part.trim());
+  const match = parts.find((part) => part.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
+}
+
+function clearAuthCookies() {
+  document.cookie = "arch_access_token=; Path=/; Max-Age=0; SameSite=Lax";
+  document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
+}
+
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const topUserMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function onMouseDown(event: MouseEvent) {
+      const target = event.target as Node;
+      const inSidebarMenu = userMenuRef.current?.contains(target) ?? false;
+      const inTopMenu = topUserMenuRef.current?.contains(target) ?? false;
+
+      if (!inSidebarMenu) {
+        setUserMenuOpen(false);
+      }
+
+      if (!inTopMenu) {
+        setTopUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, []);
+
+  async function handleLogout() {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+    const token = readCookie("arch_access_token");
+
+    if (baseUrl && token) {
+      try {
+        await fetch(`${baseUrl}/auth/logout`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } catch {
+        // Ignore network errors on logout and clear local session anyway.
+      }
+    }
+
+    clearAuthCookies();
+    setUserMenuOpen(false);
+    router.replace("/login");
+    router.refresh();
+  }
+
   const searchPlaceholder = pathname.startsWith(ADMIN_MESSAGES_ROUTE)
     ? "Search conversations..."
     : pathname.startsWith(ADMIN_NOTIFICATIONS_ROUTE)
       ? "Search notifications..."
       : pathname.startsWith(ADMIN_SETTINGS_ROUTE)
         ? ""
-    : "Search students, tutors, sessions...";
+        : "Search students, tutors, sessions...";
 
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-[#1f2937]">
@@ -115,16 +183,48 @@ export function AdminShell({ children }: { children: ReactNode }) {
               ))}
             </nav>
 
-            <div className="mt-8 border-t border-[#e8eaef] px-2 pt-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-bold text-[#d61c3f]">
-                  AD
+            <div className="relative mt-8 border-t border-[#e8eaef] px-2 pt-4" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setTopUserMenuOpen(false);
+                  setUserMenuOpen((open) => !open);
+                }}
+                className="w-full rounded-xl p-1 text-left transition hover:bg-[#f7f7f8]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-bold text-[#d61c3f]">
+                    AD
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-semibold text-[#374151]">Admin User</p>
+                    <p className="truncate text-[11px] text-[#6b7280]">admin@archcity.com</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[13px] font-semibold text-[#374151]">Admin User</p>
-                  <p className="truncate text-[11px] text-[#6b7280]">admin@archcity.com</p>
+              </button>
+
+              {userMenuOpen ? (
+                <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-[#e8eaef] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.12)]">
+                  <Link
+                    href={ADMIN_SETTINGS_ROUTE}
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-[#374151] transition hover:bg-[#f7f7f8]"
+                  >
+                    <FiUser className="h-4 w-4 text-[#6b7280]" />
+                    <span>Profile</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] font-medium text-[#d61c3f] transition hover:bg-[#fff1f3] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <FiLogOut className="h-4 w-4" />
+                    <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+                  </button>
                 </div>
-              </div>
+              ) : null}
             </div>
           </div>
         </aside>
@@ -150,8 +250,41 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   <FiBell className="h-4 w-4" />
                   <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#d61c3f]" />
                 </button>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
-                  AD
+                <div className="relative" ref={topUserMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      setTopUserMenuOpen((open) => !open);
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f] transition hover:opacity-90"
+                    aria-label="Open profile menu"
+                  >
+                    AD
+                  </button>
+
+                  {topUserMenuOpen ? (
+                    <div className="absolute right-0 top-full z-30 mt-2 w-40 rounded-xl border border-[#e8eaef] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.12)]">
+                      <Link
+                        href={ADMIN_SETTINGS_ROUTE}
+                        onClick={() => setTopUserMenuOpen(false)}
+                        className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-[#374151] transition hover:bg-[#f7f7f8]"
+                      >
+                        <FiUser className="h-4 w-4 text-[#6b7280]" />
+                        <span>Profile</span>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] font-medium text-[#d61c3f] transition hover:bg-[#fff1f3] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <FiLogOut className="h-4 w-4" />
+                        <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -163,3 +296,5 @@ export function AdminShell({ children }: { children: ReactNode }) {
     </main>
   );
 }
+
+

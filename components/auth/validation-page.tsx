@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react";
 
 import { FormStatusMessage } from "@/components/shared/form-status-message";
 import { submitPublicApi } from "@/lib/api/public-api";
@@ -12,6 +13,8 @@ import {
   STUDENT_DASHBOARD_ROUTE,
   TUTOR_DASHBOARD_ROUTE,
 } from "@/lib/routes";
+
+const OTP_LENGTH = 6;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -23,26 +26,22 @@ function readString(value: unknown) {
 
 function shouldRouteToStudentDashboard(data: unknown) {
   if (!isRecord(data)) return false;
-  const role = readString(data.role);
-  return role === "student";
+  return readString(data.role) === "student";
 }
 
 function shouldRouteToParentDashboard(data: unknown) {
   if (!isRecord(data)) return false;
-  const role = readString(data.role);
-  return role === "parent";
+  return readString(data.role) === "parent";
 }
 
 function shouldRouteToTutorDashboard(data: unknown) {
   if (!isRecord(data)) return false;
-  const role = readString(data.role);
-  return role === "tutor";
+  return readString(data.role) === "tutor";
 }
 
 function shouldRouteToAdminDashboard(data: unknown) {
   if (!isRecord(data)) return false;
-  const role = readString(data.role);
-  return role === "admin";
+  return readString(data.role) === "admin";
 }
 
 function readAccessToken(data: unknown) {
@@ -71,23 +70,69 @@ export function ValidationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialEmail = useMemo(() => searchParams.get("email") ?? "", [searchParams]);
-
-  const [email, setEmail] = useState(initialEmail);
-  const [code, setCode] = useState("");
+  const email = useMemo(() => searchParams.get("email")?.trim() ?? "", [searchParams]);
+  const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [submitState, setSubmitState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
 
-  const emailError = email.trim().length === 0 ? "Enter your email address." : "";
-  const codeError = code.trim().length === 0 ? "Enter your verification code." : "";
-  const canSubmit = !emailError && !codeError;
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const verificationCode = otpDigits.join("");
+  const canSubmit = Boolean(email) && verificationCode.length === OTP_LENGTH;
+
+  function setDigitAt(index: number, value: string) {
+    const next = [...otpDigits];
+    next[index] = value;
+    setOtpDigits(next);
+  }
+
+  function handleChange(index: number, event: ChangeEvent<HTMLInputElement>) {
+    const raw = event.target.value;
+    const digit = raw.replace(/\D/g, "").slice(-1);
+    setDigitAt(index, digit);
+
+    if (digit && index < OTP_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  }
+
+  function handleKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Backspace" && !otpDigits[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
     event.preventDefault();
+    const text = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    if (!text) return;
+
+    const next = Array(OTP_LENGTH).fill("");
+    for (let i = 0; i < text.length; i += 1) {
+      next[i] = text[i];
+    }
+    setOtpDigits(next);
+    const focusIndex = Math.min(text.length, OTP_LENGTH - 1);
+    inputRefs.current[focusIndex]?.focus();
+  }
+
+  function handleResendClick() {
+    setSubmitState("idle");
+    setSubmitMessage("Resend is not enabled yet. Please sign up again to request a new code.");
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!email) {
+      setSubmitState("error");
+      setSubmitMessage("Missing email context. Please return to signup.");
+      return;
+    }
 
     if (!canSubmit) {
       setSubmitState("error");
-      setSubmitMessage("Please enter email and code.");
+      setSubmitMessage("Please enter the full verification code.");
       return;
     }
 
@@ -97,8 +142,8 @@ export function ValidationPage() {
     const response = await submitPublicApi({
       endpoint: "verifyEmail",
       payload: {
-        email: email.trim(),
-        verification_code: code.trim(),
+        email,
+        verification_code: verificationCode,
       },
     });
 
@@ -136,63 +181,72 @@ export function ValidationPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3f0ef] px-4 py-12 sm:px-8">
-      <div className="mx-auto w-full max-w-lg rounded-2xl border border-[#e5e7eb] bg-white p-8 shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
-        <h1 className="text-3xl font-black tracking-[-0.04em] text-[#0f172a]">Verify Your Email</h1>
-        <p className="mt-3 text-sm text-[#6b7280]">Enter the verification code sent to your email to activate your account.</p>
+    <main className="min-h-screen bg-[#ececec] px-4 py-10 sm:py-14">
+      <div className="mx-auto w-full max-w-2xl text-center">
+        <h1 className="text-5xl font-bold tracking-[-0.04em] text-black">Verify Code</h1>
 
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
+        <p className="mx-auto mt-4 max-w-xl text-[38px] leading-tight text-[#161616] sm:text-[32px]">
+          We Sent OTP code to your email <br />
+          {email || "your-email@example.com"} Enter the code below to verify
+        </p>
+
+        <form className="mt-10" onSubmit={handleSubmit} noValidate>
           <FormStatusMessage
-            type={
-              submitState === "success"
-                ? "success"
-                : submitState === "error"
-                  ? "error"
-                  : "idle"
-            }
+            type={submitState === "success" ? "success" : submitState === "error" ? "error" : "idle"}
             message={submitMessage}
           />
 
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-[#4b5563]">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="h-12 w-full rounded-xl border border-[#e2e6ed] px-4 outline-none focus:border-[#a0afc7]"
-            />
-            {emailError ? <p className="mt-2 text-sm text-[#df1620]">{emailError}</p> : null}
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-[#4b5563]">Verification code</label>
-            <input
-              type="text"
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              placeholder="Enter code"
-              className="h-12 w-full rounded-xl border border-[#e2e6ed] px-4 outline-none focus:border-[#a0afc7]"
-            />
-            {codeError ? <p className="mt-2 text-sm text-[#df1620]">{codeError}</p> : null}
+          <div className="mt-6 flex justify-center gap-8">
+            {Array.from({ length: OTP_LENGTH }).map((_, index) => (
+              <input
+                key={`otp-${index}`}
+                ref={(node) => {
+                  inputRefs.current[index] = node;
+                }}
+                value={otpDigits[index]}
+                onChange={(event) => handleChange(index, event)}
+                onKeyDown={(event) => handleKeyDown(index, event)}
+                onPaste={handlePaste}
+                inputMode="numeric"
+                maxLength={1}
+                className="h-24 w-24 rounded-[18px] border-4 border-[#adadad] bg-transparent text-center text-6xl font-semibold text-[#3f3f46] outline-none focus:border-[#ef242a]"
+                aria-label={`Verification digit ${index + 1}`}
+              />
+            ))}
           </div>
 
           <button
             type="submit"
             disabled={!canSubmit || submitState === "submitting"}
-            className={`inline-flex h-12 w-full items-center justify-center rounded-xl text-base font-bold text-white transition ${
+            className={`mt-16 h-[74px] w-full rounded-[18px] text-[38px] font-medium text-white transition ${
               canSubmit && submitState !== "submitting"
-                ? "bg-[#df1620] hover:bg-[#f02029]"
+                ? "bg-[#f78d47] hover:bg-[#ef7c30]"
                 : "bg-[#d8dde6]"
             }`}
           >
-            {submitState === "submitting" ? "Verifying..." : "Verify"}
+            {submitState === "submitting" ? "Verifying..." : "Next"}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-[#6b7280]">
-          Already verified? <Link href="/login" className="font-semibold text-[#ef242a]">Go to login</Link>
+        <p className="mt-10 text-[40px] text-[#1f1f1f]">
+          Don&apos;t receive OTP?{" "}
+          <button
+            type="button"
+            onClick={handleResendClick}
+            className="text-[#d84b39] underline-offset-4 hover:underline"
+          >
+            Resend again
+          </button>
+        </p>
+
+        <p className="mt-14 text-[44px] font-medium text-[#111111]">
+          <Link href="/login" className="inline-flex items-center gap-3 hover:opacity-80">
+            <span aria-hidden="true">&#8592;</span>
+            <span>Back to Login</span>
+          </Link>
         </p>
       </div>
     </main>
   );
 }
+

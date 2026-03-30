@@ -5,8 +5,32 @@ import { useState } from "react";
 import { FiBell, FiCheckCircle, FiHelpCircle, FiLogOut } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
-import { studentProfile } from "@/lib/student/profile-data";
 import { studentScheduleItems } from "@/lib/student/schedule-data";
+
+export type StudentProfileData = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  gradeLevel: string;
+  initials: string;
+  planName: string;
+  planPrice: string;
+  renewsOn: string;
+  activePlanLabel: string;
+};
+
+type StudentProfileUpdatePayload = {
+  first_name: string;
+  last_name: string;
+  grade_level: string;
+};
+
+type ProfileFormValues = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  gradeLevel: string;
+};
 
 type ProfileTab = "Personal Info" | "Manage Plan" | "Session History" | "FAQ's & Support";
 
@@ -37,41 +61,179 @@ const faqItems = [
   },
 ];
 
-function PersonalInfoSection() {
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const encodedName = `${encodeURIComponent(name)}=`;
+  const parts = document.cookie.split(";");
+
+  for (const part of parts) {
+    const cookie = part.trim();
+    if (cookie.startsWith(encodedName)) {
+      return decodeURIComponent(cookie.slice(encodedName.length));
+    }
+  }
+
+  return null;
+}
+
+function deriveInitials(firstName: string, lastName: string): string {
+  const first = firstName.trim();
+  const last = lastName.trim();
+  if (first && last) {
+    return `${first[0]}${last[0]}`.toUpperCase();
+  }
+  if (first) {
+    return first.slice(0, 2).toUpperCase();
+  }
+  return "ST";
+}
+
+function normalizeBaseUrl(url: string) {
+  return url.endsWith("/") ? url.slice(0, -1) : url;
+}
+
+function resolveApiBaseUrl() {
+  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  return url ? normalizeBaseUrl(url) : null;
+}
+
+async function updateStudentProfile(
+  token: string,
+  payload: StudentProfileUpdatePayload,
+): Promise<StudentProfileData> {
+  const baseUrl = resolveApiBaseUrl();
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+  }
+
+  const response = await fetch(`${baseUrl}/student/profile`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    throw new Error("Authentication required. Please login again.");
+  }
+
+  if (!response.ok) {
+    let detail: string | undefined;
+
+    try {
+      const data = (await response.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON error responses.
+    }
+
+    throw new Error(detail ?? `Failed to update profile (${response.status}).`);
+  }
+
+  const data = (await response.json()) as {
+    first_name: string;
+    last_name: string;
+    email: string;
+    grade_level: string;
+    initials: string;
+    plan_name: string;
+    plan_price: string;
+    renews_on: string;
+    active_plan_label: string;
+  };
+
+  return {
+    firstName: data.first_name,
+    lastName: data.last_name,
+    email: data.email,
+    gradeLevel: data.grade_level,
+    initials: data.initials,
+    planName: data.plan_name,
+    planPrice: data.plan_price,
+    renewsOn: data.renews_on,
+    activePlanLabel: data.active_plan_label,
+  };
+}
+
+function PersonalInfoSection({
+  values,
+  isSaving,
+  saveError,
+  saveSuccess,
+  onChange,
+  onSave,
+}: {
+  values: ProfileFormValues;
+  isSaving: boolean;
+  saveError: string | null;
+  saveSuccess: string | null;
+  onChange: (field: keyof ProfileFormValues, value: string) => void;
+  onSave: () => void;
+}) {
   return (
     <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="flex items-center justify-between gap-4">
         <h3 className="text-[18px] font-bold text-[#20242b]">Personal Information</h3>
         <button
           type="button"
-          className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+          onClick={onSave}
+          disabled={isSaving}
+          className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Save Changes
+          {isSaving ? "Saving..." : "Save Changes"}
         </button>
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
-        {[
-          { label: "First Name", value: studentProfile.firstName },
-          { label: "Last Name", value: studentProfile.lastName },
-          { label: "Email Address", value: studentProfile.email },
-          { label: "Grade Level", value: studentProfile.gradeLevel },
-        ].map((field) => (
-          <div key={field.label}>
-            <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">
-              {field.label}
-            </label>
-            <div className="flex h-11 items-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563]">
-              {field.value}
-            </div>
-          </div>
-        ))}
+        <div>
+          <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">First Name</label>
+          <input
+            value={values.firstName}
+            onChange={(event) => onChange("firstName", event.target.value)}
+            className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-white px-4 text-[14px] text-[#20242b]"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Last Name</label>
+          <input
+            value={values.lastName}
+            onChange={(event) => onChange("lastName", event.target.value)}
+            className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-white px-4 text-[14px] text-[#20242b]"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Email Address</label>
+          <input
+            value={values.email}
+            readOnly
+            className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#6b7280]"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Grade Level</label>
+          <input
+            value={values.gradeLevel}
+            onChange={(event) => onChange("gradeLevel", event.target.value)}
+            className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-white px-4 text-[14px] text-[#20242b]"
+          />
+        </div>
       </div>
+
+      {saveError ? <p className="mt-4 text-[13px] text-[#d61c3f]">{saveError}</p> : null}
+      {saveSuccess ? <p className="mt-4 text-[13px] text-[#1b8a5a]">{saveSuccess}</p> : null}
     </section>
   );
 }
 
-function ManagePlanSection() {
+function ManagePlanSection({ profile }: { profile: StudentProfileData }) {
   return (
     <section className="space-y-4">
       <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -80,9 +242,9 @@ function ManagePlanSection() {
         <div className="mt-4 rounded-[12px] bg-[#fafafb] p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-[15px] font-bold text-[#20242b]">{studentProfile.planName}</p>
+              <p className="text-[15px] font-bold text-[#20242b]">{profile.planName}</p>
               <p className="text-[13px] text-[#6b7280]">
-                {studentProfile.planPrice} · Renews {studentProfile.renewsOn}
+                {profile.planPrice} - Renews {profile.renewsOn}
               </p>
             </div>
             <span className="inline-flex rounded-full bg-[#eaf7ef] px-3 py-1 text-[11px] font-medium text-[#2d8f5f]">
@@ -115,9 +277,9 @@ function ManagePlanSection() {
         <h3 className="text-[18px] font-bold text-[#20242b]">Billing Details</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {[
-            { label: "Current Plan", value: studentProfile.planName },
-            { label: "Monthly Cost", value: studentProfile.planPrice },
-            { label: "Renewal Date", value: studentProfile.renewsOn },
+            { label: "Current Plan", value: profile.planName },
+            { label: "Monthly Cost", value: profile.planPrice },
+            { label: "Renewal Date", value: profile.renewsOn },
           ].map((item) => (
             <div key={item.label} className="rounded-[12px] bg-[#fafafb] p-4">
               <p className="text-[12px] font-semibold text-[#6b7280]">{item.label}</p>
@@ -229,8 +391,73 @@ function FaqSupportSection() {
   );
 }
 
-export function StudentProfilePage() {
+export function StudentProfilePage({ profile }: { profile: StudentProfileData }) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("Personal Info");
+  const [currentProfile, setCurrentProfile] = useState<StudentProfileData>(profile);
+  const [formValues, setFormValues] = useState<ProfileFormValues>({
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    email: profile.email,
+    gradeLevel: profile.gradeLevel,
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+
+  const handleFieldChange = (field: keyof ProfileFormValues, value: string) => {
+    setFormValues((previous) => ({ ...previous, [field]: value }));
+    setSaveError(null);
+    setSaveSuccess(null);
+  };
+
+  const handleSaveChanges = async () => {
+    const firstName = formValues.firstName.trim();
+    const lastName = formValues.lastName.trim();
+    const gradeLevel = formValues.gradeLevel.trim();
+
+    if (!firstName || !lastName || !gradeLevel) {
+      setSaveError("First name, last name, and grade level are required.");
+      setSaveSuccess(null);
+      return;
+    }
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setSaveError("Authentication required. Please login again.");
+      setSaveSuccess(null);
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    try {
+      const updated = await updateStudentProfile(token, {
+        first_name: firstName,
+        last_name: lastName,
+        grade_level: gradeLevel,
+      });
+
+      const resolvedProfile: StudentProfileData = {
+        ...updated,
+        initials: updated.initials || deriveInitials(updated.firstName, updated.lastName),
+      };
+
+      setCurrentProfile(resolvedProfile);
+      setFormValues({
+        firstName: resolvedProfile.firstName,
+        lastName: resolvedProfile.lastName,
+        email: resolvedProfile.email,
+        gradeLevel: resolvedProfile.gradeLevel,
+      });
+      setSaveSuccess("Profile updated successfully.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to update profile.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <StudentShell>
@@ -246,7 +473,7 @@ export function StudentProfilePage() {
               <FiBell className="h-4 w-4" />
             </button>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
-              {studentProfile.initials}
+              {currentProfile.initials}
             </div>
           </div>
         </div>
@@ -256,17 +483,17 @@ export function StudentProfilePage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#ffe7eb] text-[20px] font-bold text-[#d61c3f]">
-                  {studentProfile.initials}
+                  {currentProfile.initials}
                 </div>
                 <div>
                   <h2 className="text-[18px] font-bold text-[#20242b]">
-                    {studentProfile.firstName} {studentProfile.lastName}
+                    {currentProfile.firstName} {currentProfile.lastName}
                   </h2>
                   <p className="text-[13px] text-[#6b7280]">
-                    {studentProfile.email} · {studentProfile.gradeLevel}
+                    {currentProfile.email} - {currentProfile.gradeLevel}
                   </p>
                   <span className="mt-2 inline-flex rounded-full bg-[#eaf7ef] px-2.5 py-1 text-[11px] font-medium text-[#2d8f5f]">
-                    Active Plan - $10/month
+                    {currentProfile.activePlanLabel}
                   </span>
                 </div>
               </div>
@@ -299,8 +526,17 @@ export function StudentProfilePage() {
             </div>
           </div>
 
-          {activeTab === "Personal Info" ? <PersonalInfoSection /> : null}
-          {activeTab === "Manage Plan" ? <ManagePlanSection /> : null}
+          {activeTab === "Personal Info" ? (
+            <PersonalInfoSection
+              values={formValues}
+              isSaving={isSaving}
+              saveError={saveError}
+              saveSuccess={saveSuccess}
+              onChange={handleFieldChange}
+              onSave={handleSaveChanges}
+            />
+          ) : null}
+          {activeTab === "Manage Plan" ? <ManagePlanSection profile={currentProfile} /> : null}
           {activeTab === "Session History" ? <SessionHistorySection /> : null}
           {activeTab === "FAQ's & Support" ? <FaqSupportSection /> : null}
 
@@ -316,3 +552,4 @@ export function StudentProfilePage() {
     </StudentShell>
   );
 }
+

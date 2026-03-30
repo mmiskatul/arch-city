@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiAlertCircle,
   FiBriefcase,
@@ -78,13 +78,18 @@ const gradeOptions = [
   "3rd Grade",
 ];
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
+function ReadOnlyField({ label, value, onChange, readOnly = true }: { label: string; value: string; onChange?: (value: string) => void; readOnly?: boolean }) {
   return (
     <div>
       <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">{label}</label>
-      <div className="flex min-h-11 items-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#4b5563]">
-        {value}
-      </div>
+      <input
+        value={value}
+        readOnly={readOnly}
+        onChange={(event) => onChange?.(event.target.value)}
+        className={`h-11 w-full rounded-lg border border-[#e5e7eb] px-4 text-[14px] ${
+          readOnly ? "bg-[#fafafa] text-[#6b7280]" : "bg-white text-[#20242b]"
+        }`}
+      />
     </div>
   );
 }
@@ -120,20 +125,20 @@ function PersonalInfoSection() {
       <h3 className="text-[18px] font-bold text-[#20242b]">Personal Information</h3>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <ReadOnlyField label="First Name" value={tutorProfile.firstName} />
-        <ReadOnlyField label="Last Name" value={tutorProfile.lastName} />
-        <ReadOnlyField label="Email Address" value={tutorProfile.email} />
-        <ReadOnlyField label="Phone Number" value={tutorProfile.phone} />
+        <ReadOnlyField label="First Name" value={profile.firstName} />
+        <ReadOnlyField label="Last Name" value={profile.lastName} />
+        <ReadOnlyField label="Email Address" value={profile.email} />
+        <ReadOnlyField label="Phone Number" value={profile.phone} />
         <ReadOnlyField label="Date of Birth" value="" />
         <ReadOnlyField label="Gender" value="" />
         <div className="md:col-span-2">
-          <ReadOnlyField label="Street Address" value={tutorProfile.streetAddress} />
+          <ReadOnlyField label="Street Address" value={profile.streetAddress} />
         </div>
-        <ReadOnlyField label="City" value={tutorProfile.city} />
-        <ReadOnlyField label="State" value={tutorProfile.state} />
-        <ReadOnlyField label="ZIP Code" value={tutorProfile.zipCode} />
-        <ReadOnlyField label="Emergency Contact Name" value={tutorProfile.emergencyContactName} />
-        <ReadOnlyField label="Emergency Contact Phone" value={tutorProfile.emergencyContactPhone} />
+        <ReadOnlyField label="City" value={profile.city} />
+        <ReadOnlyField label="State" value={profile.state} />
+        <ReadOnlyField label="ZIP Code" value={profile.zipCode} />
+        <ReadOnlyField label="Emergency Contact Name" value={profile.emergencyContactName} />
+        <ReadOnlyField label="Emergency Contact Phone" value={profile.emergencyContactPhone} />
       </div>
 
       <div className="mt-6 flex items-center justify-between rounded-[12px] bg-[#f8faf8] px-4 py-4">
@@ -141,7 +146,7 @@ function PersonalInfoSection() {
           <FiCheckCircle className="mt-0.5 h-5 w-5 text-[#64b486]" />
           <div>
             <p className="text-[14px] font-semibold text-[#20242b]">Background Check</p>
-            <p className="text-[12px] text-[#6b7280]">{tutorProfile.backgroundCheck}</p>
+            <p className="text-[12px] text-[#6b7280]">{profile.backgroundCheck}</p>
           </div>
         </div>
         <span className="inline-flex rounded-full bg-[#dff2e5] px-3 py-1 text-[11px] font-semibold text-[#3d9b68]">
@@ -206,32 +211,32 @@ export function TutorProfilePage() {
           <aside className="border-b border-[#eceef2] p-4 xl:border-r xl:border-b-0">
             <div className="flex flex-col items-center border-b border-[#eceef2] pb-4 text-center">
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#ffe7eb] text-[40px] font-bold text-[#d61c3f]">
-                {tutorProfile.initials}
+                {profile.initials}
               </div>
               <h2 className="mt-5 text-[18px] font-bold text-[#20242b]">
-                {tutorProfile.firstName} {tutorProfile.lastName}
+                {profile.firstName} {profile.lastName}
               </h2>
-              <p className="text-[14px] text-[#6b7280]">{tutorProfile.title}</p>
+              <p className="text-[14px] text-[#6b7280]">{profile.title}</p>
               <div className="mt-3 flex items-center gap-2">
                 <span className="inline-flex rounded-full bg-[#dff2e5] px-3 py-1 text-[11px] font-semibold text-[#3d9b68]">
-                  {tutorProfile.status}
+                  {profile.status}
                 </span>
-                <span className="text-[12px] text-[#6b7280]">{tutorProfile.since}</span>
+                <span className="text-[12px] text-[#6b7280]">{profile.since}</span>
               </div>
             </div>
 
             <div className="space-y-3 border-b border-[#eceef2] py-4 text-[13px] text-[#4b5563]">
               <div className="flex items-center gap-2">
                 <FiMail className="h-4 w-4 text-[#6b7280]" />
-                <span>{tutorProfile.email}</span>
+                <span>{profile.email}</span>
               </div>
               <div className="flex items-center gap-2">
                 <FiPhone className="h-4 w-4 text-[#6b7280]" />
-                <span>{tutorProfile.phone}</span>
+                <span>{profile.phone}</span>
               </div>
               <div className="flex items-center gap-2">
                 <FiMapPin className="h-4 w-4 text-[#6b7280]" />
-                <span>{tutorProfile.location}</span>
+                <span>{profile.location}</span>
               </div>
             </div>
 
@@ -239,10 +244,10 @@ export function TutorProfilePage() {
               <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">Quick Stats</p>
               <div className="mt-3 space-y-2 text-[14px]">
                 {[
-                  { label: "Total Sessions", value: tutorProfile.totalSessions, valueClassName: "text-[#20242b]" },
-                  { label: "Avg Rating", value: `${tutorProfile.avgRating} ★`, valueClassName: "text-[#20242b]" },
-                  { label: "Active Students", value: tutorProfile.activeStudents, valueClassName: "text-[#20242b]" },
-                  { label: "All-Time Earnings", value: tutorProfile.allTimeEarnings, valueClassName: "text-[#1b8a5a]" },
+                  { label: "Total Sessions", value: profile.totalSessions, valueClassName: "text-[#20242b]" },
+                  { label: "Avg Rating", value: `${profile.avgRating} ★`, valueClassName: "text-[#20242b]" },
+                  { label: "Active Students", value: profile.activeStudents, valueClassName: "text-[#20242b]" },
+                  { label: "All-Time Earnings", value: profile.allTimeEarnings, valueClassName: "text-[#1b8a5a]" },
                 ].map((stat) => (
                   <div key={stat.label} className="flex items-center justify-between gap-4">
                     <span className="text-[#6b7280]">{stat.label}</span>
@@ -791,3 +796,4 @@ export function TutorProfilePage() {
     </TutorShell>
   );
 }
+

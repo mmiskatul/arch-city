@@ -269,10 +269,6 @@ export function AdminDashboardPage({
           <p className="text-[14px] text-[#6b7280]">Today &#8212; {data.today_label}</p>
         </div>
 
-        <div className="mt-2 flex items-center gap-3 text-[12px] text-[#6b7280]">
-          <span className="rounded-full bg-[#f4f5f7] px-2 py-1 font-medium">Source: {data.meta.data_mode}</span>
-          <span>{data.meta.current_source}</span>
-        </div>
 
         {loadError ? (
           <p className="mt-2 rounded-md border border-[#ffecef] bg-[#fff5f7] px-3 py-2 text-[12px] text-[#d61c3f]">{loadError}</p>
@@ -386,3 +382,4 @@ export function AdminDashboardPage({
     </AdminShell>
   );
 }
+
