@@ -1,4 +1,4 @@
-type PublicApiEndpointKey = "login" | "signup" | "contact";
+﻿type PublicApiEndpointKey = "login" | "signup" | "verifyEmail" | "contact";
 
 type PublicApiRequest = {
   endpoint: PublicApiEndpointKey;
@@ -15,12 +15,14 @@ type PublicApiResponse<T = unknown> = {
 const endpointEnvMap: Record<PublicApiEndpointKey, string | undefined> = {
   login: process.env.NEXT_PUBLIC_API_LOGIN_URL,
   signup: process.env.NEXT_PUBLIC_API_SIGNUP_URL,
+  verifyEmail: process.env.NEXT_PUBLIC_API_VERIFY_EMAIL_URL,
   contact: process.env.NEXT_PUBLIC_API_CONTACT_URL,
 };
 
 const endpointPathMap: Record<PublicApiEndpointKey, string> = {
   login: "/auth/login",
-  signup: "/auth/signup",
+  signup: "/auth/register",
+  verifyEmail: "/auth/verify-email",
   contact: "/contact",
 };
 
@@ -46,6 +48,22 @@ export function resolvePublicApiUrl(endpoint: PublicApiEndpointKey) {
   }
 
   return `${normalizeBaseUrl(baseUrl)}${normalizePath(endpointPathMap[endpoint])}`;
+}
+
+function resolveErrorMessage<T>(response: Response, data: T | null): string {
+  if (data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+
+    if (typeof record.message === "string" && record.message) {
+      return record.message;
+    }
+
+    if (typeof record.detail === "string" && record.detail) {
+      return record.detail;
+    }
+  }
+
+  return `Request failed with status ${response.status}.`;
 }
 
 export async function submitPublicApi<T = unknown>({
@@ -78,19 +96,11 @@ export async function submitPublicApi<T = unknown>({
       : null;
 
     if (!response.ok) {
-      const message =
-        (data &&
-          typeof data === "object" &&
-          "message" in data &&
-          typeof data.message === "string" &&
-          data.message) ||
-        `Request failed with status ${response.status}.`;
-
       return {
         ok: false,
         status: response.status,
         data,
-        error: message,
+        error: resolveErrorMessage(response, data),
       };
     }
 

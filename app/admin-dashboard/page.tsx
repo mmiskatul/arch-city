@@ -11,7 +11,7 @@ function normalizeBaseUrl(url: string) {
 }
 
 function resolveApiBaseUrl() {
-  const url = process.env.API_BASE_URL?.trim() || process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
   return url ? normalizeBaseUrl(url) : null;
 }
 
@@ -23,7 +23,7 @@ async function fetchAdminDashboardOverview(): Promise<{
   if (!baseUrl) {
     return {
       data: defaultAdminDashboardOverviewData,
-      loadError: "API base URL is not configured. Showing fallback data.",
+      loadError: "NEXT_PUBLIC_API_BASE_URL is not configured. Showing fallback data.",
     };
   }
 

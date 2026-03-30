@@ -334,7 +334,7 @@ export function AuthShell({ mode }: AuthShellProps) {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginTouched, setLoginTouched] = useState<TouchedFields>({});
   const [signupRole, setSignupRole] = useState<SignupRole>("student");
-  const [signupStep, setSignupStep] = useState<"role" | "form">("role");
+  const [signupStep, setSignupStep] = useState<"role" | "form" | "confirm">("role");
   const [signupFirstName, setSignupFirstName] = useState("");
   const [signupLastName, setSignupLastName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
@@ -360,7 +360,7 @@ export function AuthShell({ mode }: AuthShellProps) {
     return {
       identifier:
         identifier.length === 0
-          ? "Enter your email address or student id."
+          ? "Enter your email address."
           : identifier.includes("@") && !EMAIL_PATTERN.test(identifier)
             ? "Enter a valid email address."
             : "",
@@ -503,7 +503,7 @@ export function AuthShell({ mode }: AuthShellProps) {
     const response = await submitPublicApi({
       endpoint: "login",
       payload: {
-        identifier: loginIdentifier.trim(),
+        email: loginIdentifier.trim(),
         password: loginPassword,
       },
     });
@@ -544,8 +544,36 @@ export function AuthShell({ mode }: AuthShellProps) {
     setLoginSubmitMessage("Login request sent successfully.");
   }
 
+  function handleSignupContinue() {
+    setSignupTouched({
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      password: true,
+      confirmPassword: true,
+      heardFrom: true,
+      agreement: true,
+      smsConsent: true,
+      terms: true,
+    });
+
+    if (!signupCanContinue) {
+      setSignupSubmitState("error");
+      setSignupSubmitMessage("Please complete all required fields before continuing.");
+      return;
+    }
+
+    setSignupSubmitState("idle");
+    setSignupSubmitMessage("Review details, then click Create User.");
+    setSignupStep("confirm");
+  }
   async function handleSignupSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (signupStep !== "confirm") {
+      return;
+    }
     setSignupTouched({
       firstName: true,
       lastName: true,
@@ -572,16 +600,13 @@ export function AuthShell({ mode }: AuthShellProps) {
       endpoint: "signup",
       payload: {
         role: signupRole,
-        firstName: signupFirstName.trim(),
-        lastName: signupLastName.trim(),
+        first_name: signupFirstName.trim(),
+        last_name: signupLastName.trim(),
         email: signupEmail.trim(),
-        phone: signupPhone.trim(),
+        phone_number: signupPhone.trim(),
+        hear_about: heardFrom,
+        sms_consent: smsConsent === "yes",
         password: signupPassword,
-        confirmPassword: signupConfirmPassword,
-        heardFrom,
-        acceptedAgreement,
-        smsConsent,
-        acceptedTerms,
       },
     });
 
@@ -592,9 +617,9 @@ export function AuthShell({ mode }: AuthShellProps) {
     }
 
     setSignupSubmitState("success");
-    setSignupSubmitMessage("Signup request sent successfully.");
+    setSignupSubmitMessage("Signup successful. Redirecting to validation...");
+    router.push(`/validation?email=${encodeURIComponent(signupEmail.trim())}`);
   }
-
   if (!isLogin && signupStep === "role") {
     return (
       <main className="min-h-screen bg-[#f3f0ef]">
@@ -698,7 +723,11 @@ export function AuthShell({ mode }: AuthShellProps) {
             {!isLogin ? (
               <button
                 type="button"
-                onClick={() => setSignupStep("role")}
+                onClick={() =>
+                  setSignupStep((current) =>
+                    current === "confirm" ? "form" : "role",
+                  )
+                }
                 aria-label="Back to account type selection"
                 className="inline-flex size-8 items-center justify-center rounded-full border border-[#d9d9d9] bg-white text-[#4b5563] shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition hover:border-[#cfcfcf] hover:bg-[#f8f8f8]"
               >
@@ -748,7 +777,7 @@ export function AuthShell({ mode }: AuthShellProps) {
                 />
                 <div>
                   <label className="mb-2 block text-xs font-semibold text-[#4b5563]">
-                    Email address or student id
+                    Email address
                   </label>
                   <input
                     type="email"
@@ -1203,5 +1232,9 @@ export function AuthShell({ mode }: AuthShellProps) {
     </main>
   );
 }
+
+
+
+
 
 
