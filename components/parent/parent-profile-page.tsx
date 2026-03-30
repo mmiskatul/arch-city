@@ -523,6 +523,18 @@ export function ParentProfilePage() {
         zipCode: updated.zipCode,
       });
       setSaveSuccess("Profile updated successfully.");
+      window.dispatchEvent(
+        new CustomEvent("arch-profile-updated", {
+          detail: {
+            role: "parent",
+            firstName: updated.firstName,
+            lastName: updated.lastName,
+            email: updated.email,
+            phone: updated.phone,
+            initials: updated.initials,
+          },
+        }),
+      );
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to save profile.");
     } finally {
@@ -645,3 +657,4 @@ export function ParentProfilePage() {
     </ParentShell>
   );
 }
+

@@ -452,6 +452,17 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
         gradeLevel: resolvedProfile.gradeLevel,
       });
       setSaveSuccess("Profile updated successfully.");
+      window.dispatchEvent(
+        new CustomEvent("arch-profile-updated", {
+          detail: {
+            role: "student",
+            firstName: resolvedProfile.firstName,
+            lastName: resolvedProfile.lastName,
+            email: resolvedProfile.email,
+            initials: resolvedProfile.initials,
+          },
+        }),
+      );
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to update profile.");
     } finally {
@@ -552,4 +563,5 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
     </StudentShell>
   );
 }
+
 

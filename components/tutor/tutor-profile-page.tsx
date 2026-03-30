@@ -407,6 +407,17 @@ export function TutorProfilePage() {
         emergencyContactPhone: updatedProfile.emergencyContactPhone,
       });
       setSaveSuccess("Profile updated successfully.");
+      window.dispatchEvent(
+        new CustomEvent("arch-profile-updated", {
+          detail: {
+            role: "tutor",
+            firstName: updatedProfile.firstName,
+            lastName: updatedProfile.lastName,
+            email: updatedProfile.email,
+            initials: updatedProfile.initials,
+          },
+        }),
+      );
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to save profile.");
       setSaveSuccess(null);
@@ -1036,6 +1047,7 @@ export function TutorProfilePage() {
     </TutorShell>
   );
 }
+
 
 
 

@@ -1,5 +1,5 @@
-import { TutorSettingsPage } from "@/components/tutor/tutor-settings-page";
+import { redirect } from "next/navigation";
 
 export default function TutorSettingsRoute() {
-  return <TutorSettingsPage />;
+  redirect("/tutor-dashboard/settings/notification-preferences");
 }

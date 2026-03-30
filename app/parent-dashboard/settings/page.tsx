@@ -1,5 +1,5 @@
-import { ParentSettingsPage } from "@/components/parent/parent-settings-page";
+import { redirect } from "next/navigation";
 
 export default function ParentSettingsRoute() {
-  return <ParentSettingsPage />;
+  redirect("/parent-dashboard/settings/notification-preferences");
 }

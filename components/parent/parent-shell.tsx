@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -93,6 +93,13 @@ function clearAuthCookies() {
   document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
 }
 
+type ShellUserProfile = {
+  initials: string;
+  name: string;
+  email: string;
+  phone: string;
+};
+
 export function ParentShell({
   children,
   messagesUnreadCountOverride,
@@ -104,8 +111,75 @@ export function ParentShell({
   const router = useRouter();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [userProfile, setUserProfile] = useState<ShellUserProfile>({
+    initials: "PA",
+    name: "Parent",
+    email: "",
+    phone: "",
+  });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    async function loadProfile() {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+      const token = readCookie("arch_access_token");
+      if (!baseUrl || !token) return;
+
+      try {
+        const response = await fetch(`${baseUrl}/parent/profile`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) return;
+
+        const data = (await response.json()) as {
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone_number: string;
+          initials: string;
+        };
+
+        setUserProfile({
+          initials: data.initials || "PA",
+          name: `${data.first_name} ${data.last_name}`.trim() || "Parent",
+          email: data.email,
+          phone: data.phone_number || "",
+        });
+      } catch {
+        // Keep fallback values.
+      }
+    }
+
+    function onProfileUpdated(event: Event) {
+      const customEvent = event as CustomEvent<{
+        role?: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+        initials?: string;
+      }>;
+      const detail = customEvent.detail;
+      if (!detail || detail.role !== "parent") return;
+
+      setUserProfile({
+        initials: detail.initials || "PA",
+        name: `${detail.firstName ?? ""} ${detail.lastName ?? ""}`.trim() || "Parent",
+        email: detail.email || "",
+        phone: detail.phone || "",
+      });
+    }
+
+    loadProfile();
+    window.addEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+    };
+  }, []);
   useEffect(() => {
     function onMouseDown(event: MouseEvent) {
       const target = event.target as Node;
@@ -198,11 +272,11 @@ export function ParentShell({
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-bold text-[#d61c3f]">
-                    SW
+                    {userProfile.initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-[#374151]">Sarah Wilson</p>
-                    <p className="truncate text-[11px] text-[#6b7280]">sarah@email.com</p>
+                    <p className="truncate text-[13px] font-semibold text-[#374151]">{userProfile.name}</p>
+                    <p className="truncate text-[11px] text-[#6b7280]">{userProfile.email}</p>
                   </div>
                 </div>
               </button>
@@ -240,3 +314,4 @@ export function ParentShell({
     </main>
   );
 }
+

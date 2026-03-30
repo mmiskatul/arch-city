@@ -1,5 +1,5 @@
-import { StudentSettingsPage } from "@/components/student/student-settings-page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <StudentSettingsPage />;
+  redirect("/student-dashboard/settings/notification-preferences");
 }

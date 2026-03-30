@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -95,6 +95,12 @@ function clearAuthCookies() {
   document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
 }
 
+type ShellUserProfile = {
+  initials: string;
+  name: string;
+  email: string;
+};
+
 export function TutorShell({
   children,
   messagesUnreadCountOverride,
@@ -107,9 +113,71 @@ export function TutorShell({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [userProfile, setUserProfile] = useState<ShellUserProfile>({
+    initials: "TU",
+    name: "Tutor",
+    email: "",
+  });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const topUserMenuRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    async function loadProfile() {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+      const token = readCookie("arch_access_token");
+      if (!baseUrl || !token) return;
+
+      try {
+        const response = await fetch(`${baseUrl}/tutor/profile`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) return;
+
+        const data = (await response.json()) as {
+          first_name: string;
+          last_name: string;
+          email: string;
+          initials: string;
+        };
+
+        setUserProfile({
+          initials: data.initials || "TU",
+          name: `${data.first_name} ${data.last_name}`.trim() || "Tutor",
+          email: data.email,
+        });
+      } catch {
+        // Keep fallback values.
+      }
+    }
+
+    function onProfileUpdated(event: Event) {
+      const customEvent = event as CustomEvent<{
+        role?: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        initials?: string;
+      }>;
+      const detail = customEvent.detail;
+      if (!detail || detail.role !== "tutor") return;
+
+      setUserProfile({
+        initials: detail.initials || "TU",
+        name: `${detail.firstName ?? ""} ${detail.lastName ?? ""}`.trim() || "Tutor",
+        email: detail.email || "",
+      });
+    }
+
+    loadProfile();
+    window.addEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+    };
+  }, []);
   useEffect(() => {
     function onMouseDown(event: MouseEvent) {
       const target = event.target as Node;
@@ -223,11 +291,11 @@ export function TutorShell({
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-bold text-[#d61c3f]">
-                    MT
+                    {userProfile.initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-[#374151]">Marcus Thompson</p>
-                    <p className="truncate text-[11px] text-[#6b7280]">marcus@email.com</p>
+                    <p className="truncate text-[13px] font-semibold text-[#374151]">{userProfile.name}</p>
+                    <p className="truncate text-[11px] text-[#6b7280]">{userProfile.email}</p>
                   </div>
                 </div>
               </button>
@@ -298,7 +366,7 @@ export function TutorShell({
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f] transition hover:opacity-90"
                     aria-label="Open profile menu"
                   >
-                    MT
+                    {userProfile.initials}
                   </button>
 
                   {topUserMenuOpen ? (
@@ -334,3 +402,4 @@ export function TutorShell({
     </main>
   );
 }
+
