@@ -1,21 +1,17 @@
+import { NotificationPreferencesPanel } from "@/components/settings/notification-preferences-panel";
 import { StudentSettingsSubrouteLayout } from "@/components/student/student-settings-subroute-layout";
+
+const options = [
+  { key: "email_session_reminders", label: "Email - Session Reminders" },
+  { key: "email_booking_confirmations", label: "Email - Booking Confirmations" },
+  { key: "email_new_messages", label: "Email - New Messages" },
+  { key: "in_app_notifications", label: "In-App Notifications" },
+];
 
 export default function Page() {
   return (
     <StudentSettingsSubrouteLayout title="Notification Preferences">
-      <div className="space-y-3">
-        {[
-          "Email - Session Reminders",
-          "Email - Booking Confirmations",
-          "Email - New Messages",
-          "In-App Notifications",
-        ].map((item) => (
-          <div key={item} className="flex items-center justify-between rounded-lg border border-[#eceef2] bg-[#fafafb] px-4 py-3">
-            <p className="text-[14px] font-medium text-[#20242b]">{item}</p>
-            <span className="text-[12px] font-semibold text-[#3d9b68]">Enabled</span>
-          </div>
-        ))}
-      </div>
+      <NotificationPreferencesPanel options={options} />
     </StudentSettingsSubrouteLayout>
   );
 }
