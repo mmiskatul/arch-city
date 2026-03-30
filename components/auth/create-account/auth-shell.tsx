@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -19,6 +19,7 @@ import {
 } from "react-icons/ai";
 import { submitPublicApi } from "@/lib/api/public-api";
 import {
+  ADMIN_DASHBOARD_ROUTE,
   PARENT_DASHBOARD_ROUTE,
   SIGNUP_ROUTE,
   STUDENT_DASHBOARD_ROUTE,
@@ -78,6 +79,45 @@ function shouldRouteToTutorDashboard(data: unknown) {
   const userRole = readString(user?.role);
 
   return role === "tutor" || userRole === "tutor";
+}
+
+function shouldRouteToAdminDashboard(data: unknown) {
+  if (!isRecord(data)) {
+    return false;
+  }
+
+  const role = readString(data.role);
+  const user = isRecord(data.user) ? data.user : null;
+  const userRole = readString(user?.role);
+
+  return role === "admin" || userRole === "admin";
+}
+
+function readAccessToken(data: unknown) {
+  if (!isRecord(data)) {
+    return "";
+  }
+
+  const accessToken = data.access_token ?? data.accessToken;
+  return typeof accessToken === "string" ? accessToken : "";
+}
+
+function persistSessionCookies(data: unknown) {
+  const token = readAccessToken(data);
+  const role = isRecord(data) ? readString(data.role) : "";
+
+  if (!token || !role) {
+    return;
+  }
+
+  const oneWeekInSeconds = 60 * 60 * 24 * 7;
+  const secureSuffix =
+    typeof window !== "undefined" && window.location.protocol === "https:"
+      ? "; Secure"
+      : "";
+
+  document.cookie = `arch_access_token=${encodeURIComponent(token)}; Path=/; Max-Age=${oneWeekInSeconds}; SameSite=Lax${secureSuffix}`;
+  document.cookie = `arch_user_role=${encodeURIComponent(role)}; Path=/; Max-Age=${oneWeekInSeconds}; SameSite=Lax${secureSuffix}`;
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -166,7 +206,7 @@ function PasswordRule({
         }`}
         aria-hidden="true"
       >
-        {satisfied ? "✓" : ""}
+        {satisfied ? "âœ“" : ""}
       </span>
       <span>{label}</span>
     </div>
@@ -475,6 +515,13 @@ export function AuthShell({ mode }: AuthShellProps) {
     }
 
     setLoginSubmitState("success");
+    persistSessionCookies(response.data);
+
+    if (shouldRouteToAdminDashboard(response.data)) {
+      setLoginSubmitMessage("Login successful. Redirecting to admin dashboard...");
+      router.push(ADMIN_DASHBOARD_ROUTE);
+      return;
+    }
 
     if (shouldRouteToStudentDashboard(response.data)) {
       setLoginSubmitMessage("Login successful. Redirecting to student dashboard...");
@@ -1156,3 +1203,5 @@ export function AuthShell({ mode }: AuthShellProps) {
     </main>
   );
 }
+
+
