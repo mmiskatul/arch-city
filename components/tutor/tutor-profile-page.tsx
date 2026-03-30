@@ -78,6 +78,133 @@ const gradeOptions = [
   "3rd Grade",
 ];
 
+
+type TutorProfileApiModel = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  street_address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  initials: string;
+  title: string;
+  status: string;
+  location: string;
+  background_check: string;
+};
+
+type TutorProfileForm = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+};
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const encodedName = `${encodeURIComponent(name)}=`;
+  const parts = document.cookie.split(";");
+  for (const part of parts) {
+    const cookie = part.trim();
+    if (cookie.startsWith(encodedName)) {
+      return decodeURIComponent(cookie.slice(encodedName.length));
+    }
+  }
+  return null;
+}
+
+function normalizeBaseUrl(url: string) {
+  return url.endsWith("/") ? url.slice(0, -1) : url;
+}
+
+function resolveApiBaseUrl() {
+  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  return url ? normalizeBaseUrl(url) : null;
+}
+
+function mapTutorProfileApiToUi(data: TutorProfileApiModel) {
+  return {
+    ...tutorProfile,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    email: data.email,
+    phone: data.phone_number,
+    streetAddress: data.street_address,
+    city: data.city,
+    state: data.state,
+    zipCode: data.zip_code,
+    emergencyContactName: data.emergency_contact_name,
+    emergencyContactPhone: data.emergency_contact_phone,
+    initials: data.initials || tutorProfile.initials,
+    title: data.title || tutorProfile.title,
+    status: data.status || tutorProfile.status,
+    location: data.location || tutorProfile.location,
+    backgroundCheck: data.background_check || tutorProfile.backgroundCheck,
+  };
+}
+
+async function fetchTutorProfile(token: string) {
+  const baseUrl = resolveApiBaseUrl();
+  if (!baseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+
+  const response = await fetch(`${baseUrl}/tutor/profile`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load profile (${response.status}).`);
+  }
+
+  return mapTutorProfileApiToUi((await response.json()) as TutorProfileApiModel);
+}
+
+async function saveTutorProfile(token: string, form: TutorProfileForm) {
+  const baseUrl = resolveApiBaseUrl();
+  if (!baseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+
+  const response = await fetch(`${baseUrl}/tutor/profile`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      first_name: form.firstName.trim(),
+      last_name: form.lastName.trim(),
+      phone_number: form.phone.trim(),
+      street_address: form.streetAddress.trim(),
+      city: form.city.trim(),
+      state: form.state.trim(),
+      zip_code: form.zipCode.trim(),
+      emergency_contact_name: form.emergencyContactName.trim(),
+      emergency_contact_phone: form.emergencyContactPhone.trim(),
+    }),
+  });
+
+  if (!response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to save profile (${response.status}).`);
+  }
+
+  return mapTutorProfileApiToUi((await response.json()) as TutorProfileApiModel);
+}
 function ReadOnlyField({ label, value, onChange, readOnly = true }: { label: string; value: string; onChange?: (value: string) => void; readOnly?: boolean }) {
   return (
     <div>
@@ -119,27 +246,42 @@ function Toggle({
   );
 }
 
-function PersonalInfoSection() {
+function PersonalInfoSection({
+  profile,
+  values,
+  onChange,
+  saveError,
+  saveSuccess,
+}: {
+  profile: typeof tutorProfile;
+  values: TutorProfileForm;
+  onChange: (field: keyof TutorProfileForm, value: string) => void;
+  saveError: string | null;
+  saveSuccess: string | null;
+}) {
   return (
     <section className="rounded-[12px] bg-white p-5">
       <h3 className="text-[18px] font-bold text-[#20242b]">Personal Information</h3>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <ReadOnlyField label="First Name" value={profile.firstName} />
-        <ReadOnlyField label="Last Name" value={profile.lastName} />
-        <ReadOnlyField label="Email Address" value={profile.email} />
-        <ReadOnlyField label="Phone Number" value={profile.phone} />
+        <ReadOnlyField label="First Name" value={values.firstName} readOnly={false} onChange={(value) => onChange("firstName", value)} />
+        <ReadOnlyField label="Last Name" value={values.lastName} readOnly={false} onChange={(value) => onChange("lastName", value)} />
+        <ReadOnlyField label="Email Address" value={values.email} />
+        <ReadOnlyField label="Phone Number" value={values.phone} readOnly={false} onChange={(value) => onChange("phone", value)} />
         <ReadOnlyField label="Date of Birth" value="" />
         <ReadOnlyField label="Gender" value="" />
         <div className="md:col-span-2">
-          <ReadOnlyField label="Street Address" value={profile.streetAddress} />
+          <ReadOnlyField label="Street Address" value={values.streetAddress} readOnly={false} onChange={(value) => onChange("streetAddress", value)} />
         </div>
-        <ReadOnlyField label="City" value={profile.city} />
-        <ReadOnlyField label="State" value={profile.state} />
-        <ReadOnlyField label="ZIP Code" value={profile.zipCode} />
-        <ReadOnlyField label="Emergency Contact Name" value={profile.emergencyContactName} />
-        <ReadOnlyField label="Emergency Contact Phone" value={profile.emergencyContactPhone} />
+        <ReadOnlyField label="City" value={values.city} readOnly={false} onChange={(value) => onChange("city", value)} />
+        <ReadOnlyField label="State" value={values.state} readOnly={false} onChange={(value) => onChange("state", value)} />
+        <ReadOnlyField label="ZIP Code" value={values.zipCode} readOnly={false} onChange={(value) => onChange("zipCode", value)} />
+        <ReadOnlyField label="Emergency Contact Name" value={values.emergencyContactName} readOnly={false} onChange={(value) => onChange("emergencyContactName", value)} />
+        <ReadOnlyField label="Emergency Contact Phone" value={values.emergencyContactPhone} readOnly={false} onChange={(value) => onChange("emergencyContactPhone", value)} />
       </div>
+
+      {saveError ? <p className="mt-4 text-[13px] text-[#d61c3f]">{saveError}</p> : null}
+      {saveSuccess ? <p className="mt-4 text-[13px] text-[#1b8a5a]">{saveSuccess}</p> : null}
 
       <div className="mt-6 flex items-center justify-between rounded-[12px] bg-[#f8faf8] px-4 py-4">
         <div className="flex items-start gap-3">
@@ -185,6 +327,93 @@ export function TutorProfilePage() {
     "10th Grade",
     "11th Grade",
   ]);
+  const [profile, setProfile] = useState(tutorProfile);
+  const [profileForm, setProfileForm] = useState<TutorProfileForm>({
+    firstName: tutorProfile.firstName,
+    lastName: tutorProfile.lastName,
+    email: tutorProfile.email,
+    phone: tutorProfile.phone,
+    streetAddress: tutorProfile.streetAddress,
+    city: tutorProfile.city,
+    state: tutorProfile.state,
+    zipCode: tutorProfile.zipCode,
+    emergencyContactName: tutorProfile.emergencyContactName,
+    emergencyContactPhone: tutorProfile.emergencyContactPhone,
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = readCookie("arch_access_token");
+    if (!token) return;
+
+    fetchTutorProfile(token)
+      .then((loadedProfile) => {
+        setProfile(loadedProfile);
+        setProfileForm({
+          firstName: loadedProfile.firstName,
+          lastName: loadedProfile.lastName,
+          email: loadedProfile.email,
+          phone: loadedProfile.phone,
+          streetAddress: loadedProfile.streetAddress,
+          city: loadedProfile.city,
+          state: loadedProfile.state,
+          zipCode: loadedProfile.zipCode,
+          emergencyContactName: loadedProfile.emergencyContactName,
+          emergencyContactPhone: loadedProfile.emergencyContactPhone,
+        });
+      })
+      .catch(() => {
+        // Keep static fallback data.
+      });
+  }, []);
+
+  function handleProfileFieldChange(field: keyof TutorProfileForm, value: string) {
+    setProfileForm((previous) => ({ ...previous, [field]: value }));
+    setSaveError(null);
+    setSaveSuccess(null);
+  }
+
+  async function handleProfileSave() {
+    if (activeTab !== "Personal Info") {
+      return;
+    }
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setSaveError("Authentication required. Please login again.");
+      setSaveSuccess(null);
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    try {
+      const updatedProfile = await saveTutorProfile(token, profileForm);
+      setProfile(updatedProfile);
+      setProfileForm({
+        firstName: updatedProfile.firstName,
+        lastName: updatedProfile.lastName,
+        email: updatedProfile.email,
+        phone: updatedProfile.phone,
+        streetAddress: updatedProfile.streetAddress,
+        city: updatedProfile.city,
+        state: updatedProfile.state,
+        zipCode: updatedProfile.zipCode,
+        emergencyContactName: updatedProfile.emergencyContactName,
+        emergencyContactPhone: updatedProfile.emergencyContactPhone,
+      });
+      setSaveSuccess("Profile updated successfully.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to save profile.");
+      setSaveSuccess(null);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }
 
   function toggleChip(value: string, currentValues: string[], setter: (values: string[]) => void) {
     setter(
@@ -201,9 +430,11 @@ export function TutorProfilePage() {
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Profile</h1>
           <button
             type="button"
-            className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+            onClick={handleProfileSave}
+            disabled={activeTab !== "Personal Info" || isSavingProfile}
+            className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save Changes
+            {isSavingProfile && activeTab === "Personal Info" ? "Saving..." : "Save Changes"}
           </button>
         </div>
 
@@ -279,7 +510,15 @@ export function TutorProfilePage() {
             </div>
 
             <div className="bg-white p-4">
-              {activeTab === "Personal Info" ? <PersonalInfoSection /> : null}
+              {activeTab === "Personal Info" ? (
+                <PersonalInfoSection
+                  profile={profile}
+                  values={profileForm}
+                  onChange={handleProfileFieldChange}
+                  saveError={saveError}
+                  saveSuccess={saveSuccess}
+                />
+              ) : null}
               {activeTab === "Bio & School District" ? (
                 <section className="rounded-[12px] bg-white p-5">
                   <h3 className="text-[18px] font-bold text-[#20242b]">Bio & School District</h3>
@@ -779,14 +1018,15 @@ export function TutorProfilePage() {
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+                  onClick={handleProfileSave}
+                  disabled={activeTab !== "Personal Info" || isSavingProfile}
+                  className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {activeTab === "Bio & School District" ||
-                  activeTab === "Subjects & Grades" ||
-                  activeTab === "Preferences" ||
-                  activeTab === "Rates"
-                    ? "Save"
-                    : "Save Personal Info"}
+                  {activeTab === "Personal Info"
+                    ? isSavingProfile
+                      ? "Saving..."
+                      : "Save Personal Info"
+                    : "Save"}
                 </button>
               </div>
             </div>
@@ -796,4 +1036,9 @@ export function TutorProfilePage() {
     </TutorShell>
   );
 }
+
+
+
+
+
 
