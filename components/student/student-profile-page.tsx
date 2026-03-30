@@ -165,6 +165,7 @@ function PersonalInfoSection({
   isSaving,
   saveError,
   saveSuccess,
+  lastSavedAt,
   onChange,
   onSave,
 }: {
@@ -172,6 +173,7 @@ function PersonalInfoSection({
   isSaving: boolean;
   saveError: string | null;
   saveSuccess: string | null;
+  lastSavedAt: string | null;
   onChange: (field: keyof ProfileFormValues, value: string) => void;
   onSave: () => void;
 }) {
@@ -229,6 +231,9 @@ function PersonalInfoSection({
 
       {saveError ? <p className="mt-4 text-[13px] text-[#d61c3f]">{saveError}</p> : null}
       {saveSuccess ? <p className="mt-4 text-[13px] text-[#1b8a5a]">{saveSuccess}</p> : null}
+      {lastSavedAt ? (
+        <p className="mt-2 text-[12px] text-[#6b7280]">Last saved at {lastSavedAt}</p>
+      ) : null}
     </section>
   );
 }
@@ -403,6 +408,7 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   const handleFieldChange = (field: keyof ProfileFormValues, value: string) => {
     setFormValues((previous) => ({ ...previous, [field]: value }));
@@ -452,6 +458,13 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
         gradeLevel: resolvedProfile.gradeLevel,
       });
       setSaveSuccess("Profile updated successfully.");
+      setLastSavedAt(
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+      );
       window.dispatchEvent(
         new CustomEvent("arch-profile-updated", {
           detail: {
@@ -543,6 +556,7 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
               isSaving={isSaving}
               saveError={saveError}
               saveSuccess={saveSuccess}
+              lastSavedAt={lastSavedAt}
               onChange={handleFieldChange}
               onSave={handleSaveChanges}
             />
@@ -563,5 +577,4 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
     </StudentShell>
   );
 }
-
 

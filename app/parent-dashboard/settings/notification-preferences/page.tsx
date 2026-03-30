@@ -1,4 +1,3 @@
-import { ParentSettingsSubrouteLayout } from "@/components/parent/parent-settings-subroute-layout";
 import { NotificationPreferencesPanel } from "@/components/settings/notification-preferences-panel";
 
 const options = [
@@ -9,9 +8,5 @@ const options = [
 ];
 
 export default function Page() {
-  return (
-    <ParentSettingsSubrouteLayout title="Notification Preferences">
-      <NotificationPreferencesPanel options={options} />
-    </ParentSettingsSubrouteLayout>
-  );
+  return <NotificationPreferencesPanel options={options} />;
 }

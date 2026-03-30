@@ -1,5 +1,4 @@
 import { NotificationPreferencesPanel } from "@/components/settings/notification-preferences-panel";
-import { StudentSettingsSubrouteLayout } from "@/components/student/student-settings-subroute-layout";
 
 const options = [
   { key: "email_session_reminders", label: "Email - Session Reminders" },
@@ -9,9 +8,5 @@ const options = [
 ];
 
 export default function Page() {
-  return (
-    <StudentSettingsSubrouteLayout title="Notification Preferences">
-      <NotificationPreferencesPanel options={options} />
-    </StudentSettingsSubrouteLayout>
-  );
+  return <NotificationPreferencesPanel options={options} />;
 }

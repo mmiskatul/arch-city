@@ -194,6 +194,7 @@ function PersonalInfoSection({
   isSaving,
   error,
   success,
+  lastSavedAt,
 }: {
   values: ParentProfileForm;
   onChange: (field: keyof ParentProfileForm, value: string) => void;
@@ -202,6 +203,7 @@ function PersonalInfoSection({
   isSaving: boolean;
   error: string | null;
   success: string | null;
+  lastSavedAt: string | null;
 }) {
   return (
     <section className="p-5">
@@ -226,6 +228,9 @@ function PersonalInfoSection({
 
       {error ? <p className="mt-4 text-[13px] text-[#d61c3f]">{error}</p> : null}
       {success ? <p className="mt-4 text-[13px] text-[#1b8a5a]">{success}</p> : null}
+      {lastSavedAt ? (
+        <p className="mt-2 text-[12px] text-[#6b7280]">Last saved at {lastSavedAt}</p>
+      ) : null}
 
       <div className="mt-6 flex justify-end gap-3">
         <button
@@ -453,6 +458,7 @@ export function ParentProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
     const token = readCookie("arch_access_token");
@@ -523,6 +529,13 @@ export function ParentProfilePage() {
         zipCode: updated.zipCode,
       });
       setSaveSuccess("Profile updated successfully.");
+      setLastSavedAt(
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+      );
       window.dispatchEvent(
         new CustomEvent("arch-profile-updated", {
           detail: {
@@ -647,6 +660,7 @@ export function ParentProfilePage() {
                 isSaving={isSaving}
                 error={saveError}
                 success={saveSuccess}
+                lastSavedAt={lastSavedAt}
               />
             ) : null}
             {activeTab === "Plan & Billing" ? <PlanAndBillingSection /> : null}
