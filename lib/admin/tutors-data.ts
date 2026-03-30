@@ -12,6 +12,7 @@ export type AdminTutorRow = {
   hourlyRate: string;
   earnedMtd: string | null;
   status: AdminTutorStatus;
+  applicationId?: string;
 };
 
 export type AdminTutorSubjectLevel = {
@@ -58,6 +59,7 @@ export type AdminTutorDetail = {
   name: string;
   email: string;
   status: AdminTutorStatus;
+  applicationId?: string;
   rating: string;
   totalSessions: number;
   totalSessionsDelta: string;
@@ -153,6 +155,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$60/hr",
     earnedMtd: null,
     status: "Pending",
+    applicationId: "TA-1024",
   },
   {
     id: "TU-2006",
@@ -166,6 +169,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$45/hr",
     earnedMtd: null,
     status: "Pending",
+    applicationId: "TA-1025",
   },
   {
     id: "TU-2007",
@@ -205,6 +209,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$48/hr",
     earnedMtd: null,
     status: "Pending",
+    applicationId: "TA-1027",
   },
   {
     id: "TU-2010",
@@ -451,3 +456,7 @@ export function getAdminTutorDetailById(id: string): AdminTutorDetail | undefine
 
   return detail;
 }
+
+
+
+

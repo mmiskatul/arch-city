@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -6,7 +6,7 @@ import { FiDownload, FiStar } from "react-icons/fi";
 
 import { AdminShell } from "@/components/admin/admin-shell";
 import { adminTutors, type AdminTutorStatus, type AdminTutorRow } from "@/lib/admin/tutors-data";
-import { ADMIN_TUTORS_ROUTE } from "@/lib/routes";
+import { ADMIN_TUTOR_APPLICATIONS_ROUTE, ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
 type TutorFilter = "All Tutors" | "Approved" | "Pending Review" | "Suspended";
 
@@ -26,10 +26,9 @@ function toStatus(filter: TutorFilter): AdminTutorStatus | null {
 }
 
 export function AdminTutorsPage() {
-  const [tutors, setTutors] = useState<AdminTutorRow[]>(adminTutors);
+  const [tutors] = useState<AdminTutorRow[]>(adminTutors);
   const [filter, setFilter] = useState<TutorFilter>("All Tutors");
   const [currentPage, setCurrentPage] = useState(1);
-  const [approveTargetId, setApproveTargetId] = useState<string | null>(null);
 
   const filteredTutors = useMemo(() => {
     const status = toStatus(filter);
@@ -45,21 +44,10 @@ export function AdminTutorsPage() {
 
   const approvedCount = tutors.filter((item) => item.status === "Approved").length;
   const pendingCount = tutors.filter((item) => item.status === "Pending").length;
-  const approveTargetTutor = tutors.find((item) => item.id === approveTargetId) ?? null;
 
   const handleFilter = (next: TutorFilter) => {
     setFilter(next);
     setCurrentPage(1);
-  };
-
-  const updateTutorStatus = (id: string, status: AdminTutorStatus) => {
-    setTutors((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)));
-  };
-
-  const handleApproveConfirm = () => {
-    if (!approveTargetId) return;
-    updateTutorStatus(approveTargetId, "Approved");
-    setApproveTargetId(null);
   };
 
   return (
@@ -68,7 +56,7 @@ export function AdminTutorsPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-[38px] font-bold leading-none text-[#20242b]">Tutors</h1>
-            <p className="mt-2 text-[14px] text-[#6b7280]">64 approved · 4 pending review</p>
+            <p className="mt-2 text-[14px] text-[#6b7280]">64 approved - 4 pending review</p>
           </div>
           <button
             type="button"
@@ -157,13 +145,13 @@ export function AdminTutorsPage() {
                       ))}
                     </div>
 
-                    <span>{tutor.sessions ?? "—"}</span>
+                    <span>{tutor.sessions ?? "-"}</span>
                     <span className="inline-flex items-center gap-1 font-semibold text-[#8f6b10]">
                       <FiStar className="h-3.5 w-3.5 fill-[#c58b1a] text-[#c58b1a]" />
                       {tutor.rating}
                     </span>
                     <span>{tutor.hourlyRate}</span>
-                    <span className="font-semibold text-[#239157]">{tutor.earnedMtd ?? "—"}</span>
+                    <span className="font-semibold text-[#239157]">{tutor.earnedMtd ?? "-"}</span>
                     <div>
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClassName(tutor.status)}`}
@@ -173,22 +161,16 @@ export function AdminTutorsPage() {
                     </div>
                     <div>
                       {tutor.status === "Pending" ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setApproveTargetId(tutor.id)}
-                            className="inline-flex h-7 items-center rounded-lg bg-[#239157] px-2.5 text-[12px] font-semibold text-white"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateTutorStatus(tutor.id, "Suspended")}
-                            className="inline-flex h-7 items-center rounded-lg bg-[#d94a62] px-2.5 text-[12px] font-semibold text-white"
-                          >
-                            Reject
-                          </button>
-                        </div>
+                        <Link
+                          href={
+                            tutor.applicationId
+                              ? `${ADMIN_TUTOR_APPLICATIONS_ROUTE}/${tutor.applicationId}`
+                              : ADMIN_TUTOR_APPLICATIONS_ROUTE
+                          }
+                          className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
+                        >
+                          Review
+                        </Link>
                       ) : (
                         <Link
                           href={`${ADMIN_TUTORS_ROUTE}/${tutor.id}`}
@@ -248,35 +230,7 @@ export function AdminTutorsPage() {
           </div>
         </div>
       </div>
-
-      {approveTargetTutor ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/40 px-4">
-          <div className="w-full max-w-md rounded-[14px] border border-[#e7e7eb] bg-white p-5 shadow-xl">
-            <h3 className="text-[18px] font-bold text-[#20242b]">Approve This Tutor?</h3>
-            <p className="mt-2 text-[14px] leading-6 text-[#6b7280]">
-              Confirm approval for {approveTargetTutor.name}. This will move the tutor from pending
-              review to approved status.
-            </p>
-
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setApproveTargetId(null)}
-                className="inline-flex h-9 items-center rounded-full border border-[#d1d5db] bg-white px-4 text-[13px] font-semibold text-[#374151] transition hover:bg-[#f9fafb]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleApproveConfirm}
-                className="inline-flex h-9 items-center rounded-full bg-[#239157] px-4 text-[13px] font-semibold text-white transition hover:bg-[#1d7b49]"
-              >
-                Confirm Approve
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </AdminShell>
   );
 }
+
