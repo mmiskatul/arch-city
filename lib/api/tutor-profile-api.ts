@@ -3,6 +3,9 @@ type TutorBioSchoolDistrictMethod = "GET" | "PUT";
 type TutorEducationMethod = "GET" | "POST" | "PUT" | "DELETE";
 type TutorWorkExperienceMethod = "GET" | "POST" | "PUT" | "DELETE";
 type TutorSubjectsGradesMethod = "GET" | "PUT";
+type TutorRatesMethod = "GET" | "PUT";
+type TutorPreferencesMethod = "GET" | "PUT";
+type TutorLocationMethod = "GET" | "POST" | "PUT" | "DELETE" | "PREFER";
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -108,7 +111,6 @@ function buildTutorWorkExperienceUrls(method: TutorWorkExperienceMethod, workExp
   ]);
 }
 
-
 function buildTutorSubjectsGradesUrls(method: TutorSubjectsGradesMethod) {
   const directUrl =
     method === "GET"
@@ -122,23 +124,80 @@ function buildTutorSubjectsGradesUrls(method: TutorSubjectsGradesMethod) {
   return uniqueUrls([directUrl ?? "", ...baseUrls]);
 }
 
+function buildTutorRatesUrls(method: TutorRatesMethod) {
+  const directUrl =
+    method === "GET"
+      ? process.env.NEXT_PUBLIC_API_TUTOR_RATES_GET_URL?.trim()
+      : process.env.NEXT_PUBLIC_API_TUTOR_RATES_UPDATE_URL?.trim();
+
+  const baseUrl = resolveApiBaseUrl();
+  const fallbackPath = "/tutor/profile/rates";
+  const baseUrls = baseUrl ? [`${baseUrl}${normalizePath(fallbackPath)}`] : [];
+
+  return uniqueUrls([directUrl ?? "", ...baseUrls]);
+}
+
+function buildTutorPreferencesUrls(method: TutorPreferencesMethod) {
+  const directUrl =
+    method === "GET"
+      ? process.env.NEXT_PUBLIC_API_TUTOR_PREFERENCES_GET_URL?.trim()
+      : process.env.NEXT_PUBLIC_API_TUTOR_PREFERENCES_UPDATE_URL?.trim();
+
+  const baseUrl = resolveApiBaseUrl();
+  const fallbackPath = "/tutor/profile/preferences";
+  const baseUrls = baseUrl ? [`${baseUrl}${normalizePath(fallbackPath)}`] : [];
+
+  return uniqueUrls([directUrl ?? "", ...baseUrls]);
+}
+
+function applyLocationIdTemplate(url: string, locationId?: string) {
+  if (!locationId) return url;
+  return url.replace("{location_id}", locationId).replace(":location_id", locationId);
+}
+
+function buildTutorLocationUrls(method: TutorLocationMethod, locationId?: string) {
+  const directUrl =
+    method === "GET"
+      ? process.env.NEXT_PUBLIC_API_TUTOR_LOCATION_GET_URL?.trim()
+      : method === "POST"
+        ? process.env.NEXT_PUBLIC_API_TUTOR_LOCATION_ADD_URL?.trim()
+        : method === "PUT"
+          ? process.env.NEXT_PUBLIC_API_TUTOR_LOCATION_UPDATE_URL?.trim()
+          : method === "DELETE"
+            ? process.env.NEXT_PUBLIC_API_TUTOR_LOCATION_DELETE_URL?.trim()
+            : process.env.NEXT_PUBLIC_API_TUTOR_LOCATION_PREFERRED_URL?.trim();
+
+  const baseUrl = resolveApiBaseUrl();
+  const fallbackPath =
+    method === "PUT" || method === "DELETE"
+      ? `/tutor/profile/location/${locationId ?? ""}`
+      : method === "PREFER"
+        ? `/tutor/profile/location/${locationId ?? ""}/preferred`
+        : "/tutor/profile/location";
+
+  const baseUrls = baseUrl ? [`${baseUrl}${normalizePath(fallbackPath)}`] : [];
+
+  return uniqueUrls([directUrl ? applyLocationIdTemplate(directUrl, locationId) : "", ...baseUrls]);
+}
+
 export function resolveTutorProfileUrl(method: TutorProfileMethod) {
   const urls = buildTutorProfileUrls(method);
   return urls.length > 0 ? urls[0] : null;
 }
 
-export async function requestTutorProfileWithFallback({
+async function requestWithFallback({
+  urls,
   method,
   token,
   body,
   extraInit,
 }: {
-  method: TutorProfileMethod;
+  urls: string[];
+  method: string;
   token: string;
   body?: string;
   extraInit?: RequestInit;
 }) {
-  const urls = buildTutorProfileUrls(method);
   if (urls.length === 0) return null;
 
   let lastResponse: Response | null = null;
@@ -146,7 +205,7 @@ export async function requestTutorProfileWithFallback({
     const response = await fetch(url, {
       method,
       headers: {
-        ...(method === "PUT" ? { "Content-Type": "application/json" } : {}),
+        ...((method === "POST" || method === "PUT") ? { "Content-Type": "application/json" } : {}),
         Authorization: `Bearer ${token}`,
         ...(extraInit?.headers ?? {}),
       },
@@ -162,146 +221,40 @@ export async function requestTutorProfileWithFallback({
   return lastResponse;
 }
 
-export async function requestTutorBioSchoolDistrictWithFallback({
-  method,
-  token,
-  body,
-  extraInit,
-}: {
-  method: TutorBioSchoolDistrictMethod;
-  token: string;
-  body?: string;
-  extraInit?: RequestInit;
-}) {
-  const urls = buildTutorBioSchoolDistrictUrls(method);
-  if (urls.length === 0) return null;
-
-  let lastResponse: Response | null = null;
-  for (const url of urls) {
-    const response = await fetch(url, {
-      method,
-      headers: {
-        ...(method === "PUT" ? { "Content-Type": "application/json" } : {}),
-        Authorization: `Bearer ${token}`,
-        ...(extraInit?.headers ?? {}),
-      },
-      ...(body ? { body } : {}),
-      ...extraInit,
-    });
-
-    if (response.ok) return response;
-    lastResponse = response;
-    if (![404, 405, 422, 501].includes(response.status)) return response;
-  }
-
-  return lastResponse;
+export async function requestTutorProfileWithFallback({ method, token, body, extraInit }: { method: TutorProfileMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+  return requestWithFallback({ urls: buildTutorProfileUrls(method), method, token, body, extraInit });
 }
 
-export async function requestTutorEducationWithFallback({
-  method,
-  token,
-  educationId,
-  body,
-  extraInit,
-}: {
-  method: TutorEducationMethod;
-  token: string;
-  educationId?: string;
-  body?: string;
-  extraInit?: RequestInit;
-}) {
-  const urls = buildTutorEducationUrls(method, educationId);
-  if (urls.length === 0) return null;
-
-  let lastResponse: Response | null = null;
-  for (const url of urls) {
-    const response = await fetch(url, {
-      method,
-      headers: {
-        ...(method === "POST" || method === "PUT" ? { "Content-Type": "application/json" } : {}),
-        Authorization: `Bearer ${token}`,
-        ...(extraInit?.headers ?? {}),
-      },
-      ...(body ? { body } : {}),
-      ...extraInit,
-    });
-
-    if (response.ok) return response;
-    lastResponse = response;
-    if (![404, 405, 422, 501].includes(response.status)) return response;
-  }
-
-  return lastResponse;
+export async function requestTutorBioSchoolDistrictWithFallback({ method, token, body, extraInit }: { method: TutorBioSchoolDistrictMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+  return requestWithFallback({ urls: buildTutorBioSchoolDistrictUrls(method), method, token, body, extraInit });
 }
 
-export async function requestTutorWorkExperienceWithFallback({
-  method,
-  token,
-  workExperienceId,
-  body,
-  extraInit,
-}: {
-  method: TutorWorkExperienceMethod;
-  token: string;
-  workExperienceId?: string;
-  body?: string;
-  extraInit?: RequestInit;
-}) {
-  const urls = buildTutorWorkExperienceUrls(method, workExperienceId);
-  if (urls.length === 0) return null;
-
-  let lastResponse: Response | null = null;
-  for (const url of urls) {
-    const response = await fetch(url, {
-      method,
-      headers: {
-        ...(method === "POST" || method === "PUT" ? { "Content-Type": "application/json" } : {}),
-        Authorization: `Bearer ${token}`,
-        ...(extraInit?.headers ?? {}),
-      },
-      ...(body ? { body } : {}),
-      ...extraInit,
-    });
-
-    if (response.ok) return response;
-    lastResponse = response;
-    if (![404, 405, 422, 501].includes(response.status)) return response;
-  }
-
-  return lastResponse;
+export async function requestTutorEducationWithFallback({ method, token, educationId, body, extraInit }: { method: TutorEducationMethod; token: string; educationId?: string; body?: string; extraInit?: RequestInit; }) {
+  return requestWithFallback({ urls: buildTutorEducationUrls(method, educationId), method, token, body, extraInit });
 }
 
-export async function requestTutorSubjectsGradesWithFallback({
-  method,
-  token,
-  body,
-  extraInit,
-}: {
-  method: TutorSubjectsGradesMethod;
-  token: string;
-  body?: string;
-  extraInit?: RequestInit;
-}) {
-  const urls = buildTutorSubjectsGradesUrls(method);
-  if (urls.length === 0) return null;
+export async function requestTutorWorkExperienceWithFallback({ method, token, workExperienceId, body, extraInit }: { method: TutorWorkExperienceMethod; token: string; workExperienceId?: string; body?: string; extraInit?: RequestInit; }) {
+  return requestWithFallback({ urls: buildTutorWorkExperienceUrls(method, workExperienceId), method, token, body, extraInit });
+}
 
-  let lastResponse: Response | null = null;
-  for (const url of urls) {
-    const response = await fetch(url, {
-      method,
-      headers: {
-        ...(method === "PUT" ? { "Content-Type": "application/json" } : {}),
-        Authorization: `Bearer ${token}`,
-        ...(extraInit?.headers ?? {}),
-      },
-      ...(body ? { body } : {}),
-      ...extraInit,
-    });
+export async function requestTutorSubjectsGradesWithFallback({ method, token, body, extraInit }: { method: TutorSubjectsGradesMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+  return requestWithFallback({ urls: buildTutorSubjectsGradesUrls(method), method, token, body, extraInit });
+}
 
-    if (response.ok) return response;
-    lastResponse = response;
-    if (![404, 405, 422, 501].includes(response.status)) return response;
-  }
+export async function requestTutorRatesWithFallback({ method, token, body, extraInit }: { method: TutorRatesMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+  return requestWithFallback({ urls: buildTutorRatesUrls(method), method, token, body, extraInit });
+}
 
-  return lastResponse;
+export async function requestTutorPreferencesWithFallback({ method, token, body, extraInit }: { method: TutorPreferencesMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+  return requestWithFallback({ urls: buildTutorPreferencesUrls(method), method, token, body, extraInit });
+}
+
+export async function requestTutorLocationWithFallback({ method, token, locationId, body, extraInit }: { method: TutorLocationMethod; token: string; locationId?: string; body?: string; extraInit?: RequestInit; }) {
+  return requestWithFallback({
+    urls: buildTutorLocationUrls(method, locationId),
+    method: method === "PREFER" ? "PUT" : method,
+    token,
+    body,
+    extraInit,
+  });
 }

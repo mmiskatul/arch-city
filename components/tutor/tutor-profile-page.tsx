@@ -18,7 +18,10 @@ import { TutorShell } from "@/components/tutor/tutor-shell";
 import {
   requestTutorBioSchoolDistrictWithFallback,
   requestTutorEducationWithFallback,
+  requestTutorLocationWithFallback,
+  requestTutorPreferencesWithFallback,
   requestTutorProfileWithFallback,
+  requestTutorRatesWithFallback,
   requestTutorSubjectsGradesWithFallback,
   requestTutorWorkExperienceWithFallback,
 } from "@/lib/api/tutor-profile-api";
@@ -136,6 +139,35 @@ type TutorWorkExperienceListApiModel = {
 type TutorSubjectsGradesApiModel = {
   subjects?: string[];
   grades?: string[];
+};
+
+type TutorRatesApiModel = {
+  virtual_45_rate?: string;
+  virtual_60_rate?: string;
+  in_person_45_rate?: string;
+  in_person_60_rate?: string;
+};
+
+type TutorPreferencesApiModel = {
+  is_classroom_teacher?: boolean;
+  offers_virtual?: boolean;
+  offers_in_person?: boolean;
+  advance_notice?: string;
+  max_sessions_per_day?: number;
+  pause_account?: boolean;
+};
+
+type TutorLocationApiItem = {
+  id: string;
+  name: string;
+  address_line_1: string;
+  address_line_2: string;
+  preferred?: boolean;
+  show_map_preview?: boolean;
+};
+
+type TutorLocationListApiModel = {
+  items?: TutorLocationApiItem[];
 };
 export type TutorProfileData = typeof tutorProfile;
 
@@ -540,6 +572,225 @@ async function saveTutorSubjectsGrades(
     grades: Array.isArray(data.grades) ? data.grades.map((item) => String(item).trim()).filter(Boolean) : [],
   };
 }
+
+async function fetchTutorRates(token: string): Promise<TutorRatesApiModel> {
+  const response = await requestTutorRatesWithFallback({
+    method: "GET",
+    token,
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Failed to load rates (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorRatesApiModel;
+  return {
+    virtual_45_rate: String(data.virtual_45_rate ?? "").trim(),
+    virtual_60_rate: String(data.virtual_60_rate ?? "").trim(),
+    in_person_45_rate: String(data.in_person_45_rate ?? "").trim(),
+    in_person_60_rate: String(data.in_person_60_rate ?? "").trim(),
+  };
+}
+
+async function saveTutorRates(token: string, payload: TutorRatesApiModel): Promise<TutorRatesApiModel> {
+  const response = await requestTutorRatesWithFallback({
+    method: "PUT",
+    token,
+    body: JSON.stringify({
+      virtual_45_rate: String(payload.virtual_45_rate ?? "").trim(),
+      virtual_60_rate: String(payload.virtual_60_rate ?? "").trim(),
+      in_person_45_rate: String(payload.in_person_45_rate ?? "").trim(),
+      in_person_60_rate: String(payload.in_person_60_rate ?? "").trim(),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to save rates (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorRatesApiModel;
+  return {
+    virtual_45_rate: String(data.virtual_45_rate ?? "").trim(),
+    virtual_60_rate: String(data.virtual_60_rate ?? "").trim(),
+    in_person_45_rate: String(data.in_person_45_rate ?? "").trim(),
+    in_person_60_rate: String(data.in_person_60_rate ?? "").trim(),
+  };
+}
+
+async function fetchTutorPreferences(token: string): Promise<TutorPreferencesApiModel> {
+  const response = await requestTutorPreferencesWithFallback({
+    method: "GET",
+    token,
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Failed to load preferences (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorPreferencesApiModel;
+  return {
+    is_classroom_teacher: Boolean(data.is_classroom_teacher),
+    offers_virtual: Boolean(data.offers_virtual),
+    offers_in_person: Boolean(data.offers_in_person),
+    advance_notice: String(data.advance_notice ?? "24 hours"),
+    max_sessions_per_day: Math.max(1, Number(data.max_sessions_per_day ?? 3)),
+    pause_account: Boolean(data.pause_account),
+  };
+}
+
+async function saveTutorPreferences(token: string, payload: TutorPreferencesApiModel): Promise<TutorPreferencesApiModel> {
+  const response = await requestTutorPreferencesWithFallback({
+    method: "PUT",
+    token,
+    body: JSON.stringify({
+      is_classroom_teacher: Boolean(payload.is_classroom_teacher),
+      offers_virtual: Boolean(payload.offers_virtual),
+      offers_in_person: Boolean(payload.offers_in_person),
+      advance_notice: String(payload.advance_notice ?? "24 hours").trim(),
+      max_sessions_per_day: Math.max(1, Number(payload.max_sessions_per_day ?? 3)),
+      pause_account: Boolean(payload.pause_account),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to save preferences (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorPreferencesApiModel;
+  return {
+    is_classroom_teacher: Boolean(data.is_classroom_teacher),
+    offers_virtual: Boolean(data.offers_virtual),
+    offers_in_person: Boolean(data.offers_in_person),
+    advance_notice: String(data.advance_notice ?? "24 hours"),
+    max_sessions_per_day: Math.max(1, Number(data.max_sessions_per_day ?? 3)),
+    pause_account: Boolean(data.pause_account),
+  };
+}
+
+function normalizeTutorLocationItem(item: TutorLocationApiItem): TutorLocationApiItem {
+  return {
+    id: String(item.id || ""),
+    name: String(item.name || "").trim(),
+    address_line_1: String(item.address_line_1 || "").trim(),
+    address_line_2: String(item.address_line_2 || "").trim(),
+    preferred: Boolean(item.preferred),
+    show_map_preview: Boolean(item.show_map_preview),
+  };
+}
+
+async function fetchTutorLocations(token: string): Promise<TutorLocationApiItem[]> {
+  const response = await requestTutorLocationWithFallback({ method: "GET", token });
+
+  if (!response || !response.ok) {
+    throw new Error(`Failed to load locations (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorLocationListApiModel;
+  const items = Array.isArray(data.items) ? data.items : [];
+  return items.map(normalizeTutorLocationItem).filter((item) => item.id && item.name);
+}
+
+async function addTutorLocation(token: string, payload: Omit<TutorLocationApiItem, "id">): Promise<TutorLocationApiItem> {
+  const response = await requestTutorLocationWithFallback({
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      name: payload.name.trim(),
+      address_line_1: payload.address_line_1.trim(),
+      address_line_2: payload.address_line_2.trim(),
+      preferred: Boolean(payload.preferred),
+      show_map_preview: Boolean(payload.show_map_preview),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to add location (${response?.status ?? "no-response"}).`);
+  }
+
+  return normalizeTutorLocationItem((await response.json()) as TutorLocationApiItem);
+}
+
+async function updateTutorLocation(token: string, locationId: string, payload: Omit<TutorLocationApiItem, "id">): Promise<TutorLocationApiItem> {
+  const response = await requestTutorLocationWithFallback({
+    method: "PUT",
+    token,
+    locationId,
+    body: JSON.stringify({
+      name: payload.name.trim(),
+      address_line_1: payload.address_line_1.trim(),
+      address_line_2: payload.address_line_2.trim(),
+      preferred: Boolean(payload.preferred),
+      show_map_preview: Boolean(payload.show_map_preview),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to update location (${response?.status ?? "no-response"}).`);
+  }
+
+  return normalizeTutorLocationItem((await response.json()) as TutorLocationApiItem);
+}
+
+async function setPreferredTutorLocation(token: string, locationId: string): Promise<TutorLocationApiItem> {
+  const response = await requestTutorLocationWithFallback({ method: "PREFER", token, locationId });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to set preferred location (${response?.status ?? "no-response"}).`);
+  }
+
+  return normalizeTutorLocationItem((await response.json()) as TutorLocationApiItem);
+}
+
+async function deleteTutorLocation(token: string, locationId: string): Promise<void> {
+  const response = await requestTutorLocationWithFallback({ method: "DELETE", token, locationId });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to delete location (${response?.status ?? "no-response"}).`);
+  }
+}
+
 async function deleteTutorWorkExperienceEntry(token: string, workExperienceId: string): Promise<void> {
   const response = await requestTutorWorkExperienceWithFallback({
     method: "DELETE",
@@ -761,6 +1012,31 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
   const [isDeleteWorkExperienceConfirmOpen, setIsDeleteWorkExperienceConfirmOpen] = useState(false);
   const [deletingWorkExperienceId, setDeletingWorkExperienceId] = useState<string | null>(null);
   const [isSavingWorkExperience, setIsSavingWorkExperience] = useState(false);
+  const [locationEntries, setLocationEntries] = useState<TutorLocationApiItem[]>(
+    tutorLocationEntries.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      address_line_1: entry.addressLine1,
+      address_line_2: entry.addressLine2,
+      preferred: entry.preferred,
+      show_map_preview: entry.showMapPreview,
+    })),
+  );
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [locationMode, setLocationMode] = useState<"add" | "edit">("add");
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [locationForm, setLocationForm] = useState({
+    name: "",
+    addressLine1: "",
+    addressLine2: "",
+    preferred: false,
+    showMapPreview: false,
+  });
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationSuccess, setLocationSuccess] = useState<string | null>(null);
+  const [isDeleteLocationConfirmOpen, setIsDeleteLocationConfirmOpen] = useState(false);
+  const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null);
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [profile, setProfile] = useState<TutorProfileData>(initialProfile ?? tutorProfile);
   const [profileForm, setProfileForm] = useState<TutorProfileForm>({
     firstName: (initialProfile ?? tutorProfile).firstName,
@@ -781,6 +1057,8 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const isSavingSubjectsGrades = isSavingProfile && activeTab === "Subjects & Grades";
+  const isSavingRates = isSavingProfile && activeTab === "Rates";
+  const isSavingPreferences = isSavingProfile && activeTab === "Preferences";
 
   useEffect(() => {
     if (initialProfile) return;
@@ -855,6 +1133,53 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       })
       .catch(() => {
         // Keep static fallback chips.
+      });
+  }, []);
+
+  useEffect(() => {
+    const token = readCookie("arch_access_token");
+    if (!token) return;
+
+    fetchTutorRates(token)
+      .then((data) => {
+        setVirtual45Rate(data.virtual_45_rate || "");
+        setVirtual60Rate(data.virtual_60_rate || "");
+        setInPerson45Rate(data.in_person_45_rate || "");
+        setInPerson60Rate(data.in_person_60_rate || "");
+      })
+      .catch(() => {
+        // Keep static fallback values.
+      });
+  }, []);
+
+  useEffect(() => {
+    const token = readCookie("arch_access_token");
+    if (!token) return;
+
+    fetchTutorPreferences(token)
+      .then((data) => {
+        setIsClassroomTeacher(Boolean(data.is_classroom_teacher));
+        setOffersVirtual(Boolean(data.offers_virtual));
+        setOffersInPerson(Boolean(data.offers_in_person));
+        setAdvanceNotice(data.advance_notice || "24 hours");
+        setMaxSessionsPerDay(Math.max(1, Number(data.max_sessions_per_day ?? 3)));
+        setPauseAccount(Boolean(data.pause_account));
+      })
+      .catch(() => {
+        // Keep static fallback values.
+      });
+  }, []);
+
+  useEffect(() => {
+    const token = readCookie("arch_access_token");
+    if (!token) return;
+
+    fetchTutorLocations(token)
+      .then((items) => {
+        setLocationEntries(items);
+      })
+      .catch(() => {
+        // Keep static fallback values.
       });
   }, []);
 
@@ -1123,6 +1448,181 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       setIsSavingWorkExperience(false);
     }
   }
+  function openLocationModal(entry?: TutorLocationApiItem) {
+    if (entry) {
+      setLocationMode("edit");
+      setEditingLocationId(entry.id);
+      setLocationForm({
+        name: entry.name,
+        addressLine1: entry.address_line_1,
+        addressLine2: entry.address_line_2,
+        preferred: Boolean(entry.preferred),
+        showMapPreview: Boolean(entry.show_map_preview),
+      });
+    } else {
+      setLocationMode("add");
+      setEditingLocationId(null);
+      setLocationForm({
+        name: "",
+        addressLine1: "",
+        addressLine2: "",
+        preferred: false,
+        showMapPreview: false,
+      });
+    }
+
+    setLocationError(null);
+    setLocationSuccess(null);
+    setIsLocationModalOpen(true);
+  }
+
+  function closeLocationModal() {
+    if (isSavingLocation) return;
+    setIsLocationModalOpen(false);
+    setLocationMode("add");
+    setEditingLocationId(null);
+    setLocationError(null);
+  }
+
+  function openDeleteLocationConfirm(locationId: string) {
+    setDeletingLocationId(locationId);
+    setLocationError(null);
+    setLocationSuccess(null);
+    setIsDeleteLocationConfirmOpen(true);
+  }
+
+  function closeDeleteLocationConfirm() {
+    if (isSavingLocation) return;
+    setIsDeleteLocationConfirmOpen(false);
+    setDeletingLocationId(null);
+    setLocationError(null);
+  }
+
+  async function handleSaveLocation() {
+    const name = locationForm.name.trim();
+    const addressLine1 = locationForm.addressLine1.trim();
+    const addressLine2 = locationForm.addressLine2.trim();
+
+    if (!name || !addressLine1 || !addressLine2) {
+      setLocationError("Name and address fields are required.");
+      return;
+    }
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setLocationError("Authentication required. Please login again.");
+      return;
+    }
+
+    setIsSavingLocation(true);
+    setLocationError(null);
+    setLocationSuccess(null);
+
+    try {
+      const payload = {
+        name,
+        address_line_1: addressLine1,
+        address_line_2: addressLine2,
+        preferred: locationForm.preferred,
+        show_map_preview: locationForm.showMapPreview,
+      };
+
+      if (locationMode === "edit") {
+        if (!editingLocationId) {
+          throw new Error("Location id is missing.");
+        }
+
+        const item = await updateTutorLocation(token, editingLocationId, payload);
+        setLocationEntries((current) => {
+          const next = current.map((entry) => (entry.id === editingLocationId ? item : entry));
+          return item.preferred ? next.map((entry) => ({ ...entry, preferred: entry.id === item.id })) : next;
+        });
+        setLocationSuccess("Location updated successfully.");
+      } else {
+        const item = await addTutorLocation(token, payload);
+        setLocationEntries((current) => {
+          const next = [item, ...current];
+          return item.preferred ? next.map((entry) => ({ ...entry, preferred: entry.id === item.id })) : next;
+        });
+        setLocationSuccess("Location added successfully.");
+      }
+
+      setIsLocationModalOpen(false);
+      setLocationMode("add");
+      setEditingLocationId(null);
+      setLocationForm({
+        name: "",
+        addressLine1: "",
+        addressLine2: "",
+        preferred: false,
+        showMapPreview: false,
+      });
+    } catch (error) {
+      setLocationError(
+        error instanceof Error
+          ? error.message
+          : locationMode === "edit"
+            ? "Failed to update location."
+            : "Failed to add location.",
+      );
+    } finally {
+      setIsSavingLocation(false);
+    }
+  }
+
+  async function handleDeleteLocationConfirm() {
+    if (!deletingLocationId) return;
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setLocationError("Authentication required. Please login again.");
+      return;
+    }
+
+    setIsSavingLocation(true);
+    setLocationError(null);
+    setLocationSuccess(null);
+
+    try {
+      await deleteTutorLocation(token, deletingLocationId);
+      setLocationEntries((current) => current.filter((entry) => entry.id !== deletingLocationId));
+      setIsDeleteLocationConfirmOpen(false);
+      setDeletingLocationId(null);
+      setLocationSuccess("Location deleted successfully.");
+    } catch (error) {
+      setLocationError(error instanceof Error ? error.message : "Failed to delete location.");
+    } finally {
+      setIsSavingLocation(false);
+    }
+  }
+
+  async function handleSetPreferredLocation(locationId: string) {
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setLocationError("Authentication required. Please login again.");
+      return;
+    }
+
+    setIsSavingLocation(true);
+    setLocationError(null);
+    setLocationSuccess(null);
+
+    try {
+      const preferred = await setPreferredTutorLocation(token, locationId);
+      setLocationEntries((current) =>
+        current.map((entry) => ({
+          ...entry,
+          preferred: entry.id === preferred.id,
+        })),
+      );
+      setLocationSuccess("Preferred location updated.");
+    } catch (error) {
+      setLocationError(error instanceof Error ? error.message : "Failed to set preferred location.");
+    } finally {
+      setIsSavingLocation(false);
+    }
+  }
+
   function handleProfileFieldChange(field: keyof TutorProfileForm, value: string) {
     setProfileForm((previous) => ({ ...previous, [field]: value }));
     setSaveError(null);
@@ -1130,7 +1630,13 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
   }
 
   async function handleProfileSave() {
-    if (activeTab !== "Personal Info" && activeTab !== "Bio & School District" && activeTab !== "Subjects & Grades") {
+    if (
+      activeTab !== "Personal Info" &&
+      activeTab !== "Bio & School District" &&
+      activeTab !== "Subjects & Grades" &&
+      activeTab !== "Rates" &&
+      activeTab !== "Preferences"
+    ) {
       return;
     }
 
@@ -1194,7 +1700,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
           schoolDistrict: nextDistrict,
         }));
         setSaveSuccess("Bio & school district updated successfully.");
-      } else {
+      } else if (activeTab === "Subjects & Grades") {
         const updated = await saveTutorSubjectsGrades(token, {
           subjects: selectedSubjects,
           grades: selectedGrades,
@@ -1203,6 +1709,36 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
         setSelectedSubjects(updated.subjects || []);
         setSelectedGrades(updated.grades || []);
         setSaveSuccess("Subjects & grades updated successfully.");
+      } else if (activeTab === "Rates") {
+        const updatedRates = await saveTutorRates(token, {
+          virtual_45_rate: virtual45Rate,
+          virtual_60_rate: virtual60Rate,
+          in_person_45_rate: inPerson45Rate,
+          in_person_60_rate: inPerson60Rate,
+        });
+
+        setVirtual45Rate(updatedRates.virtual_45_rate || "");
+        setVirtual60Rate(updatedRates.virtual_60_rate || "");
+        setInPerson45Rate(updatedRates.in_person_45_rate || "");
+        setInPerson60Rate(updatedRates.in_person_60_rate || "");
+        setSaveSuccess("Rates updated successfully.");
+      } else {
+        const updatedPrefs = await saveTutorPreferences(token, {
+          is_classroom_teacher: isClassroomTeacher,
+          offers_virtual: offersVirtual,
+          offers_in_person: offersInPerson,
+          advance_notice: advanceNotice,
+          max_sessions_per_day: maxSessionsPerDay,
+          pause_account: pauseAccount,
+        });
+
+        setIsClassroomTeacher(Boolean(updatedPrefs.is_classroom_teacher));
+        setOffersVirtual(Boolean(updatedPrefs.offers_virtual));
+        setOffersInPerson(Boolean(updatedPrefs.offers_in_person));
+        setAdvanceNotice(updatedPrefs.advance_notice || "24 hours");
+        setMaxSessionsPerDay(Math.max(1, Number(updatedPrefs.max_sessions_per_day ?? 3)));
+        setPauseAccount(Boolean(updatedPrefs.pause_account));
+        setSaveSuccess("Preferences updated successfully.");
       }
 
       setLastSavedAt(
@@ -1236,10 +1772,10 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
           <button
             type="button"
             onClick={handleProfileSave}
-            disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District" && activeTab !== "Subjects & Grades") || isSavingProfile}
+            disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District" && activeTab !== "Subjects & Grades" && activeTab !== "Rates" && activeTab !== "Preferences") || isSavingProfile}
             className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSavingProfile && (activeTab === "Personal Info" || activeTab === "Bio & School District" || activeTab === "Subjects & Grades") ? "Saving..." : "Save Changes"}
+            {isSavingProfile && (activeTab === "Personal Info" || activeTab === "Bio & School District" || activeTab === "Subjects & Grades" || activeTab === "Rates" || activeTab === "Preferences") ? "Saving..." : "Save Changes"}
           </button>
         </div>
 
@@ -1281,7 +1817,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
               <div className="mt-3 space-y-2 text-[14px]">
                 {[
                   { label: "Total Sessions", value: profile.totalSessions, valueClassName: "text-[#20242b]" },
-                  { label: "Avg Rating", value: `${profile.avgRating} Ã¢Ëœâ€¦`, valueClassName: "text-[#20242b]" },
+                  { label: "Avg Rating", value: `${profile.avgRating} ★`, valueClassName: "text-[#20242b]" },
                   { label: "Active Students", value: profile.activeStudents, valueClassName: "text-[#20242b]" },
                   { label: "All-Time Earnings", value: profile.allTimeEarnings, valueClassName: "text-[#1b8a5a]" },
                 ].map((stat) => (
@@ -1535,7 +2071,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                 </section>
               ) : null}
               {activeTab === "Rates" ? (
-                <section className="rounded-[12px] bg-white p-5">
+                <section className="relative rounded-[12px] bg-white p-5">
                   <h3 className="text-[18px] font-bold text-[#20242b]">Rates</h3>
 
                   <div className="mt-6 max-w-[420px] space-y-6">
@@ -1553,7 +2089,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                           <input
                             type="text"
                             value={virtual45Rate}
-                            onChange={(event) => setVirtual45Rate(event.target.value)}
+                            onChange={(event) => { setVirtual45Rate(event.target.value); setSaveError(null); setSaveSuccess(null); }}
                             className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                           />
                         </div>
@@ -1564,7 +2100,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                           <input
                             type="text"
                             value={virtual60Rate}
-                            onChange={(event) => setVirtual60Rate(event.target.value)}
+                            onChange={(event) => { setVirtual60Rate(event.target.value); setSaveError(null); setSaveSuccess(null); }}
                             className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                           />
                         </div>
@@ -1585,7 +2121,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                           <input
                             type="text"
                             value={inPerson45Rate}
-                            onChange={(event) => setInPerson45Rate(event.target.value)}
+                            onChange={(event) => { setInPerson45Rate(event.target.value); setSaveError(null); setSaveSuccess(null); }}
                             className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                           />
                         </div>
@@ -1596,7 +2132,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                           <input
                             type="text"
                             value={inPerson60Rate}
-                            onChange={(event) => setInPerson60Rate(event.target.value)}
+                            onChange={(event) => { setInPerson60Rate(event.target.value); setSaveError(null); setSaveSuccess(null); }}
                             className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                           />
                         </div>
@@ -1610,11 +2146,25 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         PayPal. Arch City Tutors only collects the $5 scheduling fee.
                       </p>
                     </div>
+
+                    {saveError ? <p className="text-[13px] text-[#d61c3f]">{saveError}</p> : null}
+                    {saveSuccess ? <p className="text-[13px] text-[#1b8a5a]">{saveSuccess}</p> : null}
+                    {lastSavedAt ? (
+                      <p className="text-[12px] text-[#6b7280]">Last saved at {lastSavedAt}</p>
+                    ) : null}
                   </div>
+                  {isSavingRates ? (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[12px] bg-white/70 backdrop-blur-[1px]">
+                      <div className="flex items-center gap-3 rounded-full border border-[#f3cfd6] bg-white px-4 py-2 text-[13px] font-semibold text-[#d61c3f]">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f3cfd6] border-t-[#d61c3f]" />
+                        <span>Saving...</span>
+                      </div>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
               {activeTab === "Preferences" ? (
-                <section className="rounded-[12px] bg-white p-5">
+                <section className="relative rounded-[12px] bg-white p-5">
                   <h3 className="text-[18px] font-bold text-[#20242b]">Preferences</h3>
 
                   <div className="mt-6 space-y-6">
@@ -1629,19 +2179,31 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                             title: "Currently teaching in classroom",
                             description: "Active classroom teacher",
                             enabled: isClassroomTeacher,
-                            onToggle: () => setIsClassroomTeacher((current) => !current),
+                            onToggle: () => {
+                              setIsClassroomTeacher((current) => !current);
+                              setSaveError(null);
+                              setSaveSuccess(null);
+                            },
                           },
                           {
                             title: "Offer virtual tutoring",
                             description: "Available for video sessions",
                             enabled: offersVirtual,
-                            onToggle: () => setOffersVirtual((current) => !current),
+                            onToggle: () => {
+                              setOffersVirtual((current) => !current);
+                              setSaveError(null);
+                              setSaveSuccess(null);
+                            },
                           },
                           {
                             title: "Offer in-person tutoring",
                             description: "Meet at a physical location",
                             enabled: offersInPerson,
-                            onToggle: () => setOffersInPerson((current) => !current),
+                            onToggle: () => {
+                              setOffersInPerson((current) => !current);
+                              setSaveError(null);
+                              setSaveSuccess(null);
+                            },
                           },
                         ].map((item) => (
                           <div key={item.title} className="flex items-center justify-between gap-4 py-3">
@@ -1681,7 +2243,11 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                             <button
                               key={option.label}
                               type="button"
-                              onClick={() => setAdvanceNotice(option.label)}
+                              onClick={() => {
+                                setAdvanceNotice(option.label);
+                                setSaveError(null);
+                                setSaveSuccess(null);
+                              }}
                               className={`flex w-full items-start gap-3 rounded-[12px] border px-4 py-3 text-left transition ${
                                 active
                                   ? "border-[#f191a5] bg-[#fff7f8]"
@@ -1695,7 +2261,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                                     : "border-[#d8dde6] text-transparent"
                                 }`}
                               >
-                                Ã¢Å“â€œ
+                                {"✓"}
                               </span>
                               <span>
                                 <span className="block text-[14px] font-semibold text-[#20242b]">
@@ -1725,7 +2291,11 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
-                            onClick={() => setMaxSessionsPerDay((current) => Math.max(1, current - 1))}
+                            onClick={() => {
+                              setMaxSessionsPerDay((current) => Math.max(1, current - 1));
+                              setSaveError(null);
+                              setSaveSuccess(null);
+                            }}
                             className="flex h-7 w-7 items-center justify-center rounded-full border border-[#e5e7eb] text-[#6b7280]"
                           >
                             -
@@ -1735,7 +2305,11 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                           </span>
                           <button
                             type="button"
-                            onClick={() => setMaxSessionsPerDay((current) => current + 1)}
+                            onClick={() => {
+                              setMaxSessionsPerDay((current) => current + 1);
+                              setSaveError(null);
+                              setSaveSuccess(null);
+                            }}
                             className="flex h-7 w-7 items-center justify-center rounded-full bg-[#d61c3f] text-white"
                           >
                             +
@@ -1755,18 +2329,41 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                             Hides your profile from student searches. No need to re-register; just toggle back on when ready.
                           </p>
                         </div>
-                        <Toggle enabled={pauseAccount} onToggle={() => setPauseAccount((current) => !current)} />
+                        <Toggle
+                          enabled={pauseAccount}
+                          onToggle={() => {
+                            setPauseAccount((current) => !current);
+                            setSaveError(null);
+                            setSaveSuccess(null);
+                          }}
+                        />
                       </div>
                     </div>
+
+                    {saveError ? <p className="text-[13px] text-[#d61c3f]">{saveError}</p> : null}
+                    {saveSuccess ? <p className="text-[13px] text-[#1b8a5a]">{saveSuccess}</p> : null}
+                    {lastSavedAt ? (
+                      <p className="text-[12px] text-[#6b7280]">Last saved at {lastSavedAt}</p>
+                    ) : null}
                   </div>
+
+                  {isSavingPreferences ? (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[12px] bg-white/70 backdrop-blur-[1px]">
+                      <div className="flex items-center gap-3 rounded-full border border-[#f3cfd6] bg-white px-4 py-2 text-[13px] font-semibold text-[#d61c3f]">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f3cfd6] border-t-[#d61c3f]" />
+                        <span>Saving...</span>
+                      </div>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
               {activeTab === "Location" ? (
-                <section className="rounded-[12px] bg-white p-5">
+                <section className="relative rounded-[12px] bg-white p-5">
                   <div className="flex items-center justify-between gap-4">
                     <h3 className="text-[18px] font-bold text-[#20242b]">Location</h3>
                     <button
                       type="button"
+                      onClick={() => openLocationModal()}
                       className="inline-flex h-10 items-center gap-2 rounded-full bg-[#d61c3f] px-4 text-[13px] font-semibold text-white"
                     >
                       <FiPlus className="h-4 w-4" />
@@ -1775,7 +2372,13 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                   </div>
 
                   <div className="mt-5 max-w-[520px] space-y-4">
-                    {tutorLocationEntries.map((entry) => (
+                    {locationEntries.length === 0 ? (
+                      <div className="rounded-[16px] border border-dashed border-[#f3cfd6] bg-[#fff7f8] px-4 py-6 text-[13px] text-[#6b7280]">
+                        No locations added yet. Click Add to create your first tutoring location.
+                      </div>
+                    ) : null}
+
+                    {locationEntries.map((entry) => (
                       <div
                         key={entry.id}
                         className={`rounded-[16px] border bg-white px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.05)] ${
@@ -1796,41 +2399,68 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                                   </span>
                                 ) : null}
                               </div>
-                              <p className="text-[13px] text-[#6b7280]">{entry.addressLine1}</p>
-                              <p className="text-[13px] text-[#6b7280]">{entry.addressLine2}</p>
+                              <p className="text-[13px] text-[#6b7280]">{entry.address_line_1}</p>
+                              <p className="text-[13px] text-[#6b7280]">{entry.address_line_2}</p>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-4 text-[#9ca3af]">
-                            <button type="button" aria-label="Edit location entry">
+                            <button
+                              type="button"
+                              onClick={() => openLocationModal(entry)}
+                              aria-label="Edit location entry"
+                              disabled={isSavingLocation}
+                            >
                               <FiEdit2 className="h-4 w-4" />
                             </button>
-                            <button type="button" aria-label="Delete location entry">
+                            <button
+                              type="button"
+                              onClick={() => openDeleteLocationConfirm(entry.id)}
+                              aria-label="Delete location entry"
+                              disabled={isSavingLocation}
+                            >
                               <FiTrash2 className="h-4 w-4 text-[#f08a9c]" />
                             </button>
                           </div>
                         </div>
 
-                        {entry.showMapPreview ? (
+                        {entry.show_map_preview ? (
                           <div className="mt-4 rounded-[12px] bg-[#eceef2] px-4 py-8 text-center text-[13px] text-[#6b7280]">
                             <span className="inline-flex items-center gap-2">
                               <FiMapPin className="h-4 w-4" />
                               <span>Map Preview</span>
                             </span>
                           </div>
-                        ) : (
+                        ) : null}
+
+                        {!entry.preferred ? (
                           <button
                             type="button"
-                            className="mt-4 text-[12px] font-semibold text-[#d61c3f]"
+                            onClick={() => handleSetPreferredLocation(entry.id)}
+                            disabled={isSavingLocation}
+                            className="mt-4 text-[12px] font-semibold text-[#d61c3f] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             Set as preferred
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     ))}
                   </div>
+
+                  {locationError ? <p className="mt-4 text-[13px] text-[#d61c3f]">{locationError}</p> : null}
+                  {locationSuccess ? <p className="mt-2 text-[13px] text-[#1b8a5a]">{locationSuccess}</p> : null}
+
+                  {isSavingLocation ? (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[12px] bg-white/70 backdrop-blur-[1px]">
+                      <div className="flex items-center gap-3 rounded-full border border-[#f3cfd6] bg-white px-4 py-2 text-[13px] font-semibold text-[#d61c3f]">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f3cfd6] border-t-[#d61c3f]" />
+                        <span>Saving...</span>
+                      </div>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
+
 
               <div className="mt-6 flex justify-end gap-3">
                 <button
@@ -1842,14 +2472,14 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                 <button
                   type="button"
                   onClick={handleProfileSave}
-                  disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District" && activeTab !== "Subjects & Grades") || isSavingProfile}
+                  disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District" && activeTab !== "Subjects & Grades" && activeTab !== "Rates" && activeTab !== "Preferences") || isSavingProfile}
                   className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {activeTab === "Personal Info"
                     ? isSavingProfile
                       ? "Saving..."
                       : "Save Personal Info"
-                    : activeTab === "Bio & School District" ? isSavingProfile ? "Saving..." : "Save Bio & School District" : activeTab === "Subjects & Grades" ? isSavingProfile ? "Saving..." : "Save Subjects & Grades" : "Save"}
+                    : activeTab === "Bio & School District" ? isSavingProfile ? "Saving..." : "Save Bio & School District" : activeTab === "Subjects & Grades" ? isSavingProfile ? "Saving..." : "Save Subjects & Grades" : activeTab === "Rates" ? isSavingProfile ? "Saving..." : "Save Rates" : activeTab === "Preferences" ? isSavingProfile ? "Saving..." : "Save Preferences" : "Save"}
                 </button>
               </div>
             </div>
@@ -2106,6 +2736,140 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
           </div>
         </div>
       ) : null}
+
+      {isLocationModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-[520px] rounded-[16px] bg-white p-6 shadow-[0_12px_36px_rgba(15,23,42,0.28)]">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-[20px] font-bold text-[#20242b]">{locationMode === "edit" ? "Edit Location" : "Add Location"}</h3>
+              <button
+                type="button"
+                onClick={closeLocationModal}
+                className="rounded-full border border-[#e5e7eb] px-3 py-1 text-[12px] font-semibold text-[#6b7280]"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Location Name</label>
+                <input
+                  type="text"
+                  value={locationForm.name}
+                  onChange={(event) => {
+                    setLocationForm((current) => ({ ...current, name: event.target.value }));
+                    setLocationError(null);
+                  }}
+                  placeholder="e.g., Main Tutoring Office"
+                  className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Address Line 1</label>
+                <input
+                  type="text"
+                  value={locationForm.addressLine1}
+                  onChange={(event) => {
+                    setLocationForm((current) => ({ ...current, addressLine1: event.target.value }));
+                    setLocationError(null);
+                  }}
+                  placeholder="Street address"
+                  className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Address Line 2</label>
+                <input
+                  type="text"
+                  value={locationForm.addressLine2}
+                  onChange={(event) => {
+                    setLocationForm((current) => ({ ...current, addressLine2: event.target.value }));
+                    setLocationError(null);
+                  }}
+                  placeholder="City, state ZIP"
+                  className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-[13px] text-[#4b5563]">
+                <input
+                  type="checkbox"
+                  checked={locationForm.preferred}
+                  onChange={(event) => {
+                    setLocationForm((current) => ({ ...current, preferred: event.target.checked }));
+                    setLocationError(null);
+                  }}
+                />
+                <span>Set as preferred location</span>
+              </label>
+
+              <label className="flex items-center gap-2 text-[13px] text-[#4b5563]">
+                <input
+                  type="checkbox"
+                  checked={locationForm.showMapPreview}
+                  onChange={(event) => {
+                    setLocationForm((current) => ({ ...current, showMapPreview: event.target.checked }));
+                    setLocationError(null);
+                  }}
+                />
+                <span>Show map preview</span>
+              </label>
+
+              {locationError ? <p className="text-[13px] text-[#d61c3f]">{locationError}</p> : null}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeLocationModal}
+                className="inline-flex h-10 items-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveLocation}
+                disabled={isSavingLocation}
+                className="inline-flex h-10 items-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingLocation ? "Saving..." : locationMode === "edit" ? "Update" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isDeleteLocationConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-[440px] rounded-[16px] bg-white p-6 shadow-[0_12px_36px_rgba(15,23,42,0.28)]">
+            <h3 className="text-[20px] font-bold text-[#20242b]">Delete Location</h3>
+            <p className="mt-3 text-[14px] text-[#6b7280]">Are you sure you want to delete this location entry?</p>
+            {locationError ? <p className="mt-3 text-[13px] text-[#d61c3f]">{locationError}</p> : null}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteLocationConfirm}
+                className="inline-flex h-10 items-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteLocationConfirm}
+                disabled={isSavingLocation}
+                className="inline-flex h-10 items-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingLocation ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
 
     </TutorShell>
   );
