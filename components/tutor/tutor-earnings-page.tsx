@@ -1,3 +1,5 @@
+"use client";
+
 import type { IconType } from "react-icons";
 import {
   FiAlertCircle,
@@ -7,6 +9,7 @@ import {
 } from "react-icons/fi";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
+import { useTutorApplicationStatus } from "@/lib/tutor/use-tutor-application-status";
 import {
   tutorEarningsRows,
   tutorEarningsSummary,
@@ -21,32 +24,6 @@ type SummaryCard = {
   iconClassName: string;
   valueClassName?: string;
 };
-
-const summaryCards: SummaryCard[] = [
-  {
-    title: "This Month",
-    value: tutorEarningsSummary.thisMonth,
-    subtitle: tutorEarningsSummary.thisMonthLabel,
-    icon: FiDollarSign,
-    iconClassName: "bg-[#ffecef] text-[#d94a62]",
-    valueClassName: "text-[#d61c3f]",
-  },
-  {
-    title: "Sessions Completed",
-    value: tutorEarningsSummary.sessionsCompletedThisMonth,
-    subtitle: "This month",
-    icon: FiCheckCircle,
-    iconClassName: "bg-[#ebf7ef] text-[#1b8a5a]",
-    valueClassName: "text-[#1b8a5a]",
-  },
-  {
-    title: "All-Time Total",
-    value: tutorEarningsSummary.allTimeTotal,
-    subtitle: `${tutorEarningsSummary.allTimeSessions} sessions completed`,
-    icon: FiTrendingUp,
-    iconClassName: "bg-[#fff6de] text-[#b58112]",
-  },
-];
 
 function SummaryCardView({ card }: { card: SummaryCard }) {
   const Icon = card.icon;
@@ -84,6 +61,62 @@ function statusClass(status: TutorEarningRow["status"]) {
 }
 
 export function TutorEarningsPage() {
+  const { isNotApproved: isPending } = useTutorApplicationStatus();
+
+  const summaryCards: SummaryCard[] = isPending
+    ? [
+        {
+          title: "This Month",
+          value: "$0",
+          subtitle: "No earnings yet",
+          icon: FiDollarSign,
+          iconClassName: "bg-[#ffecef] text-[#d94a62]",
+          valueClassName: "text-[#d61c3f]",
+        },
+        {
+          title: "Sessions Completed",
+          value: "0",
+          subtitle: "This month",
+          icon: FiCheckCircle,
+          iconClassName: "bg-[#ebf7ef] text-[#1b8a5a]",
+          valueClassName: "text-[#1b8a5a]",
+        },
+        {
+          title: "All-Time Total",
+          value: "$0",
+          subtitle: "0 sessions completed",
+          icon: FiTrendingUp,
+          iconClassName: "bg-[#fff6de] text-[#b58112]",
+        },
+      ]
+    : [
+        {
+          title: "This Month",
+          value: tutorEarningsSummary.thisMonth,
+          subtitle: tutorEarningsSummary.thisMonthLabel,
+          icon: FiDollarSign,
+          iconClassName: "bg-[#ffecef] text-[#d94a62]",
+          valueClassName: "text-[#d61c3f]",
+        },
+        {
+          title: "Sessions Completed",
+          value: tutorEarningsSummary.sessionsCompletedThisMonth,
+          subtitle: "This month",
+          icon: FiCheckCircle,
+          iconClassName: "bg-[#ebf7ef] text-[#1b8a5a]",
+          valueClassName: "text-[#1b8a5a]",
+        },
+        {
+          title: "All-Time Total",
+          value: tutorEarningsSummary.allTimeTotal,
+          subtitle: `${tutorEarningsSummary.allTimeSessions} sessions completed`,
+          icon: FiTrendingUp,
+          iconClassName: "bg-[#fff6de] text-[#b58112]",
+        },
+      ];
+
+  const rows = isPending ? [] : tutorEarningsRows;
+
   return (
     <TutorShell>
       <div className="w-full">
@@ -106,12 +139,12 @@ export function TutorEarningsPage() {
         <div className="mt-4 flex items-start gap-3 rounded-[12px] border border-[#f1c6cf] bg-[#fff8f9] px-4 py-3 text-[13px] text-[#6b7280]">
           <FiAlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#6b7280]" />
           <p>
-            Earnings are collected directly from students via cash, check, Venmo, or PayPal after each session. This log is a record of expected and confirmed payments — it is not processed through this platform.
+            Earnings are collected directly from students via cash, check, Venmo, or PayPal after each session. This log is a record of expected and confirmed payments - it is not processed through this platform.
           </p>
         </div>
 
         <section className="mt-5">
-          <h2 className="text-[17px] font-bold text-[#20242b]">Session Earnings — March 2026</h2>
+          <h2 className="text-[17px] font-bold text-[#20242b]">Session Earnings - March 2026</h2>
 
           <div className="mt-3 overflow-hidden rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <div className="grid grid-cols-[1.5fr_1fr_1fr_0.8fr_0.8fr_0.7fr_0.7fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
@@ -125,7 +158,7 @@ export function TutorEarningsPage() {
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {tutorEarningsRows.map((row) => (
+              {rows.map((row) => (
                 <div
                   key={row.id}
                   className="grid grid-cols-[1.5fr_1fr_1fr_0.8fr_0.8fr_0.7fr_0.7fr] gap-4 px-4 py-4 text-[14px] text-[#4b5563]"
@@ -154,6 +187,12 @@ export function TutorEarningsPage() {
                   </div>
                 </div>
               ))}
+
+              {rows.length === 0 ? (
+                <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
+                  No earnings yet. Complete your tutor application first.
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
@@ -161,3 +200,6 @@ export function TutorEarningsPage() {
     </TutorShell>
   );
 }
+
+
+

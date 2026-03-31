@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import { TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
+import { useTutorApplicationStatus } from "@/lib/tutor/use-tutor-application-status";
 import {
   getTutorScheduleCounts,
   tutorScheduleItems,
@@ -38,12 +39,19 @@ function statusClass(status: TutorScheduleStatus) {
 
 export function TutorSchedulePage() {
   const [activeTab, setActiveTab] = useState<TutorScheduleStatus>("Upcoming");
+  const { isNotApproved: isPending } = useTutorApplicationStatus();
 
   const filteredSessions = useMemo(
-    () => tutorScheduleItems.filter((item) => item.status === activeTab),
-    [activeTab],
+    () =>
+      isPending
+        ? []
+        : tutorScheduleItems.filter((item) => item.status === activeTab),
+    [activeTab, isPending],
   );
-  const counts = useMemo(() => getTutorScheduleCounts(), []);
+  const counts = useMemo(
+    () => (isPending ? { Upcoming: 0, Completed: 0, Cancelled: 0 } : getTutorScheduleCounts()),
+    [isPending],
+  );
 
   return (
     <TutorShell>
@@ -92,13 +100,13 @@ export function TutorSchedulePage() {
           <div className="overflow-x-auto">
             <div className="min-w-[980px]">
               <div className="grid grid-cols-[1.65fr_0.8fr_1fr_0.8fr_0.9fr_0.8fr_0.7fr_0.9fr_0.8fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
-                <span>Student ↕</span>
+                <span>Student</span>
                 <span>Grade</span>
-                <span>Date ↕</span>
-                <span>Time ↕</span>
+                <span>Date</span>
+                <span>Time</span>
                 <span>Duration</span>
                 <span>Type</span>
-                <span>Rate ↕</span>
+                <span>Rate</span>
                 <span>Status</span>
                 <span>Actions</span>
               </div>
@@ -144,7 +152,9 @@ export function TutorSchedulePage() {
 
                 {filteredSessions.length === 0 ? (
                   <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
-                    No sessions in this section right now.
+                    {isPending
+                      ? "No sessions yet. Complete your tutor application first."
+                      : "No sessions in this section right now."}
                   </div>
                 ) : null}
               </div>
@@ -155,3 +165,5 @@ export function TutorSchedulePage() {
     </TutorShell>
   );
 }
+
+

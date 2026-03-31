@@ -1,10 +1,16 @@
-﻿import { cookies } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import {
   AdminDashboardPage,
+  defaultAdminDashboardOverviewData,
   type AdminDashboardOverviewData,
 } from "@/components/admin/admin-dashboard-page";
+
+type DashboardSummaryCard = AdminDashboardOverviewData["summary_cards"][number];
+type DashboardSummaryResponse = {
+  data: DashboardSummaryCard[];
+};
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -15,7 +21,16 @@ function resolveApiBaseUrl() {
   return url ? normalizeBaseUrl(url) : null;
 }
 
-async function fetchAdminDashboardOverview(): Promise<AdminDashboardOverviewData> {
+function todayLabel() {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
+}
+
+async function fetchAdminDashboardSummary(): Promise<DashboardSummaryCard[]> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
@@ -26,7 +41,7 @@ async function fetchAdminDashboardOverview(): Promise<AdminDashboardOverviewData
     redirect("/login");
   }
 
-  const response = await fetch(`${baseUrl}/admin-dashboard/overview`, {
+  const response = await fetch(`${baseUrl}/admin-dashboard/summary`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -39,13 +54,30 @@ async function fetchAdminDashboardOverview(): Promise<AdminDashboardOverviewData
   }
 
   if (!response.ok) {
-    throw new Error(`Dashboard API failed (${response.status}).`);
+    throw new Error(`Dashboard summary API failed (${response.status}).`);
   }
 
-  return (await response.json()) as AdminDashboardOverviewData;
+  const payload = (await response.json()) as DashboardSummaryResponse;
+  return payload.data;
 }
 
 export default async function AdminDashboardRoute() {
-  const data = await fetchAdminDashboardOverview();
-  return <AdminDashboardPage data={data} />;
+  let summaryCards = defaultAdminDashboardOverviewData.summary_cards;
+
+  try {
+    summaryCards = await fetchAdminDashboardSummary();
+  } catch {
+    // Keep fallback summary cards when summary endpoint is temporarily unavailable.
+  }
+
+  const initialData: AdminDashboardOverviewData = {
+    ...defaultAdminDashboardOverviewData,
+    today_label: todayLabel(),
+    summary_cards: summaryCards,
+    recent_sessions: [],
+    pending_actions: [],
+    top_tutors_this_month: [],
+  };
+
+  return <AdminDashboardPage data={initialData} lazySections />;
 }

@@ -3,16 +3,13 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
+import { useRouter } from "next/navigation";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
+import { submitTutorApplication } from "@/lib/api/tutor-application-api";
+import { TUTOR_DASHBOARD_ROUTE } from "@/lib/routes";
 
-function SectionCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-[24px] border border-[#eceef2] bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <h2 className="text-[18px] font-bold text-[#20242b]">{title}</h2>
@@ -60,21 +57,11 @@ function YesNoField({
       <p className="mb-3 text-[13px] font-semibold text-[#4b5563]">{label}</p>
       <div className="flex items-center gap-5 text-[14px] text-[#4b5563]">
         <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name={label}
-            checked={value === "yes"}
-            onChange={() => onChange("yes")}
-          />
+          <input type="radio" name={label} checked={value === "yes"} onChange={() => onChange("yes")} />
           <span>Yes</span>
         </label>
         <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name={label}
-            checked={value === "no"}
-            onChange={() => onChange("no")}
-          />
+          <input type="radio" name={label} checked={value === "no"} onChange={() => onChange("no")} />
           <span>No</span>
         </label>
       </div>
@@ -82,7 +69,16 @@ function YesNoField({
   );
 }
 
+function readCookie(name: string) {
+  if (typeof document === "undefined") return "";
+  const prefix = `${name}=`;
+  const parts = document.cookie.split(";").map((part) => part.trim());
+  const match = parts.find((part) => part.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
+}
+
 export function TutorApplicationPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -111,9 +107,89 @@ export function TutorApplicationPage() {
   const [isEmployedTeacher, setIsEmployedTeacher] = useState<"yes" | "no">("no");
   const [isWorkingTowardExtraCerts, setIsWorkingTowardExtraCerts] = useState<"yes" | "no">("no");
   const [approved, setApproved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState(false);
 
   function updateField(key: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleSubmit() {
+    if (!approved || submitting) return;
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setSubmitError(true);
+      setSubmitMessage("Session expired. Please login again.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(false);
+    setSubmitMessage("");
+
+    try {
+      const response = await submitTutorApplication({
+        token,
+        payload: {
+          first_name: form.firstName.trim(),
+          last_name: form.lastName.trim(),
+          email: form.email.trim().toLowerCase(),
+          mobile_phone: form.mobilePhone.trim(),
+          address: form.address.trim(),
+          city: form.city.trim(),
+          state: form.state.trim(),
+          postal_code: form.postalCode.trim(),
+          degree: form.degree.trim(),
+          certification: form.certification.trim(),
+          tutoring_mode: form.tutoringMode.trim(),
+          in_person_location: form.inPersonLocation.trim(),
+          remote_tools: form.remoteTools.trim(),
+          tutoring_days_per_month: form.tutoringDaysPerMonth.trim(),
+          grade_levels: form.gradeLevels.trim(),
+          subjects: form.subjects.trim(),
+          teaching_approach: form.teachingApproach.trim(),
+          engagement_methods: form.engagementMethods.trim(),
+          session_structure: form.sessionStructure.trim(),
+          customization_approach: form.customizationApproach.trim(),
+          ssn: form.ssn.trim(),
+          has_offenses: hasOffenses === "yes",
+          is_certified: isCertified === "yes",
+          is_employed_teacher: isEmployedTeacher === "yes",
+          is_working_toward_extra_certs: isWorkingTowardExtraCerts === "yes",
+          approved: true,
+        },
+      });
+
+      if (!response || !response.ok) {
+        let errorText = "Failed to submit application.";
+        try {
+          const data = response ? ((await response.json()) as { detail?: string | { msg?: string }[] }) : null;
+          if (typeof data?.detail === "string") {
+            errorText = data.detail;
+          } else if (Array.isArray(data?.detail) && data?.detail[0]?.msg) {
+            errorText = data.detail[0].msg as string;
+          }
+        } catch {
+          // keep fallback
+        }
+
+        setSubmitError(true);
+        setSubmitMessage(errorText);
+        return;
+      }
+
+      setSubmitError(false);
+      setSubmitMessage("Application submitted successfully. Redirecting...");
+      router.replace(`${TUTOR_DASHBOARD_ROUTE}?application=submitted`);
+      router.refresh();
+    } catch {
+      setSubmitError(true);
+      setSubmitMessage("Network error while submitting application.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -123,18 +199,20 @@ export function TutorApplicationPage() {
           <div>
             <h1 className="text-[22px] font-bold text-[#20242b] sm:text-[24px]">Apply as a Tutor</h1>
             <p className="mt-2 text-[15px] text-[#6b7280]">Fill out the form below to apply to become a tutor:</p>
+            {submitMessage ? (
+              <p className={`mt-2 text-[13px] ${submitError ? "text-[#d61c3f]" : "text-[#1b8a5a]"}`}>{submitMessage}</p>
+            ) : null}
           </div>
 
           <button
             type="button"
-            disabled={!approved}
+            disabled={!approved || submitting}
+            onClick={handleSubmit}
             className={`inline-flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-semibold ${
-              approved
-                ? "bg-[#d61c3f] text-white"
-                : "bg-[#d9dde5] text-white"
+              approved && !submitting ? "bg-[#d61c3f] text-white" : "bg-[#d9dde5] text-white"
             }`}
           >
-            Submit
+            {submitting ? "Submitting..." : "Submit"}
             <FiArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -146,26 +224,14 @@ export function TutorApplicationPage() {
                 <Field label="First name" placeholder="Enter your first name" value={form.firstName} onChange={(value) => updateField("firstName", value)} />
                 <Field label="Last name" placeholder="Enter your last name" value={form.lastName} onChange={(value) => updateField("lastName", value)} />
                 <Field label="Email address" placeholder="Enter your email address" value={form.email} onChange={(value) => updateField("email", value)} />
-                <YesNoField
-                  label="Have you ever been convicted of any sexual or criminal offenses?"
-                  value={hasOffenses}
-                  onChange={setHasOffenses}
-                />
+                <YesNoField label="Have you ever been convicted of any sexual or criminal offenses?" value={hasOffenses} onChange={setHasOffenses} />
               </div>
             </SectionCard>
 
             <SectionCard title="Teaching Experience">
               <div className="grid gap-6">
-                <YesNoField
-                  label="Are you a certified teacher in the state of Missouri?"
-                  value={isCertified}
-                  onChange={setIsCertified}
-                />
-                <YesNoField
-                  label="Are you currently employed as a teacher?"
-                  value={isEmployedTeacher}
-                  onChange={setIsEmployedTeacher}
-                />
+                <YesNoField label="Are you a certified teacher in the state of Missouri?" value={isCertified} onChange={setIsCertified} />
+                <YesNoField label="Are you currently employed as a teacher?" value={isEmployedTeacher} onChange={setIsEmployedTeacher} />
               </div>
             </SectionCard>
 
@@ -205,11 +271,7 @@ export function TutorApplicationPage() {
               <div className="grid gap-4">
                 <Field label="What degree(s) do you currently hold?" placeholder="Please enter..." value={form.degree} onChange={(value) => updateField("degree", value)} />
                 <Field label="What certification(s) do you currently hold?" placeholder="Please enter..." value={form.certification} onChange={(value) => updateField("certification", value)} />
-                <YesNoField
-                  label="Are you currently working towards any additional degree(s)/certification(s)?"
-                  value={isWorkingTowardExtraCerts}
-                  onChange={setIsWorkingTowardExtraCerts}
-                />
+                <YesNoField label="Are you currently working towards any additional degree(s)/certification(s)?" value={isWorkingTowardExtraCerts} onChange={setIsWorkingTowardExtraCerts} />
               </div>
             </SectionCard>
 
@@ -218,9 +280,7 @@ export function TutorApplicationPage() {
                 <Field label="Social security number (optional)" placeholder="XXX-XX-XXXX" value={form.ssn} onChange={(value) => updateField("ssn", value)} />
 
                 <div>
-                  <label className="mb-2 block text-[13px] font-semibold text-[#4b5563]">
-                    State or federally issued identification (required)
-                  </label>
+                  <label className="mb-2 block text-[13px] font-semibold text-[#4b5563]">State or federally issued identification (required)</label>
                   <input
                     type="file"
                     className="block w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#4b5563] file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-[13px] file:font-medium"
@@ -234,18 +294,11 @@ export function TutorApplicationPage() {
                 </div>
 
                 <label className="flex items-center gap-3 text-[14px] text-[#20242b]">
-                  <input
-                    type="checkbox"
-                    checked={approved}
-                    onChange={(event) => setApproved(event.target.checked)}
-                  />
+                  <input type="checkbox" checked={approved} onChange={(event) => setApproved(event.target.checked)} />
                   <span>I approve</span>
                 </label>
 
-                <p className="text-[13px] text-[#6b7280]">
-                  You can submit your application by scrolling to the top of the page and clicking
-                  &quot;Submit&quot;
-                </p>
+                <p className="text-[13px] text-[#6b7280]">You can submit your application by scrolling to the top of the page and clicking &quot;Submit&quot;</p>
               </div>
             </SectionCard>
           </div>
@@ -254,3 +307,5 @@ export function TutorApplicationPage() {
     </TutorShell>
   );
 }
+
+
