@@ -1,4 +1,9 @@
-﻿type PublicApiEndpointKey = "login" | "signup" | "verifyEmail" | "contact";
+type PublicApiEndpointKey =
+  | "login"
+  | "signup"
+  | "verifyEmail"
+  | "contact"
+  | "checkEmail";
 
 type PublicApiRequest = {
   endpoint: PublicApiEndpointKey;
@@ -17,6 +22,7 @@ const endpointEnvMap: Record<PublicApiEndpointKey, string | undefined> = {
   signup: process.env.NEXT_PUBLIC_API_SIGNUP_URL,
   verifyEmail: process.env.NEXT_PUBLIC_API_VERIFY_EMAIL_URL,
   contact: process.env.NEXT_PUBLIC_API_CONTACT_URL,
+  checkEmail: process.env.NEXT_PUBLIC_API_CHECK_EMAIL_URL,
 };
 
 const endpointPathMap: Record<PublicApiEndpointKey, string> = {
@@ -24,6 +30,7 @@ const endpointPathMap: Record<PublicApiEndpointKey, string> = {
   signup: "/auth/register",
   verifyEmail: "/auth/verify-email",
   contact: "/contact",
+  checkEmail: "/auth/check-email",
 };
 
 function normalizeBaseUrl(url: string) {
@@ -119,3 +126,64 @@ export async function submitPublicApi<T = unknown>({
     };
   }
 }
+
+export async function checkEmailDuplicate(email: string): Promise<{
+  ok: boolean;
+  duplicate: boolean;
+  message: string;
+}> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return {
+      ok: false,
+      duplicate: false,
+      message: "Email is required.",
+    };
+  }
+
+  const response = await submitPublicApi<{
+    exists?: boolean;
+    is_duplicate?: boolean;
+    duplicate?: boolean;
+    available?: boolean;
+  }>({
+    endpoint: "checkEmail",
+    payload: { email: normalizedEmail },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404 || response.status === 405) {
+      return {
+        ok: false,
+        duplicate: false,
+        message: "Email availability endpoint is not enabled.",
+      };
+    }
+
+    return {
+      ok: false,
+      duplicate: false,
+      message: response.error || "Could not validate email availability.",
+    };
+  }
+
+  const data = response.data;
+  const exists = Boolean(
+    data &&
+      typeof data === "object" &&
+      (data.exists || data.is_duplicate || data.duplicate),
+  );
+  const availableFalse = Boolean(
+    data &&
+      typeof data === "object" &&
+      "available" in data &&
+      data.available === false,
+  );
+
+  return {
+    ok: true,
+    duplicate: exists || availableFalse,
+    message: exists || availableFalse ? "Email already exists." : "",
+  };
+}
+

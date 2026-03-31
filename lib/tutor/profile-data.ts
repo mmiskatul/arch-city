@@ -18,6 +18,8 @@ export const tutorProfile = {
   zipCode: "63108",
   emergencyContactName: "Sandra Thompson",
   emergencyContactPhone: "(314) 555-0144",
+  dateOfBirth: "",
+  gender: "",
   backgroundCheck: "Verified — Expires Dec 2026",
   bio: "Missouri-certified mathematics tutor with classroom and one-on-one tutoring experience focused on Algebra, Geometry, and Pre-Calculus.",
   schoolDistrict: "Clayton School District",

@@ -28,6 +28,7 @@ import {
   TUTOR_SCHEDULE_ROUTE,
   TUTOR_SETTINGS_ROUTE,
 } from "@/lib/routes";
+import { requestTutorProfileWithFallback } from "@/lib/api/tutor-profile-api";
 import { tutorMessagesUnreadCount } from "@/lib/tutor/messages-data";
 
 type NavItem = {
@@ -123,18 +124,15 @@ export function TutorShell({
 
   useEffect(() => {
     async function loadProfile() {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
       const token = readCookie("arch_access_token");
-      if (!baseUrl || !token) return;
+      if (!token) return;
 
       try {
-        const response = await fetch(`${baseUrl}/tutor/profile`, {
+        const response = await requestTutorProfileWithFallback({
           method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          token,
         });
-        if (!response.ok) return;
+        if (!response || !response.ok) return;
 
         const data = (await response.json()) as {
           first_name: string;
@@ -402,4 +400,5 @@ export function TutorShell({
     </main>
   );
 }
+
 

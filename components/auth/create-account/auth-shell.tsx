@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -206,7 +206,7 @@ function PasswordRule({
         }`}
         aria-hidden="true"
       >
-        {satisfied ? "âœ“" : ""}
+        {satisfied ? "✓" : ""}
       </span>
       <span>{label}</span>
     </div>
@@ -301,6 +301,22 @@ const signupRoleOptions = [
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^[0-9+()\-\s]{10,}$/;
+
+function isDuplicateEmailSignupFailure(status: number, message: string) {
+  if (status === 409) {
+    return true;
+  }
+
+  const normalizedMessage = message.trim().toLowerCase();
+  return (
+    normalizedMessage.includes("already exists") ||
+    normalizedMessage.includes("already registered") ||
+    normalizedMessage.includes("duplicate") ||
+    normalizedMessage.includes("email exists") ||
+    normalizedMessage.includes("email taken")
+  );
+}
+
 
 const memberAgreement = `THIS MEMBER AGREEMENT (this "Agreement"), effective as of March, 2026 is entered into by and between STL TUTORING SOLUTIONS, LLC, a Missouri limited liability company, doing business as ARCH CITY TUTORS (the "Company" and/or "ACT") and ("Client") (the Company and Client are each referred to individually as a "Party" and collectively as the "Parties").
 
@@ -548,6 +564,8 @@ export function AuthShell({ mode }: AuthShellProps) {
   async function handleSignupSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const normalizedSignupEmail = signupEmail.trim().toLowerCase();
+
     setSignupTouched({
       firstName: true,
       lastName: true,
@@ -576,7 +594,7 @@ export function AuthShell({ mode }: AuthShellProps) {
         role: signupRole,
         first_name: signupFirstName.trim(),
         last_name: signupLastName.trim(),
-        email: signupEmail.trim(),
+        email: normalizedSignupEmail,
         phone_number: signupPhone.trim(),
         hear_about: heardFrom,
         sms_consent: smsConsent === "yes",
@@ -586,13 +604,17 @@ export function AuthShell({ mode }: AuthShellProps) {
 
     if (!response.ok) {
       setSignupSubmitState("error");
-      setSignupSubmitMessage(response.error);
+      setSignupSubmitMessage(
+        isDuplicateEmailSignupFailure(response.status, response.error)
+          ? "Email already exists. Please log in or use another email."
+          : response.error,
+      );
       return;
     }
 
     setSignupSubmitState("success");
     setSignupSubmitMessage("Signup successful. Redirecting to validation...");
-    router.push(`/validation?email=${encodeURIComponent(signupEmail.trim())}`);
+    router.push(`/validation?email=${encodeURIComponent(normalizedSignupEmail)}`);
   }
   if (!isLogin && signupStep === "role") {
     return (
@@ -1202,9 +1224,4 @@ export function AuthShell({ mode }: AuthShellProps) {
     </main>
   );
 }
-
-
-
-
-
 

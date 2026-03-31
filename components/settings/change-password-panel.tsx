@@ -7,8 +7,11 @@ type ChangePasswordResponse = {
   message: string;
 };
 
+type SettingsScope = "student" | "parent" | "tutor";
+
 type ChangePasswordPanelProps = {
   confirmPlaceholder?: string;
+  scope?: SettingsScope;
 };
 
 function readCookie(name: string): string | null {
@@ -48,7 +51,57 @@ function wait(ms: number) {
   });
 }
 
-export function ChangePasswordPanel({ confirmPlaceholder = "Re-enter new password" }: ChangePasswordPanelProps) {
+function getChangePasswordEndpoints(scope: SettingsScope) {
+  const scopedPrefix =
+    scope === "student"
+      ? "/student/settings"
+      : scope === "parent"
+        ? "/parent/settings"
+        : "/tutor/settings";
+
+  return [`${scopedPrefix}/change-password`, "/settings/change-password"];
+}
+
+async function postWithEndpointFallback({
+  baseUrl,
+  token,
+  endpoints,
+  body,
+}: {
+  baseUrl: string;
+  token: string;
+  endpoints: string[];
+  body: string;
+}) {
+  let lastResponse: Response | null = null;
+
+  for (const endpoint of endpoints) {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body,
+    });
+
+    if (response.ok) {
+      return response;
+    }
+
+    lastResponse = response;
+    if (![404, 405, 501].includes(response.status)) {
+      return response;
+    }
+  }
+
+  return lastResponse;
+}
+
+export function ChangePasswordPanel({
+  confirmPlaceholder = "Re-enter new password",
+  scope = "student",
+}: ChangePasswordPanelProps) {
   const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -105,12 +158,10 @@ export function ChangePasswordPanel({ confirmPlaceholder = "Re-enter new passwor
     setSuccess(null);
 
     try {
-      const response = await fetch(`${baseUrl}/settings/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await postWithEndpointFallback({
+        baseUrl,
+        token,
+        endpoints: getChangePasswordEndpoints(scope),
         body: JSON.stringify({
           current_password: currentPassword,
           new_password: newPassword,
@@ -118,16 +169,16 @@ export function ChangePasswordPanel({ confirmPlaceholder = "Re-enter new passwor
         }),
       });
 
-      if (!response.ok) {
+      if (!response || !response.ok) {
         let detail: string | undefined;
         try {
-          const data = (await response.json()) as { detail?: string };
+          const data = (await response?.json()) as { detail?: string };
           detail = data.detail;
         } catch {
           // Ignore non-JSON responses.
         }
 
-        throw new Error(detail ?? `Failed to update password (${response.status}).`);
+        throw new Error(detail ?? `Failed to update password (${response?.status ?? "no-response"}).`);
       }
 
       const data = (await response.json()) as ChangePasswordResponse;
@@ -221,3 +272,4 @@ export function ChangePasswordPanel({ confirmPlaceholder = "Re-enter new passwor
     </>
   );
 }
+

@@ -8,5 +8,5 @@ const options = [
 ];
 
 export default function Page() {
-  return <NotificationPreferencesPanel options={options} />;
+  return <NotificationPreferencesPanel options={options} scope="parent" />;
 }

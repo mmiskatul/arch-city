@@ -7,8 +7,11 @@ type PreferenceOption = {
   label: string;
 };
 
+type SettingsScope = "student" | "parent" | "tutor";
+
 type NotificationPreferencesPanelProps = {
   options: PreferenceOption[];
+  scope?: SettingsScope;
 };
 
 type NotificationPreferencesResponse = {
@@ -41,6 +44,55 @@ function resolveApiBaseUrl() {
   return url ? normalizeBaseUrl(url) : null;
 }
 
+function getNotificationPreferenceEndpoints(scope: SettingsScope) {
+  const scopedPrefix =
+    scope === "student"
+      ? "/student/settings"
+      : scope === "parent"
+        ? "/parent/settings"
+        : "/tutor/settings";
+
+  return [`${scopedPrefix}/notification-preferences`, "/settings/notification-preferences"];
+}
+
+async function requestWithEndpointFallback({
+  baseUrl,
+  token,
+  endpoints,
+  method,
+  body,
+}: {
+  baseUrl: string;
+  token: string;
+  endpoints: string[];
+  method: "GET" | "PUT";
+  body?: string;
+}) {
+  let lastResponse: Response | null = null;
+
+  for (const endpoint of endpoints) {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      method,
+      headers: {
+        ...(method === "PUT" ? { "Content-Type": "application/json" } : {}),
+        Authorization: `Bearer ${token}`,
+      },
+      ...(body ? { body } : {}),
+    });
+
+    if (response.ok) {
+      return response;
+    }
+
+    lastResponse = response;
+    if (![404, 405, 501].includes(response.status)) {
+      return response;
+    }
+  }
+
+  return lastResponse;
+}
+
 function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
   return (
     <button
@@ -60,7 +112,10 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
   );
 }
 
-export function NotificationPreferencesPanel({ options }: NotificationPreferencesPanelProps) {
+export function NotificationPreferencesPanel({
+  options,
+  scope = "student",
+}: NotificationPreferencesPanelProps) {
   const [initialPreferences, setInitialPreferences] = useState<Record<string, boolean>>({});
   const [preferences, setPreferences] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -87,17 +142,20 @@ export function NotificationPreferencesPanel({ options }: NotificationPreference
       return;
     }
 
+    const apiBaseUrl = baseUrl;
+    const authToken = token;
+
     async function loadPreferences() {
       try {
-        const response = await fetch(`${baseUrl}/settings/notification-preferences`, {
+        const response = await requestWithEndpointFallback({
+          baseUrl: apiBaseUrl,
+          token: authToken,
+          endpoints: getNotificationPreferenceEndpoints(scope),
           method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to load preferences (${response.status}).`);
+        if (!response || !response.ok) {
+          throw new Error(`Failed to load preferences (${response?.status ?? "no-response"}).`);
         }
 
         const data = (await response.json()) as NotificationPreferencesResponse;
@@ -120,7 +178,7 @@ export function NotificationPreferencesPanel({ options }: NotificationPreference
     }
 
     loadPreferences();
-  }, [options]);
+  }, [options, scope]);
 
   function handleToggle(key: string) {
     if (!allowedKeys.has(key)) return;
@@ -151,24 +209,23 @@ export function NotificationPreferencesPanel({ options }: NotificationPreference
         preferences: Object.fromEntries(options.map((option) => [option.key, Boolean(preferences[option.key])])),
       };
 
-      const response = await fetch(`${baseUrl}/settings/notification-preferences`, {
+      const response = await requestWithEndpointFallback({
+        baseUrl,
+        token,
+        endpoints: getNotificationPreferenceEndpoints(scope),
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
+      if (!response || !response.ok) {
         let detail: string | undefined;
         try {
-          const data = (await response.json()) as { detail?: string };
+          const data = (await response?.json()) as { detail?: string };
           detail = data.detail;
         } catch {
           // Ignore non-JSON error body.
         }
-        throw new Error(detail ?? `Failed to update preferences (${response.status}).`);
+        throw new Error(detail ?? `Failed to update preferences (${response?.status ?? "no-response"}).`);
       }
 
       const data = (await response.json()) as NotificationPreferencesResponse;
@@ -222,3 +279,4 @@ export function NotificationPreferencesPanel({ options }: NotificationPreference
     </div>
   );
 }
+

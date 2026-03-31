@@ -16,6 +16,10 @@ import {
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import {
+  requestTutorBioSchoolDistrictWithFallback,
+  requestTutorProfileWithFallback,
+} from "@/lib/api/tutor-profile-api";
+import {
   tutorEducationEntries,
   tutorLocationEntries,
   tutorProfile,
@@ -95,7 +99,13 @@ type TutorProfileApiModel = {
   status: string;
   location: string;
   background_check: string;
+  date_of_birth?: string;
+  gender?: string;
+  bio?: string;
+  school_district?: string;
 };
+
+export type TutorProfileData = typeof tutorProfile;
 
 type TutorProfileForm = {
   firstName: string;
@@ -108,6 +118,8 @@ type TutorProfileForm = {
   zipCode: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  dateOfBirth: string;
+  gender: string;
 };
 
 function readCookie(name: string): string | null {
@@ -123,16 +135,8 @@ function readCookie(name: string): string | null {
   return null;
 }
 
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
 
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
-
-function mapTutorProfileApiToUi(data: TutorProfileApiModel) {
+function mapTutorProfileApiToUi(data: TutorProfileApiModel): TutorProfileData {
   return {
     ...tutorProfile,
     firstName: data.first_name,
@@ -150,35 +154,30 @@ function mapTutorProfileApiToUi(data: TutorProfileApiModel) {
     status: data.status || tutorProfile.status,
     location: data.location || tutorProfile.location,
     backgroundCheck: data.background_check || tutorProfile.backgroundCheck,
+    dateOfBirth: data.date_of_birth || tutorProfile.dateOfBirth || "",
+    gender: data.gender || tutorProfile.gender || "",
+    bio: data.bio || tutorProfile.bio || "",
+    schoolDistrict: data.school_district || tutorProfile.schoolDistrict || "",
   };
 }
 
-async function fetchTutorProfile(token: string) {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
-
-  const response = await fetch(`${baseUrl}/tutor/profile`, {
+async function fetchTutorProfile(token: string): Promise<TutorProfileData> {
+  const response = await requestTutorProfileWithFallback({
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
+    token,
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to load profile (${response.status}).`);
+  if (!response || !response.ok) {
+    throw new Error(`Failed to load profile (${response?.status ?? "no-response"}).`);
   }
 
   return mapTutorProfileApiToUi((await response.json()) as TutorProfileApiModel);
 }
 
 async function saveTutorProfile(token: string, form: TutorProfileForm) {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
-
-  const response = await fetch(`${baseUrl}/tutor/profile`, {
+  const response = await requestTutorProfileWithFallback({
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    token,
     body: JSON.stringify({
       first_name: form.firstName.trim(),
       last_name: form.lastName.trim(),
@@ -189,23 +188,57 @@ async function saveTutorProfile(token: string, form: TutorProfileForm) {
       zip_code: form.zipCode.trim(),
       emergency_contact_name: form.emergencyContactName.trim(),
       emergency_contact_phone: form.emergencyContactPhone.trim(),
+      date_of_birth: form.dateOfBirth,
+      gender: form.gender.trim(),
     }),
   });
 
-  if (!response.ok) {
+  if (!response || !response.ok) {
     let detail: string | undefined;
     try {
-      const data = (await response.json()) as { detail?: string };
+      const data = (await response?.json()) as { detail?: string };
       detail = data.detail;
     } catch {
       // Ignore non-JSON errors.
     }
-    throw new Error(detail ?? `Failed to save profile (${response.status}).`);
+    throw new Error(detail ?? `Failed to save profile (${response?.status ?? "no-response"}).`);
   }
 
   return mapTutorProfileApiToUi((await response.json()) as TutorProfileApiModel);
 }
-function ReadOnlyField({ label, value, onChange, readOnly = true }: { label: string; value: string; onChange?: (value: string) => void; readOnly?: boolean }) {
+type TutorBioSchoolDistrictApiModel = {
+  bio?: string;
+  school_district?: string;
+};
+
+
+async function saveTutorBioSchoolDistrict(
+  token: string,
+  payload: TutorBioSchoolDistrictApiModel,
+): Promise<TutorBioSchoolDistrictApiModel> {
+  const response = await requestTutorBioSchoolDistrictWithFallback({
+    method: "PUT",
+    token,
+    body: JSON.stringify({
+      bio: (payload.bio || "").trim(),
+      school_district: (payload.school_district || "").trim(),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to save bio section (${response?.status ?? "no-response"}).`);
+  }
+
+  return (await response.json()) as TutorBioSchoolDistrictApiModel;
+}
+function ReadOnlyField({ label, value, onChange, readOnly = true, placeholder }: { label: string; value: string; onChange?: (value: string) => void; readOnly?: boolean; placeholder?: string }) {
   return (
     <div>
       <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">{label}</label>
@@ -213,6 +246,7 @@ function ReadOnlyField({ label, value, onChange, readOnly = true }: { label: str
         value={value}
         readOnly={readOnly}
         onChange={(event) => onChange?.(event.target.value)}
+        placeholder={placeholder}
         className={`h-11 w-full rounded-lg border border-[#e5e7eb] px-4 text-[14px] ${
           readOnly ? "bg-[#fafafa] text-[#6b7280]" : "bg-white text-[#20242b]"
         }`}
@@ -254,7 +288,7 @@ function PersonalInfoSection({
   saveSuccess,
   lastSavedAt,
 }: {
-  profile: typeof tutorProfile;
+  profile: TutorProfileData;
   values: TutorProfileForm;
   onChange: (field: keyof TutorProfileForm, value: string) => void;
   saveError: string | null;
@@ -269,17 +303,47 @@ function PersonalInfoSection({
         <ReadOnlyField label="First Name" value={values.firstName} readOnly={false} onChange={(value) => onChange("firstName", value)} />
         <ReadOnlyField label="Last Name" value={values.lastName} readOnly={false} onChange={(value) => onChange("lastName", value)} />
         <ReadOnlyField label="Email Address" value={values.email} />
-        <ReadOnlyField label="Phone Number" value={values.phone} readOnly={false} onChange={(value) => onChange("phone", value)} />
-        <ReadOnlyField label="Date of Birth" value="" />
-        <ReadOnlyField label="Gender" value="" />
-        <div className="md:col-span-2">
-          <ReadOnlyField label="Street Address" value={values.streetAddress} readOnly={false} onChange={(value) => onChange("streetAddress", value)} />
+        <ReadOnlyField label="Phone Number" value={values.phone} readOnly={false} placeholder="Enter phone number" onChange={(value) => onChange("phone", value)} />
+
+        <div>
+          <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Date of Birth</label>
+          <input
+            type="date"
+            value={values.dateOfBirth}
+            onChange={(event) => onChange("dateOfBirth", event.target.value)}
+            placeholder="Select date of birth"
+            className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-white px-4 text-[14px] text-[#20242b]"
+          />
         </div>
-        <ReadOnlyField label="City" value={values.city} readOnly={false} onChange={(value) => onChange("city", value)} />
-        <ReadOnlyField label="State" value={values.state} readOnly={false} onChange={(value) => onChange("state", value)} />
-        <ReadOnlyField label="ZIP Code" value={values.zipCode} readOnly={false} onChange={(value) => onChange("zipCode", value)} />
-        <ReadOnlyField label="Emergency Contact Name" value={values.emergencyContactName} readOnly={false} onChange={(value) => onChange("emergencyContactName", value)} />
-        <ReadOnlyField label="Emergency Contact Phone" value={values.emergencyContactPhone} readOnly={false} onChange={(value) => onChange("emergencyContactPhone", value)} />
+
+        <div>
+          <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Gender</label>
+          <div className="flex h-11 items-center gap-4 rounded-lg border border-[#e5e7eb] bg-white px-4 text-[14px] text-[#20242b]">
+            {(["Male", "Female", "Other"] as const).map((genderOption) => (
+              <label key={genderOption} className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="tutor-gender"
+                  value={genderOption}
+                  checked={values.gender === genderOption}
+                  onChange={(event) => onChange("gender", event.target.value)}
+                  className="h-4 w-4"
+                />
+                <span>{genderOption}</span>
+              </label>
+            ))}
+          </div>
+          {!values.gender ? <p className="mt-1 text-[12px] text-[#9ca3af]">Select gender</p> : null}
+        </div>
+
+        <div className="md:col-span-2">
+          <ReadOnlyField label="Street Address" value={values.streetAddress} readOnly={false} placeholder="Enter street address" onChange={(value) => onChange("streetAddress", value)} />
+        </div>
+        <ReadOnlyField label="City" value={values.city} readOnly={false} placeholder="Enter city" onChange={(value) => onChange("city", value)} />
+        <ReadOnlyField label="State" value={values.state} readOnly={false} placeholder="Enter state" onChange={(value) => onChange("state", value)} />
+        <ReadOnlyField label="ZIP Code" value={values.zipCode} readOnly={false} placeholder="Enter ZIP code" onChange={(value) => onChange("zipCode", value)} />
+        <ReadOnlyField label="Emergency Contact Name" value={values.emergencyContactName} readOnly={false} placeholder="Enter emergency contact name" onChange={(value) => onChange("emergencyContactName", value)} />
+        <ReadOnlyField label="Emergency Contact Phone" value={values.emergencyContactPhone} readOnly={false} placeholder="Enter emergency contact phone" onChange={(value) => onChange("emergencyContactPhone", value)} />
       </div>
 
       {saveError ? <p className="mt-4 text-[13px] text-[#d61c3f]">{saveError}</p> : null}
@@ -304,10 +368,10 @@ function PersonalInfoSection({
   );
 }
 
-export function TutorProfilePage() {
+export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorProfileData }) {
   const [activeTab, setActiveTab] = useState<TutorProfileTab>("Personal Info");
-  const [bio, setBio] = useState("");
-  const [schoolDistrict, setSchoolDistrict] = useState("Kirkwood School District");
+  const [bio, setBio] = useState((initialProfile ?? tutorProfile).bio || "");
+  const [schoolDistrict, setSchoolDistrict] = useState((initialProfile ?? tutorProfile).schoolDistrict || "");
   const [isClassroomTeacher, setIsClassroomTeacher] = useState(true);
   const [offersVirtual, setOffersVirtual] = useState(true);
   const [offersInPerson, setOffersInPerson] = useState(true);
@@ -332,18 +396,20 @@ export function TutorProfilePage() {
     "10th Grade",
     "11th Grade",
   ]);
-  const [profile, setProfile] = useState(tutorProfile);
+  const [profile, setProfile] = useState<TutorProfileData>(initialProfile ?? tutorProfile);
   const [profileForm, setProfileForm] = useState<TutorProfileForm>({
-    firstName: tutorProfile.firstName,
-    lastName: tutorProfile.lastName,
-    email: tutorProfile.email,
-    phone: tutorProfile.phone,
-    streetAddress: tutorProfile.streetAddress,
-    city: tutorProfile.city,
-    state: tutorProfile.state,
-    zipCode: tutorProfile.zipCode,
-    emergencyContactName: tutorProfile.emergencyContactName,
-    emergencyContactPhone: tutorProfile.emergencyContactPhone,
+    firstName: (initialProfile ?? tutorProfile).firstName,
+    lastName: (initialProfile ?? tutorProfile).lastName,
+    email: (initialProfile ?? tutorProfile).email,
+    phone: (initialProfile ?? tutorProfile).phone,
+    streetAddress: (initialProfile ?? tutorProfile).streetAddress,
+    city: (initialProfile ?? tutorProfile).city,
+    state: (initialProfile ?? tutorProfile).state,
+    zipCode: (initialProfile ?? tutorProfile).zipCode,
+    emergencyContactName: (initialProfile ?? tutorProfile).emergencyContactName,
+    emergencyContactPhone: (initialProfile ?? tutorProfile).emergencyContactPhone,
+    dateOfBirth: (initialProfile ?? tutorProfile).dateOfBirth || "",
+    gender: (initialProfile ?? tutorProfile).gender || "",
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -351,6 +417,8 @@ export function TutorProfilePage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialProfile) return;
+
     const token = readCookie("arch_access_token");
     if (!token) return;
 
@@ -368,12 +436,15 @@ export function TutorProfilePage() {
           zipCode: loadedProfile.zipCode,
           emergencyContactName: loadedProfile.emergencyContactName,
           emergencyContactPhone: loadedProfile.emergencyContactPhone,
+          dateOfBirth: loadedProfile.dateOfBirth || "",          gender: loadedProfile.gender || "",
         });
+        setBio(loadedProfile.bio || "");
+        setSchoolDistrict(loadedProfile.schoolDistrict || "");
       })
       .catch(() => {
         // Keep static fallback data.
       });
-  }, []);
+  }, [initialProfile]);
 
   function handleProfileFieldChange(field: keyof TutorProfileForm, value: string) {
     setProfileForm((previous) => ({ ...previous, [field]: value }));
@@ -382,7 +453,7 @@ export function TutorProfilePage() {
   }
 
   async function handleProfileSave() {
-    if (activeTab !== "Personal Info") {
+    if (activeTab !== "Personal Info" && activeTab !== "Bio & School District") {
       return;
     }
 
@@ -398,37 +469,61 @@ export function TutorProfilePage() {
     setSaveSuccess(null);
 
     try {
-      const updatedProfile = await saveTutorProfile(token, profileForm);
-      setProfile(updatedProfile);
-      setProfileForm({
-        firstName: updatedProfile.firstName,
-        lastName: updatedProfile.lastName,
-        email: updatedProfile.email,
-        phone: updatedProfile.phone,
-        streetAddress: updatedProfile.streetAddress,
-        city: updatedProfile.city,
-        state: updatedProfile.state,
-        zipCode: updatedProfile.zipCode,
-        emergencyContactName: updatedProfile.emergencyContactName,
-        emergencyContactPhone: updatedProfile.emergencyContactPhone,
-      });
-      setSaveSuccess("Profile updated successfully.");
+      if (activeTab === "Personal Info") {
+        const updatedProfile = await saveTutorProfile(token, profileForm);
+        setProfile(updatedProfile);
+        setProfileForm({
+          firstName: updatedProfile.firstName,
+          lastName: updatedProfile.lastName,
+          email: updatedProfile.email,
+          phone: updatedProfile.phone,
+          streetAddress: updatedProfile.streetAddress,
+          city: updatedProfile.city,
+          state: updatedProfile.state,
+          zipCode: updatedProfile.zipCode,
+          emergencyContactName: updatedProfile.emergencyContactName,
+          emergencyContactPhone: updatedProfile.emergencyContactPhone,
+          dateOfBirth: updatedProfile.dateOfBirth || "",
+          gender: updatedProfile.gender || "",
+        });
+        setBio(updatedProfile.bio || "");
+        setSchoolDistrict(updatedProfile.schoolDistrict || "");
+        setSaveSuccess("Profile updated successfully.");
+        window.dispatchEvent(
+          new CustomEvent("arch-profile-updated", {
+            detail: {
+              role: "tutor",
+              firstName: updatedProfile.firstName,
+              lastName: updatedProfile.lastName,
+              email: updatedProfile.email,
+              initials: updatedProfile.initials,
+            },
+          }),
+        );
+      } else {
+        const updatedBio = await saveTutorBioSchoolDistrict(token, {
+          bio,
+          school_district: schoolDistrict,
+        });
+
+        const nextBio = updatedBio.bio || "";
+        const nextDistrict = updatedBio.school_district || "";
+
+        setBio(nextBio);
+        setSchoolDistrict(nextDistrict);
+        setProfile((current) => ({
+          ...current,
+          bio: nextBio,
+          schoolDistrict: nextDistrict,
+        }));
+        setSaveSuccess("Bio & school district updated successfully.");
+      }
+
       setLastSavedAt(
         new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
-        }),
-      );
-      window.dispatchEvent(
-        new CustomEvent("arch-profile-updated", {
-          detail: {
-            role: "tutor",
-            firstName: updatedProfile.firstName,
-            lastName: updatedProfile.lastName,
-            email: updatedProfile.email,
-            initials: updatedProfile.initials,
-          },
         }),
       );
     } catch (error) {
@@ -455,10 +550,10 @@ export function TutorProfilePage() {
           <button
             type="button"
             onClick={handleProfileSave}
-            disabled={activeTab !== "Personal Info" || isSavingProfile}
+            disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District") || isSavingProfile}
             className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSavingProfile && activeTab === "Personal Info" ? "Saving..." : "Save Changes"}
+            {isSavingProfile && (activeTab === "Personal Info" || activeTab === "Bio & School District") ? "Saving..." : "Save Changes"}
           </button>
         </div>
 
@@ -583,6 +678,12 @@ export function TutorProfilePage() {
                         Leave blank to hide it.
                       </p>
                     </div>
+
+                    {saveError ? <p className="text-[13px] text-[#d61c3f]">{saveError}</p> : null}
+                    {saveSuccess ? <p className="text-[13px] text-[#1b8a5a]">{saveSuccess}</p> : null}
+                    {lastSavedAt ? (
+                      <p className="text-[12px] text-[#6b7280]">Last saved at {lastSavedAt}</p>
+                    ) : null}
                   </div>
                 </section>
               ) : null}
@@ -1044,14 +1145,14 @@ export function TutorProfilePage() {
                 <button
                   type="button"
                   onClick={handleProfileSave}
-                  disabled={activeTab !== "Personal Info" || isSavingProfile}
+                  disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District") || isSavingProfile}
                   className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {activeTab === "Personal Info"
                     ? isSavingProfile
                       ? "Saving..."
                       : "Save Personal Info"
-                    : "Save"}
+                    : activeTab === "Bio & School District" ? isSavingProfile ? "Saving..." : "Save Bio & School District" : "Save"}
                 </button>
               </div>
             </div>
@@ -1061,4 +1162,17 @@ export function TutorProfilePage() {
     </TutorShell>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
