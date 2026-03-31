@@ -1,7 +1,8 @@
 type TutorProfileMethod = "GET" | "PUT";
 type TutorBioSchoolDistrictMethod = "GET" | "PUT";
 type TutorEducationMethod = "GET" | "POST" | "PUT" | "DELETE";
-type TutorWorkExperienceMethod = "GET" | "POST" | "PUT" | "DELETE";`r`ntype TutorSubjectsGradesMethod = "GET" | "PUT";
+type TutorWorkExperienceMethod = "GET" | "POST" | "PUT" | "DELETE";
+type TutorSubjectsGradesMethod = "GET" | "PUT";
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;

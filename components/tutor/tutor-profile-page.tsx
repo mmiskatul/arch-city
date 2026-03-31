@@ -19,6 +19,7 @@ import {
   requestTutorBioSchoolDistrictWithFallback,
   requestTutorEducationWithFallback,
   requestTutorProfileWithFallback,
+  requestTutorSubjectsGradesWithFallback,
   requestTutorWorkExperienceWithFallback,
 } from "@/lib/api/tutor-profile-api";
 import {
@@ -130,6 +131,11 @@ type TutorWorkExperienceApiItem = {
 
 type TutorWorkExperienceListApiModel = {
   items?: TutorWorkExperienceApiItem[];
+};
+
+type TutorSubjectsGradesApiModel = {
+  subjects?: string[];
+  grades?: string[];
 };
 export type TutorProfileData = typeof tutorProfile;
 
@@ -774,6 +780,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const isSavingSubjectsGrades = isSavingProfile && activeTab === "Subjects & Grades";
 
   useEffect(() => {
     if (initialProfile) return;
@@ -834,6 +841,20 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       })
       .catch(() => {
         // Keep static fallback entries.
+      });
+  }, []);
+
+  useEffect(() => {
+    const token = readCookie("arch_access_token");
+    if (!token) return;
+
+    fetchTutorSubjectsGrades(token)
+      .then((data) => {
+        setSelectedSubjects(data.subjects || []);
+        setSelectedGrades(data.grades || []);
+      })
+      .catch(() => {
+        // Keep static fallback chips.
       });
   }, []);
 
@@ -911,7 +932,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
         setEducationEntries((current) =>
           current.map((entry) => (entry.id === editingEducationId ? item : entry)),
         );
-      } else if (activeTab === "Bio & School District") {
+      } else {
         const item = await addTutorEducationEntry(token, { title, organization, period });
         setEducationEntries((current) => [item, ...current]);
       }
@@ -1048,7 +1069,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
         setWorkExperienceEntries((current) =>
           current.map((entry) => (entry.id === editingWorkExperienceId ? item : entry)),
         );
-      } else if (activeTab === "Bio & School District") {
+      } else {
         const item = await addTutorWorkExperienceEntry(token, {
           title,
           organization,
@@ -1260,7 +1281,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
               <div className="mt-3 space-y-2 text-[14px]">
                 {[
                   { label: "Total Sessions", value: profile.totalSessions, valueClassName: "text-[#20242b]" },
-                  { label: "Avg Rating", value: `${profile.avgRating} â˜…`, valueClassName: "text-[#20242b]" },
+                  { label: "Avg Rating", value: `${profile.avgRating} Ã¢Ëœâ€¦`, valueClassName: "text-[#20242b]" },
                   { label: "Active Students", value: profile.activeStudents, valueClassName: "text-[#20242b]" },
                   { label: "All-Time Earnings", value: profile.allTimeEarnings, valueClassName: "text-[#1b8a5a]" },
                 ].map((stat) => (
@@ -1332,7 +1353,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                       />
                       <p className="mt-2 text-[12px] text-[#9ca3af]">
-                        Optional â€” Enter if you currently teach in a school district.
+                        Enter if you currently teach in a school district.
                       </p>
                     </div>
 
@@ -1374,7 +1395,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                       >
                         <div className="flex items-start gap-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffe7eb] text-[#d61c3f]">
-                            <span className="text-[16px] font-bold">{index === 0 ? "âœ" : "â–£"}</span>
+                            <span className="text-[16px] font-bold">{index + 1}</span>
                           </div>
                           <div>
                             <p className="text-[16px] font-bold leading-6 text-[#20242b]">{entry.title}</p>
@@ -1450,7 +1471,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                 </section>
               ) : null}
               {activeTab === "Subjects & Grades" ? (
-                <section className="rounded-[12px] bg-white p-5">
+                <section className="relative rounded-[12px] bg-white p-5">
                   <h3 className="text-[18px] font-bold text-[#20242b]">Subjects & Grades</h3>
 
                   <div className="mt-6">
@@ -1463,6 +1484,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                           <button
                             key={subject}
                             type="button"
+                            disabled={isSavingSubjectsGrades}
                             onClick={() => toggleChip(subject, selectedSubjects, setSelectedSubjects)}
                             className={`rounded-full border px-3 py-2 text-[13px] font-semibold transition ${
                               active
@@ -1488,6 +1510,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                           <button
                             key={grade}
                             type="button"
+                            disabled={isSavingSubjectsGrades}
                             onClick={() => toggleChip(grade, selectedGrades, setSelectedGrades)}
                             className={`rounded-full border px-3 py-2 text-[13px] font-semibold transition ${
                               active
@@ -1501,6 +1524,14 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                       })}
                     </div>
                   </div>
+                  {isSavingSubjectsGrades ? (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[12px] bg-white/70 backdrop-blur-[1px]">
+                      <div className="flex items-center gap-3 rounded-full border border-[#f3cfd6] bg-white px-4 py-2 text-[13px] font-semibold text-[#d61c3f]">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f3cfd6] border-t-[#d61c3f]" />
+                        <span>Saving...</span>
+                      </div>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
               {activeTab === "Rates" ? (
@@ -1664,7 +1695,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                                     : "border-[#d8dde6] text-transparent"
                                 }`}
                               >
-                                â€¢
+                                Ã¢Å“â€œ
                               </span>
                               <span>
                                 <span className="block text-[14px] font-semibold text-[#20242b]">
@@ -1721,8 +1752,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         <div>
                           <p className="text-[14px] font-semibold text-[#20242b]">Pause Account</p>
                           <p className="mt-1 text-[12px] text-[#9ca3af]">
-                            Hides your profile from student searches. No need to re-register â€”
-                            just toggle back on when ready.
+                            Hides your profile from student searches. No need to re-register; just toggle back on when ready.
                           </p>
                         </div>
                         <Toggle enabled={pauseAccount} onToggle={() => setPauseAccount((current) => !current)} />
