@@ -19,6 +19,7 @@ import {
   requestTutorBioSchoolDistrictWithFallback,
   requestTutorEducationWithFallback,
   requestTutorProfileWithFallback,
+  requestTutorWorkExperienceWithFallback,
 } from "@/lib/api/tutor-profile-api";
 import {
   tutorEducationEntries,
@@ -117,6 +118,19 @@ type TutorEducationListApiModel = {
   items?: TutorEducationApiItem[];
 };
 
+type TutorWorkExperienceApiItem = {
+  id: string;
+  title: string;
+  organization: string;
+  period: string;
+  description: string;
+  from_date?: string;
+  to_date?: string;
+};
+
+type TutorWorkExperienceListApiModel = {
+  items?: TutorWorkExperienceApiItem[];
+};
 export type TutorProfileData = typeof tutorProfile;
 
 type TutorProfileForm = {
@@ -148,6 +162,56 @@ function readCookie(name: string): string | null {
 }
 
 
+
+function formatWorkMonthYear(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-US", { month: "short", year: "numeric" });
+}
+
+function calculateWorkDurationLabel(fromDate: string, toDate?: string): string {
+  const from = new Date(fromDate);
+  if (Number.isNaN(from.getTime())) return "";
+
+  const end = toDate ? new Date(toDate) : new Date();
+  if (Number.isNaN(end.getTime()) || end < from) return "";
+
+  const yearDiff = end.getFullYear() - from.getFullYear();
+  const monthDiff = end.getMonth() - from.getMonth();
+  let totalMonths = yearDiff * 12 + monthDiff;
+
+  if (end.getDate() < from.getDate()) {
+    totalMonths -= 1;
+  }
+  if (totalMonths < 0) totalMonths = 0;
+
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+
+  if (years > 0 && months > 0) {
+    return `${years} yr${years > 1 ? "s" : ""} ${months} mo`;
+  }
+  if (years > 0) {
+    return `${years} yr${years > 1 ? "s" : ""}`;
+  }
+  return `${months} mo`;
+}
+
+function buildWorkPeriodLabel(fromDate: string, toDate?: string): string {
+  const fromLabel = formatWorkMonthYear(fromDate);
+  if (!fromLabel) return "";
+
+  const toLabel = toDate ? formatWorkMonthYear(toDate) : "Present";
+  const duration = calculateWorkDurationLabel(fromDate, toDate);
+  return duration ? `${fromLabel} - ${toLabel} - ${duration}` : `${fromLabel} - ${toLabel}`;
+}
+
+function getWorkPeriodForDisplay(entry: TutorWorkExperienceApiItem): string {
+  if (entry.from_date) {
+    return buildWorkPeriodLabel(entry.from_date, entry.to_date || "") || entry.period;
+  }
+  return entry.period;
+}
 function mapTutorProfileApiToUi(data: TutorProfileApiModel): TutorProfileData {
   return {
     ...tutorProfile,
@@ -340,6 +404,103 @@ async function deleteTutorEducationEntry(token: string, educationId: string): Pr
     throw new Error(detail ?? `Failed to delete education (${response?.status ?? "no-response"}).`);
   }
 }
+
+async function fetchTutorWorkExperienceEntries(token: string): Promise<TutorWorkExperienceApiItem[]> {
+  const response = await requestTutorWorkExperienceWithFallback({
+    method: "GET",
+    token,
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Failed to load work experience (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorWorkExperienceListApiModel;
+  const items = Array.isArray(data.items) ? data.items : [];
+  return items.filter((item) => item && item.id && item.title && item.organization && item.period);
+}
+
+async function addTutorWorkExperienceEntry(
+  token: string,
+  payload: Omit<TutorWorkExperienceApiItem, "id">,
+): Promise<TutorWorkExperienceApiItem> {
+  const response = await requestTutorWorkExperienceWithFallback({
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      title: payload.title.trim(),
+      organization: payload.organization.trim(),
+      period: payload.period.trim(),
+      description: payload.description.trim(),
+      from_date: (payload.from_date || "").trim(),
+      to_date: (payload.to_date || "").trim(),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to add work experience (${response?.status ?? "no-response"}).`);
+  }
+
+  return (await response.json()) as TutorWorkExperienceApiItem;
+}
+
+async function updateTutorWorkExperienceEntry(
+  token: string,
+  workExperienceId: string,
+  payload: Omit<TutorWorkExperienceApiItem, "id" | "user_id">,
+): Promise<TutorWorkExperienceApiItem> {
+  const response = await requestTutorWorkExperienceWithFallback({
+    method: "PUT",
+    token,
+    workExperienceId,
+    body: JSON.stringify({
+      title: payload.title.trim(),
+      organization: payload.organization.trim(),
+      period: payload.period.trim(),
+      description: payload.description.trim(),
+      from_date: (payload.from_date || "").trim(),
+      to_date: (payload.to_date || "").trim(),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to update work experience (${response?.status ?? "no-response"}).`);
+  }
+
+  return (await response.json()) as TutorWorkExperienceApiItem;
+}
+async function deleteTutorWorkExperienceEntry(token: string, workExperienceId: string): Promise<void> {
+  const response = await requestTutorWorkExperienceWithFallback({
+    method: "DELETE",
+    token,
+    workExperienceId,
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to delete work experience (${response?.status ?? "no-response"}).`);
+  }
+}
 function ReadOnlyField({ label, value, onChange, readOnly = true, placeholder }: { label: string; value: string; onChange?: (value: string) => void; readOnly?: boolean; placeholder?: string }) {
   return (
     <div>
@@ -518,6 +679,31 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
   const [isDeleteEducationConfirmOpen, setIsDeleteEducationConfirmOpen] = useState(false);
   const [deletingEducationId, setDeletingEducationId] = useState<string | null>(null);
   const [isSavingEducation, setIsSavingEducation] = useState(false);
+  const [workExperienceEntries, setWorkExperienceEntries] = useState<TutorWorkExperienceApiItem[]>(
+    tutorWorkExperienceEntries.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      organization: entry.organization,
+      period: entry.period,
+      description: entry.description,
+      from_date: entry.from_date || "",
+      to_date: entry.to_date || "",
+    })),
+  );
+  const [isWorkExperienceModalOpen, setIsWorkExperienceModalOpen] = useState(false);
+  const [workExperienceMode, setWorkExperienceMode] = useState<"add" | "edit">("add");
+  const [editingWorkExperienceId, setEditingWorkExperienceId] = useState<string | null>(null);
+  const [workExperienceForm, setWorkExperienceForm] = useState({
+    title: "",
+    fromDate: "",
+    toDate: "",
+    organization: "",
+    description: "",
+  });
+  const [workExperienceError, setWorkExperienceError] = useState<string | null>(null);
+  const [isDeleteWorkExperienceConfirmOpen, setIsDeleteWorkExperienceConfirmOpen] = useState(false);
+  const [deletingWorkExperienceId, setDeletingWorkExperienceId] = useState<string | null>(null);
+  const [isSavingWorkExperience, setIsSavingWorkExperience] = useState(false);
   const [profile, setProfile] = useState<TutorProfileData>(initialProfile ?? tutorProfile);
   const [profileForm, setProfileForm] = useState<TutorProfileForm>({
     firstName: (initialProfile ?? tutorProfile).firstName,
@@ -584,6 +770,22 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
         // Keep static fallback entries.
       });
   }, []);
+
+  useEffect(() => {
+    const token = readCookie("arch_access_token");
+    if (!token) return;
+
+    fetchTutorWorkExperienceEntries(token)
+      .then((items) => {
+        if (items.length > 0) {
+          setWorkExperienceEntries(items);
+        }
+      })
+      .catch(() => {
+        // Keep static fallback entries.
+      });
+  }, []);
+
 
   function openEducationModal(entry?: TutorEducationApiItem) {
     if (entry) {
@@ -701,6 +903,152 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       setEducationError(error instanceof Error ? error.message : "Failed to delete education.");
     } finally {
       setIsSavingEducation(false);
+    }
+  }
+
+  function openWorkExperienceModal(entry?: TutorWorkExperienceApiItem) {
+    if (entry) {
+      setWorkExperienceMode("edit");
+      setEditingWorkExperienceId(entry.id);
+      setWorkExperienceForm({
+        title: entry.title,
+        fromDate: entry.from_date || "",
+        toDate: entry.to_date || "",
+        organization: entry.organization,
+        description: entry.description,
+      });
+    } else {
+      setWorkExperienceMode("add");
+      setEditingWorkExperienceId(null);
+      setWorkExperienceForm({ title: "", fromDate: "", toDate: "", organization: "", description: "" });
+    }
+    setWorkExperienceError(null);
+    setIsWorkExperienceModalOpen(true);
+  }
+
+  function closeWorkExperienceModal() {
+    if (isSavingWorkExperience) return;
+    setIsWorkExperienceModalOpen(false);
+    setWorkExperienceMode("add");
+    setEditingWorkExperienceId(null);
+    setWorkExperienceError(null);
+  }
+
+  function openDeleteWorkExperienceConfirm(workExperienceId: string) {
+    setDeletingWorkExperienceId(workExperienceId);
+    setWorkExperienceError(null);
+    setIsDeleteWorkExperienceConfirmOpen(true);
+  }
+
+  function closeDeleteWorkExperienceConfirm() {
+    if (isSavingWorkExperience) return;
+    setIsDeleteWorkExperienceConfirmOpen(false);
+    setDeletingWorkExperienceId(null);
+    setWorkExperienceError(null);
+  }
+
+  async function handleSaveWorkExperience() {
+    const title = workExperienceForm.title.trim();
+    const organization = workExperienceForm.organization.trim();
+    const fromDate = workExperienceForm.fromDate;
+    const toDate = workExperienceForm.toDate;
+    const description = workExperienceForm.description.trim();
+
+    if (!title || !organization || !fromDate) {
+      setWorkExperienceError("Title, organization, and start date are required.");
+      return;
+    }
+
+    if (toDate && new Date(toDate) < new Date(fromDate)) {
+      setWorkExperienceError("End date cannot be earlier than start date.");
+      return;
+    }
+
+    const period = buildWorkPeriodLabel(fromDate, toDate);
+    if (!period) {
+      setWorkExperienceError("Please provide valid start/end dates.");
+      return;
+    }
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setWorkExperienceError("Authentication required. Please login again.");
+      return;
+    }
+
+    setIsSavingWorkExperience(true);
+    setWorkExperienceError(null);
+
+    try {
+      if (workExperienceMode === "edit") {
+        if (!editingWorkExperienceId) {
+          throw new Error("Work experience id is missing.");
+        }
+
+        const item = await updateTutorWorkExperienceEntry(token, editingWorkExperienceId, {
+          title,
+          organization,
+          period,
+          description,
+          from_date: fromDate,
+          to_date: toDate,
+        });
+
+        setWorkExperienceEntries((current) =>
+          current.map((entry) => (entry.id === editingWorkExperienceId ? item : entry)),
+        );
+      } else {
+        const item = await addTutorWorkExperienceEntry(token, {
+          title,
+          organization,
+          period,
+          description,
+          from_date: fromDate,
+          to_date: toDate,
+        });
+        setWorkExperienceEntries((current) => [item, ...current]);
+      }
+
+      setIsWorkExperienceModalOpen(false);
+      setWorkExperienceMode("add");
+      setEditingWorkExperienceId(null);
+      setWorkExperienceForm({ title: "", fromDate: "", toDate: "", organization: "", description: "" });
+    } catch (error) {
+      setWorkExperienceError(
+        error instanceof Error
+          ? error.message
+          : workExperienceMode === "edit"
+            ? "Failed to update work experience."
+            : "Failed to add work experience.",
+      );
+    } finally {
+      setIsSavingWorkExperience(false);
+    }
+  }
+
+  async function handleDeleteWorkExperienceConfirm() {
+    if (!deletingWorkExperienceId) return;
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setWorkExperienceError("Authentication required. Please login again.");
+      return;
+    }
+
+    setIsSavingWorkExperience(true);
+    setWorkExperienceError(null);
+
+    try {
+      await deleteTutorWorkExperienceEntry(token, deletingWorkExperienceId);
+      setWorkExperienceEntries((current) => current.filter((entry) => entry.id !== deletingWorkExperienceId));
+      setIsDeleteWorkExperienceConfirmOpen(false);
+      setDeletingWorkExperienceId(null);
+    } catch (error) {
+      setWorkExperienceError(
+        error instanceof Error ? error.message : "Failed to delete work experience.",
+      );
+    } finally {
+      setIsSavingWorkExperience(false);
     }
   }
   function handleProfileFieldChange(field: keyof TutorProfileForm, value: string) {
@@ -1002,6 +1350,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                     <h3 className="text-[18px] font-bold text-[#20242b]">Work Experience</h3>
                     <button
                       type="button"
+                      onClick={() => openWorkExperienceModal()}
                       className="inline-flex h-10 items-center gap-2 rounded-full bg-[#d61c3f] px-4 text-[13px] font-semibold text-white"
                     >
                       <FiPlus className="h-4 w-4" />
@@ -1010,7 +1359,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                   </div>
 
                   <div className="mt-5 space-y-4">
-                    {tutorWorkExperienceEntries.map((entry) => (
+                    {workExperienceEntries.map((entry) => (
                       <div
                         key={entry.id}
                         className="flex items-start justify-between gap-4 rounded-[16px] border border-[#eceef2] bg-white px-4 py-5 shadow-[0_4px_14px_rgba(15,23,42,0.05)]"
@@ -1022,16 +1371,16 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                           <div className="max-w-[520px]">
                             <p className="text-[16px] font-bold leading-6 text-[#20242b]">{entry.title}</p>
                             <p className="text-[14px] text-[#6b7280]">{entry.organization}</p>
-                            <p className="text-[14px] text-[#6b7280]">{entry.period}</p>
+                            <p className="text-[14px] text-[#6b7280]">{getWorkPeriodForDisplay(entry)}</p>
                             <p className="mt-2 text-[14px] leading-7 text-[#4b5563]">{entry.description}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-4 text-[#9ca3af]">
-                          <button type="button" aria-label="Edit work experience entry">
+                          <button type="button" onClick={() => openWorkExperienceModal(entry)} aria-label="Edit work experience entry">
                             <FiEdit2 className="h-4 w-4" />
                           </button>
-                          <button type="button" aria-label="Delete work experience entry">
+                          <button type="button" onClick={() => openDeleteWorkExperienceConfirm(entry.id)} aria-label="Delete work experience entry">
                             <FiTrash2 className="h-4 w-4 text-[#f08a9c]" />
                           </button>
                         </div>
@@ -1474,7 +1823,6 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                   className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                 />
               </div>
-
               {educationError ? <p className="text-[13px] text-[#d61c3f]">{educationError}</p> : null}
             </div>
 
@@ -1526,9 +1874,187 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
           </div>
         </div>
       ) : null}
+
+      {isWorkExperienceModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-[520px] rounded-[16px] bg-white p-6 shadow-[0_12px_36px_rgba(15,23,42,0.28)]">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-[20px] font-bold text-[#20242b]">{workExperienceMode === "edit" ? "Edit Work Experience" : "Add Work Experience"}</h3>
+              <button
+                type="button"
+                onClick={closeWorkExperienceModal}
+                className="rounded-full border border-[#e5e7eb] px-3 py-1 text-[12px] font-semibold text-[#6b7280]"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Title</label>
+                <input
+                  type="text"
+                  value={workExperienceForm.title}
+                  onChange={(event) => {
+                    setWorkExperienceForm((current) => ({ ...current, title: event.target.value }));
+                    setWorkExperienceError(null);
+                  }}
+                  placeholder="e.g., Algebra II Teacher"
+                  className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Organization</label>
+                <input
+                  type="text"
+                  value={workExperienceForm.organization}
+                  onChange={(event) => {
+                    setWorkExperienceForm((current) => ({ ...current, organization: event.target.value }));
+                    setWorkExperienceError(null);
+                  }}
+                  placeholder="e.g., Kirkwood School District"
+                  className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">From</label>
+                  <input
+                    type="date"
+                    value={workExperienceForm.fromDate}
+                    onChange={(event) => {
+                      setWorkExperienceForm((current) => ({ ...current, fromDate: event.target.value }));
+                      setWorkExperienceError(null);
+                    }}
+                    className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">To (Optional)</label>
+                  <input
+                    type="date"
+                    value={workExperienceForm.toDate}
+                    onChange={(event) => {
+                      setWorkExperienceForm((current) => ({ ...current, toDate: event.target.value }));
+                      setWorkExperienceError(null);
+                    }}
+                    className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                  />
+                </div>
+              </div>
+
+              {workExperienceForm.fromDate ? (
+                <p className="text-[12px] text-[#6b7280]">
+                  Duration: {buildWorkPeriodLabel(workExperienceForm.fromDate, workExperienceForm.toDate) || "Invalid dates"}
+                </p>
+              ) : null}
+
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Description</label>
+                <textarea
+                  value={workExperienceForm.description}
+                  onChange={(event) => {
+                    setWorkExperienceForm((current) => ({ ...current, description: event.target.value }));
+                    setWorkExperienceError(null);
+                  }}
+                  placeholder="Briefly describe responsibilities and impact"
+                  className="min-h-[100px] w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              {workExperienceError ? <p className="text-[13px] text-[#d61c3f]">{workExperienceError}</p> : null}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeWorkExperienceModal}
+                className="inline-flex h-10 items-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveWorkExperience}
+                disabled={isSavingWorkExperience}
+                className="inline-flex h-10 items-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingWorkExperience ? "Saving..." : workExperienceMode === "edit" ? "Update" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isDeleteWorkExperienceConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-[440px] rounded-[16px] bg-white p-6 shadow-[0_12px_36px_rgba(15,23,42,0.28)]">
+            <h3 className="text-[20px] font-bold text-[#20242b]">Delete Work Experience</h3>
+            <p className="mt-3 text-[14px] text-[#6b7280]">Are you sure you want to delete this work experience entry?</p>
+            {workExperienceError ? <p className="mt-3 text-[13px] text-[#d61c3f]">{workExperienceError}</p> : null}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteWorkExperienceConfirm}
+                className="inline-flex h-10 items-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteWorkExperienceConfirm}
+                disabled={isSavingWorkExperience}
+                className="inline-flex h-10 items-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingWorkExperience ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
     </TutorShell>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

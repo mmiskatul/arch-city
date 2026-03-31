@@ -46,24 +46,8 @@ export const tutorEducationEntries = [
   },
 ];
 
-export const tutorWorkExperienceEntries = [
-  {
-    id: "work-1",
-    title: "Algebra II & Pre-Calculus Teacher",
-    organization: "Kirkwood School District",
-    period: "Aug 2016 – Present · 8 yrs",
-    description:
-      "Teaching high school mathematics to 9th–12th grade students. Department lead for curriculum development.",
-  },
-  {
-    id: "work-2",
-    title: "Mathematics Tutor",
-    organization: "Independent / Freelance",
-    period: "Jan 2018 – Present · 6 yrs",
-    description:
-      "One-on-one tutoring for high school and college students in algebra, calculus, and SAT prep.",
-  },
-];
+export const tutorWorkExperienceEntries = [];
+
 
 export const tutorLocationEntries = [
   {
@@ -83,3 +67,4 @@ export const tutorLocationEntries = [
     showMapPreview: false,
   },
 ];
+

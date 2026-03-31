@@ -1,6 +1,7 @@
-﻿type TutorProfileMethod = "GET" | "PUT";
+type TutorProfileMethod = "GET" | "PUT";
 type TutorBioSchoolDistrictMethod = "GET" | "PUT";
 type TutorEducationMethod = "GET" | "POST" | "PUT" | "DELETE";
+type TutorWorkExperienceMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -75,6 +76,35 @@ function buildTutorEducationUrls(method: TutorEducationMethod, educationId?: str
   const baseUrls = baseUrl ? [`${baseUrl}${normalizePath(fallbackPath)}`] : [];
 
   return uniqueUrls([directUrl ? applyEducationIdTemplate(directUrl, educationId) : "", ...baseUrls]);
+}
+
+function applyWorkExperienceIdTemplate(url: string, workExperienceId?: string) {
+  if (!workExperienceId) return url;
+  return url.replace("{work_experience_id}", workExperienceId).replace(":work_experience_id", workExperienceId);
+}
+
+function buildTutorWorkExperienceUrls(method: TutorWorkExperienceMethod, workExperienceId?: string) {
+  const directUrl =
+    method === "GET"
+      ? process.env.NEXT_PUBLIC_API_TUTOR_WORK_EXPERIENCE_GET_URL?.trim()
+      : method === "POST"
+        ? process.env.NEXT_PUBLIC_API_TUTOR_WORK_EXPERIENCE_ADD_URL?.trim()
+        : method === "PUT"
+          ? process.env.NEXT_PUBLIC_API_TUTOR_WORK_EXPERIENCE_UPDATE_URL?.trim()
+          : process.env.NEXT_PUBLIC_API_TUTOR_WORK_EXPERIENCE_DELETE_URL?.trim();
+
+  const baseUrl = resolveApiBaseUrl();
+  const fallbackPath =
+    method === "PUT" || method === "DELETE"
+      ? `/tutor/profile/work-experience/${workExperienceId ?? ""}`
+      : "/tutor/profile/work-experience";
+
+  const baseUrls = baseUrl ? [`${baseUrl}${normalizePath(fallbackPath)}`] : [];
+
+  return uniqueUrls([
+    directUrl ? applyWorkExperienceIdTemplate(directUrl, workExperienceId) : "",
+    ...baseUrls,
+  ]);
 }
 
 export function resolveTutorProfileUrl(method: TutorProfileMethod) {
@@ -166,6 +196,43 @@ export async function requestTutorEducationWithFallback({
   extraInit?: RequestInit;
 }) {
   const urls = buildTutorEducationUrls(method, educationId);
+  if (urls.length === 0) return null;
+
+  let lastResponse: Response | null = null;
+  for (const url of urls) {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        ...(method === "POST" || method === "PUT" ? { "Content-Type": "application/json" } : {}),
+        Authorization: `Bearer ${token}`,
+        ...(extraInit?.headers ?? {}),
+      },
+      ...(body ? { body } : {}),
+      ...extraInit,
+    });
+
+    if (response.ok) return response;
+    lastResponse = response;
+    if (![404, 405, 422, 501].includes(response.status)) return response;
+  }
+
+  return lastResponse;
+}
+
+export async function requestTutorWorkExperienceWithFallback({
+  method,
+  token,
+  workExperienceId,
+  body,
+  extraInit,
+}: {
+  method: TutorWorkExperienceMethod;
+  token: string;
+  workExperienceId?: string;
+  body?: string;
+  extraInit?: RequestInit;
+}) {
+  const urls = buildTutorWorkExperienceUrls(method, workExperienceId);
   if (urls.length === 0) return null;
 
   let lastResponse: Response | null = null;
