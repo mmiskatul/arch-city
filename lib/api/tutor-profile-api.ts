@@ -1,6 +1,6 @@
-type TutorProfileMethod = "GET" | "PUT";
-
+﻿type TutorProfileMethod = "GET" | "PUT";
 type TutorBioSchoolDistrictMethod = "GET" | "PUT";
+type TutorEducationMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -26,10 +26,7 @@ function buildTutorProfileUrls(method: TutorProfileMethod) {
       : process.env.NEXT_PUBLIC_API_TUTOR_PROFILE_UPDATE_URL?.trim();
 
   const baseUrl = resolveApiBaseUrl();
-  const fallbackPaths =
-    method === "GET"
-      ? ["/tutor/profile/personal-info", "/tutor/profile"]
-      : ["/tutor/profile/personal-info", "/tutor/profile"];
+  const fallbackPaths = ["/tutor/profile/personal-info", "/tutor/profile"];
 
   const baseUrls = baseUrl
     ? fallbackPaths.map((path) => `${baseUrl}${normalizePath(path)}`)
@@ -45,16 +42,39 @@ function buildTutorBioSchoolDistrictUrls(method: TutorBioSchoolDistrictMethod) {
       : process.env.NEXT_PUBLIC_API_TUTOR_BIO_SCHOOL_DISTRICT_UPDATE_URL?.trim();
 
   const baseUrl = resolveApiBaseUrl();
-  const fallbackPaths =
-    method === "GET"
-      ? ["/tutor/profile/bio-school-district", "/tutor/profile"]
-      : ["/tutor/profile/bio-school-district", "/tutor/profile"];
+  const fallbackPaths = ["/tutor/profile/bio-school-district"];
 
   const baseUrls = baseUrl
     ? fallbackPaths.map((path) => `${baseUrl}${normalizePath(path)}`)
     : [];
 
   return uniqueUrls([directUrl ?? "", ...baseUrls]);
+}
+
+function applyEducationIdTemplate(url: string, educationId?: string) {
+  if (!educationId) return url;
+  return url.replace("{education_id}", educationId).replace(":education_id", educationId);
+}
+
+function buildTutorEducationUrls(method: TutorEducationMethod, educationId?: string) {
+  const directUrl =
+    method === "GET"
+      ? process.env.NEXT_PUBLIC_API_TUTOR_EDUCATION_GET_URL?.trim()
+      : method === "POST"
+        ? process.env.NEXT_PUBLIC_API_TUTOR_EDUCATION_ADD_URL?.trim()
+        : method === "PUT"
+          ? process.env.NEXT_PUBLIC_API_TUTOR_EDUCATION_UPDATE_URL?.trim()
+          : process.env.NEXT_PUBLIC_API_TUTOR_EDUCATION_DELETE_URL?.trim();
+
+  const baseUrl = resolveApiBaseUrl();
+  const fallbackPath =
+    method === "PUT" || method === "DELETE"
+      ? `/tutor/profile/education/${educationId ?? ""}`
+      : "/tutor/profile/education";
+
+  const baseUrls = baseUrl ? [`${baseUrl}${normalizePath(fallbackPath)}`] : [];
+
+  return uniqueUrls([directUrl ? applyEducationIdTemplate(directUrl, educationId) : "", ...baseUrls]);
 }
 
 export function resolveTutorProfileUrl(method: TutorProfileMethod) {
@@ -74,12 +94,9 @@ export async function requestTutorProfileWithFallback({
   extraInit?: RequestInit;
 }) {
   const urls = buildTutorProfileUrls(method);
-  if (urls.length === 0) {
-    return null;
-  }
+  if (urls.length === 0) return null;
 
   let lastResponse: Response | null = null;
-
   for (const url of urls) {
     const response = await fetch(url, {
       method,
@@ -92,14 +109,9 @@ export async function requestTutorProfileWithFallback({
       ...extraInit,
     });
 
-    if (response.ok) {
-      return response;
-    }
-
+    if (response.ok) return response;
     lastResponse = response;
-    if (![404, 405, 422, 501].includes(response.status)) {
-      return response;
-    }
+    if (![404, 405, 422, 501].includes(response.status)) return response;
   }
 
   return lastResponse;
@@ -117,12 +129,9 @@ export async function requestTutorBioSchoolDistrictWithFallback({
   extraInit?: RequestInit;
 }) {
   const urls = buildTutorBioSchoolDistrictUrls(method);
-  if (urls.length === 0) {
-    return null;
-  }
+  if (urls.length === 0) return null;
 
   let lastResponse: Response | null = null;
-
   for (const url of urls) {
     const response = await fetch(url, {
       method,
@@ -135,14 +144,46 @@ export async function requestTutorBioSchoolDistrictWithFallback({
       ...extraInit,
     });
 
-    if (response.ok) {
-      return response;
-    }
-
+    if (response.ok) return response;
     lastResponse = response;
-    if (![404, 405, 422, 501].includes(response.status)) {
-      return response;
-    }
+    if (![404, 405, 422, 501].includes(response.status)) return response;
+  }
+
+  return lastResponse;
+}
+
+export async function requestTutorEducationWithFallback({
+  method,
+  token,
+  educationId,
+  body,
+  extraInit,
+}: {
+  method: TutorEducationMethod;
+  token: string;
+  educationId?: string;
+  body?: string;
+  extraInit?: RequestInit;
+}) {
+  const urls = buildTutorEducationUrls(method, educationId);
+  if (urls.length === 0) return null;
+
+  let lastResponse: Response | null = null;
+  for (const url of urls) {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        ...(method === "POST" || method === "PUT" ? { "Content-Type": "application/json" } : {}),
+        Authorization: `Bearer ${token}`,
+        ...(extraInit?.headers ?? {}),
+      },
+      ...(body ? { body } : {}),
+      ...extraInit,
+    });
+
+    if (response.ok) return response;
+    lastResponse = response;
+    if (![404, 405, 422, 501].includes(response.status)) return response;
   }
 
   return lastResponse;

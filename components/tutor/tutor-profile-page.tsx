@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -17,6 +17,7 @@ import {
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import {
   requestTutorBioSchoolDistrictWithFallback,
+  requestTutorEducationWithFallback,
   requestTutorProfileWithFallback,
 } from "@/lib/api/tutor-profile-api";
 import {
@@ -103,6 +104,17 @@ type TutorProfileApiModel = {
   gender?: string;
   bio?: string;
   school_district?: string;
+};
+
+type TutorEducationApiItem = {
+  id: string;
+  title: string;
+  organization: string;
+  period: string;
+};
+
+type TutorEducationListApiModel = {
+  items?: TutorEducationApiItem[];
 };
 
 export type TutorProfileData = typeof tutorProfile;
@@ -237,6 +249,96 @@ async function saveTutorBioSchoolDistrict(
   }
 
   return (await response.json()) as TutorBioSchoolDistrictApiModel;
+}
+async function fetchTutorEducationEntries(token: string): Promise<TutorEducationApiItem[]> {
+  const response = await requestTutorEducationWithFallback({
+    method: "GET",
+    token,
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Failed to load education (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorEducationListApiModel;
+  const items = Array.isArray(data.items) ? data.items : [];
+  return items.filter((item) => item && item.id && item.title && item.organization && item.period);
+}
+
+async function addTutorEducationEntry(
+  token: string,
+  payload: Omit<TutorEducationApiItem, "id">,
+): Promise<TutorEducationApiItem> {
+  const response = await requestTutorEducationWithFallback({
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      title: payload.title.trim(),
+      organization: payload.organization.trim(),
+      period: payload.period.trim(),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to add education (${response?.status ?? "no-response"}).`);
+  }
+
+  return (await response.json()) as TutorEducationApiItem;
+}
+async function updateTutorEducationEntry(
+  token: string,
+  educationId: string,
+  payload: Omit<TutorEducationApiItem, "id" | "user_id">,
+): Promise<TutorEducationApiItem> {
+  const response = await requestTutorEducationWithFallback({
+    method: "PUT",
+    token,
+    educationId,
+    body: JSON.stringify({
+      title: payload.title.trim(),
+      organization: payload.organization.trim(),
+      period: payload.period.trim(),
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to update education (${response?.status ?? "no-response"}).`);
+  }
+
+  return (await response.json()) as TutorEducationApiItem;
+}
+
+async function deleteTutorEducationEntry(token: string, educationId: string): Promise<void> {
+  const response = await requestTutorEducationWithFallback({
+    method: "DELETE",
+    token,
+    educationId,
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to delete education (${response?.status ?? "no-response"}).`);
+  }
 }
 function ReadOnlyField({ label, value, onChange, readOnly = true, placeholder }: { label: string; value: string; onChange?: (value: string) => void; readOnly?: boolean; placeholder?: string }) {
   return (
@@ -396,6 +498,26 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
     "10th Grade",
     "11th Grade",
   ]);
+  const [educationEntries, setEducationEntries] = useState<TutorEducationApiItem[]>(
+    tutorEducationEntries.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      organization: entry.organization,
+      period: entry.period,
+    })),
+  );
+  const [isEducationModalOpen, setIsEducationModalOpen] = useState(false);
+  const [educationMode, setEducationMode] = useState<"add" | "edit">("add");
+  const [editingEducationId, setEditingEducationId] = useState<string | null>(null);
+  const [educationForm, setEducationForm] = useState({
+    title: "",
+    organization: "",
+    period: "",
+  });
+  const [educationError, setEducationError] = useState<string | null>(null);
+  const [isDeleteEducationConfirmOpen, setIsDeleteEducationConfirmOpen] = useState(false);
+  const [deletingEducationId, setDeletingEducationId] = useState<string | null>(null);
+  const [isSavingEducation, setIsSavingEducation] = useState(false);
   const [profile, setProfile] = useState<TutorProfileData>(initialProfile ?? tutorProfile);
   const [profileForm, setProfileForm] = useState<TutorProfileForm>({
     firstName: (initialProfile ?? tutorProfile).firstName,
@@ -436,7 +558,8 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
           zipCode: loadedProfile.zipCode,
           emergencyContactName: loadedProfile.emergencyContactName,
           emergencyContactPhone: loadedProfile.emergencyContactPhone,
-          dateOfBirth: loadedProfile.dateOfBirth || "",          gender: loadedProfile.gender || "",
+          dateOfBirth: loadedProfile.dateOfBirth || "",
+          gender: loadedProfile.gender || "",
         });
         setBio(loadedProfile.bio || "");
         setSchoolDistrict(loadedProfile.schoolDistrict || "");
@@ -446,6 +569,140 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       });
   }, [initialProfile]);
 
+
+  useEffect(() => {
+    const token = readCookie("arch_access_token");
+    if (!token) return;
+
+    fetchTutorEducationEntries(token)
+      .then((items) => {
+        if (items.length > 0) {
+          setEducationEntries(items);
+        }
+      })
+      .catch(() => {
+        // Keep static fallback entries.
+      });
+  }, []);
+
+  function openEducationModal(entry?: TutorEducationApiItem) {
+    if (entry) {
+      setEducationMode("edit");
+      setEditingEducationId(entry.id);
+      setEducationForm({
+        title: entry.title,
+        organization: entry.organization,
+        period: entry.period,
+      });
+    } else {
+      setEducationMode("add");
+      setEditingEducationId(null);
+      setEducationForm({ title: "", organization: "", period: "" });
+    }
+    setEducationError(null);
+    setIsEducationModalOpen(true);
+  }
+
+  function closeEducationModal() {
+    if (isSavingEducation) return;
+    setIsEducationModalOpen(false);
+    setEducationMode("add");
+    setEditingEducationId(null);
+    setEducationError(null);
+  }
+
+  function openDeleteEducationConfirm(educationId: string) {
+    setDeletingEducationId(educationId);
+    setEducationError(null);
+    setIsDeleteEducationConfirmOpen(true);
+  }
+
+  function closeDeleteEducationConfirm() {
+    if (isSavingEducation) return;
+    setIsDeleteEducationConfirmOpen(false);
+    setDeletingEducationId(null);
+    setEducationError(null);
+  }
+
+  async function handleSaveEducation() {
+    const title = educationForm.title.trim();
+    const organization = educationForm.organization.trim();
+    const period = educationForm.period.trim();
+
+    if (!title || !organization || !period) {
+      setEducationError("Title, organization, and period are required.");
+      return;
+    }
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setEducationError("Authentication required. Please login again.");
+      return;
+    }
+
+    setIsSavingEducation(true);
+    setEducationError(null);
+
+    try {
+      if (educationMode === "edit") {
+        if (!editingEducationId) {
+          throw new Error("Education id is missing.");
+        }
+
+        const item = await updateTutorEducationEntry(token, editingEducationId, {
+          title,
+          organization,
+          period,
+        });
+
+        setEducationEntries((current) =>
+          current.map((entry) => (entry.id === editingEducationId ? item : entry)),
+        );
+      } else {
+        const item = await addTutorEducationEntry(token, { title, organization, period });
+        setEducationEntries((current) => [item, ...current]);
+      }
+
+      setIsEducationModalOpen(false);
+      setEducationMode("add");
+      setEditingEducationId(null);
+      setEducationForm({ title: "", organization: "", period: "" });
+    } catch (error) {
+      setEducationError(
+        error instanceof Error
+          ? error.message
+          : educationMode === "edit"
+            ? "Failed to update education."
+            : "Failed to add education.",
+      );
+    } finally {
+      setIsSavingEducation(false);
+    }
+  }
+
+  async function handleDeleteEducationConfirm() {
+    if (!deletingEducationId) return;
+
+    const token = readCookie("arch_access_token");
+    if (!token) {
+      setEducationError("Authentication required. Please login again.");
+      return;
+    }
+
+    setIsSavingEducation(true);
+    setEducationError(null);
+
+    try {
+      await deleteTutorEducationEntry(token, deletingEducationId);
+      setEducationEntries((current) => current.filter((entry) => entry.id !== deletingEducationId));
+      setIsDeleteEducationConfirmOpen(false);
+      setDeletingEducationId(null);
+    } catch (error) {
+      setEducationError(error instanceof Error ? error.message : "Failed to delete education.");
+    } finally {
+      setIsSavingEducation(false);
+    }
+  }
   function handleProfileFieldChange(field: keyof TutorProfileForm, value: string) {
     setProfileForm((previous) => ({ ...previous, [field]: value }));
     setSaveError(null);
@@ -595,7 +852,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
               <div className="mt-3 space-y-2 text-[14px]">
                 {[
                   { label: "Total Sessions", value: profile.totalSessions, valueClassName: "text-[#20242b]" },
-                  { label: "Avg Rating", value: `${profile.avgRating} ★`, valueClassName: "text-[#20242b]" },
+                  { label: "Avg Rating", value: `${profile.avgRating} â˜…`, valueClassName: "text-[#20242b]" },
                   { label: "Active Students", value: profile.activeStudents, valueClassName: "text-[#20242b]" },
                   { label: "All-Time Earnings", value: profile.allTimeEarnings, valueClassName: "text-[#1b8a5a]" },
                 ].map((stat) => (
@@ -667,7 +924,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                       />
                       <p className="mt-2 text-[12px] text-[#9ca3af]">
-                        Optional — Enter if you currently teach in a school district.
+                        Optional â€” Enter if you currently teach in a school district.
                       </p>
                     </div>
 
@@ -693,6 +950,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                     <h3 className="text-[18px] font-bold text-[#20242b]">Education</h3>
                     <button
                       type="button"
+                      onClick={() => openEducationModal()}
                       className="inline-flex h-10 items-center gap-2 rounded-full bg-[#d61c3f] px-4 text-[13px] font-semibold text-white"
                     >
                       <FiPlus className="h-4 w-4" />
@@ -701,14 +959,14 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                   </div>
 
                   <div className="mt-5 space-y-4">
-                    {tutorEducationEntries.map((entry, index) => (
+                    {educationEntries.map((entry, index) => (
                       <div
                         key={entry.id}
                         className="flex items-start justify-between gap-4 rounded-[16px] border border-[#eceef2] bg-white px-4 py-5 shadow-[0_4px_14px_rgba(15,23,42,0.05)]"
                       >
                         <div className="flex items-start gap-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffe7eb] text-[#d61c3f]">
-                            <span className="text-[16px] font-bold">{index === 0 ? "✏" : "▣"}</span>
+                            <span className="text-[16px] font-bold">{index === 0 ? "âœ" : "â–£"}</span>
                           </div>
                           <div>
                             <p className="text-[16px] font-bold leading-6 text-[#20242b]">{entry.title}</p>
@@ -718,10 +976,10 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         </div>
 
                         <div className="flex items-center gap-4 text-[#9ca3af]">
-                          <button type="button" aria-label="Edit education entry">
+                          <button type="button" onClick={() => openEducationModal(entry)} aria-label="Edit education entry">
                             <FiEdit2 className="h-4 w-4" />
                           </button>
-                          <button type="button" aria-label="Delete education entry">
+                          <button type="button" onClick={() => openDeleteEducationConfirm(entry.id)} aria-label="Delete education entry">
                             <FiTrash2 className="h-4 w-4 text-[#f08a9c]" />
                           </button>
                         </div>
@@ -997,7 +1255,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                                     : "border-[#d8dde6] text-transparent"
                                 }`}
                               >
-                                •
+                                â€¢
                               </span>
                               <span>
                                 <span className="block text-[14px] font-semibold text-[#20242b]">
@@ -1054,7 +1312,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         <div>
                           <p className="text-[14px] font-semibold text-[#20242b]">Pause Account</p>
                           <p className="mt-1 text-[12px] text-[#9ca3af]">
-                            Hides your profile from student searches. No need to re-register —
+                            Hides your profile from student searches. No need to re-register â€”
                             just toggle back on when ready.
                           </p>
                         </div>
@@ -1159,9 +1417,136 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
           </section>
         </div>
       </div>
-    </TutorShell>
+
+      {isEducationModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-[520px] rounded-[16px] bg-white p-6 shadow-[0_12px_36px_rgba(15,23,42,0.28)]">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-[20px] font-bold text-[#20242b]">{educationMode === "edit" ? "Edit Education" : "Add Education"}</h3>
+              <button
+                type="button"
+                onClick={closeEducationModal}
+                className="rounded-full border border-[#e5e7eb] px-3 py-1 text-[12px] font-semibold text-[#6b7280]"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Title</label>
+                <input
+                  type="text"
+                  value={educationForm.title}
+                  onChange={(event) => {
+                    setEducationForm((current) => ({ ...current, title: event.target.value }));
+                    setEducationError(null);
+                  }}
+                  placeholder="e.g., B.S. Mathematics Education"
+                  className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Organization</label>
+                <input
+                  type="text"
+                  value={educationForm.organization}
+                  onChange={(event) => {
+                    setEducationForm((current) => ({ ...current, organization: event.target.value }));
+                    setEducationError(null);
+                  }}
+                  placeholder="e.g., University of Missouri"
+                  className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[12px] font-semibold text-[#6b7280]">Period</label>
+                <input
+                  type="text"
+                  value={educationForm.period}
+                  onChange={(event) => {
+                    setEducationForm((current) => ({ ...current, period: event.target.value }));
+                    setEducationError(null);
+                  }}
+                  placeholder="e.g., 2019 - 2023"
+                  className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
+                />
+              </div>
+
+              {educationError ? <p className="text-[13px] text-[#d61c3f]">{educationError}</p> : null}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeEducationModal}
+                className="inline-flex h-10 items-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEducation}
+                disabled={isSavingEducation}
+                className="inline-flex h-10 items-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingEducation ? "Saving..." : educationMode === "edit" ? "Update" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isDeleteEducationConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-[440px] rounded-[16px] bg-white p-6 shadow-[0_12px_36px_rgba(15,23,42,0.28)]">
+            <h3 className="text-[20px] font-bold text-[#20242b]">Delete Education</h3>
+            <p className="mt-3 text-[14px] text-[#6b7280]">Are you sure you want to delete this education entry?</p>
+            {educationError ? <p className="mt-3 text-[13px] text-[#d61c3f]">{educationError}</p> : null}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteEducationConfirm}
+                className="inline-flex h-10 items-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteEducationConfirm}
+                disabled={isSavingEducation}
+                className="inline-flex h-10 items-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingEducation ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}`r`n    </TutorShell>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
