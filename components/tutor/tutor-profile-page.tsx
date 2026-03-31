@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -852,7 +852,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
               <div className="mt-3 space-y-2 text-[14px]">
                 {[
                   { label: "Total Sessions", value: profile.totalSessions, valueClassName: "text-[#20242b]" },
-                  { label: "Avg Rating", value: `${profile.avgRating} â˜…`, valueClassName: "text-[#20242b]" },
+                  { label: "Avg Rating", value: `${profile.avgRating} ★`, valueClassName: "text-[#20242b]" },
                   { label: "Active Students", value: profile.activeStudents, valueClassName: "text-[#20242b]" },
                   { label: "All-Time Earnings", value: profile.allTimeEarnings, valueClassName: "text-[#1b8a5a]" },
                 ].map((stat) => (
@@ -924,7 +924,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                       />
                       <p className="mt-2 text-[12px] text-[#9ca3af]">
-                        Optional â€” Enter if you currently teach in a school district.
+                        Optional — Enter if you currently teach in a school district.
                       </p>
                     </div>
 
@@ -966,7 +966,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                       >
                         <div className="flex items-start gap-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffe7eb] text-[#d61c3f]">
-                            <span className="text-[16px] font-bold">{index === 0 ? "âœ" : "â–£"}</span>
+                            <span className="text-[16px] font-bold">{index === 0 ? "✏" : "▣"}</span>
                           </div>
                           <div>
                             <p className="text-[16px] font-bold leading-6 text-[#20242b]">{entry.title}</p>
@@ -1255,7 +1255,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                                     : "border-[#d8dde6] text-transparent"
                                 }`}
                               >
-                                â€¢
+                                •
                               </span>
                               <span>
                                 <span className="block text-[14px] font-semibold text-[#20242b]">
@@ -1312,7 +1312,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         <div>
                           <p className="text-[14px] font-semibold text-[#20242b]">Pause Account</p>
                           <p className="mt-1 text-[12px] text-[#9ca3af]">
-                            Hides your profile from student searches. No need to re-register â€”
+                            Hides your profile from student searches. No need to re-register —
                             just toggle back on when ready.
                           </p>
                         </div>
@@ -1525,9 +1525,13 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
             </div>
           </div>
         </div>
-      ) : null}`r`n    </TutorShell>
+      ) : null}
+    </TutorShell>
   );
 }
+
+
+
 
 
 
