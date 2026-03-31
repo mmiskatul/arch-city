@@ -483,6 +483,57 @@ async function updateTutorWorkExperienceEntry(
 
   return (await response.json()) as TutorWorkExperienceApiItem;
 }
+async function fetchTutorSubjectsGrades(token: string): Promise<TutorSubjectsGradesApiModel> {
+  const response = await requestTutorSubjectsGradesWithFallback({
+    method: "GET",
+    token,
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Failed to load subjects & grades (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorSubjectsGradesApiModel;
+  return {
+    subjects: Array.isArray(data.subjects) ? data.subjects.map((item) => String(item).trim()).filter(Boolean) : [],
+    grades: Array.isArray(data.grades) ? data.grades.map((item) => String(item).trim()).filter(Boolean) : [],
+  };
+}
+
+async function saveTutorSubjectsGrades(
+  token: string,
+  payload: TutorSubjectsGradesApiModel,
+): Promise<TutorSubjectsGradesApiModel> {
+  const response = await requestTutorSubjectsGradesWithFallback({
+    method: "PUT",
+    token,
+    body: JSON.stringify({
+      subjects: Array.isArray(payload.subjects)
+        ? payload.subjects.map((item) => String(item).trim()).filter(Boolean)
+        : [],
+      grades: Array.isArray(payload.grades)
+        ? payload.grades.map((item) => String(item).trim()).filter(Boolean)
+        : [],
+    }),
+  });
+
+  if (!response || !response.ok) {
+    let detail: string | undefined;
+    try {
+      const data = (await response?.json()) as { detail?: string };
+      detail = data.detail;
+    } catch {
+      // Ignore non-JSON errors.
+    }
+    throw new Error(detail ?? `Failed to save subjects & grades (${response?.status ?? "no-response"}).`);
+  }
+
+  const data = (await response.json()) as TutorSubjectsGradesApiModel;
+  return {
+    subjects: Array.isArray(data.subjects) ? data.subjects.map((item) => String(item).trim()).filter(Boolean) : [],
+    grades: Array.isArray(data.grades) ? data.grades.map((item) => String(item).trim()).filter(Boolean) : [],
+  };
+}
 async function deleteTutorWorkExperienceEntry(token: string, workExperienceId: string): Promise<void> {
   const response = await requestTutorWorkExperienceWithFallback({
     method: "DELETE",
@@ -860,7 +911,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
         setEducationEntries((current) =>
           current.map((entry) => (entry.id === editingEducationId ? item : entry)),
         );
-      } else {
+      } else if (activeTab === "Bio & School District") {
         const item = await addTutorEducationEntry(token, { title, organization, period });
         setEducationEntries((current) => [item, ...current]);
       }
@@ -997,7 +1048,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
         setWorkExperienceEntries((current) =>
           current.map((entry) => (entry.id === editingWorkExperienceId ? item : entry)),
         );
-      } else {
+      } else if (activeTab === "Bio & School District") {
         const item = await addTutorWorkExperienceEntry(token, {
           title,
           organization,
@@ -1058,7 +1109,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
   }
 
   async function handleProfileSave() {
-    if (activeTab !== "Personal Info" && activeTab !== "Bio & School District") {
+    if (activeTab !== "Personal Info" && activeTab !== "Bio & School District" && activeTab !== "Subjects & Grades") {
       return;
     }
 
@@ -1105,7 +1156,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
             },
           }),
         );
-      } else {
+      } else if (activeTab === "Bio & School District") {
         const updatedBio = await saveTutorBioSchoolDistrict(token, {
           bio,
           school_district: schoolDistrict,
@@ -1122,6 +1173,15 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
           schoolDistrict: nextDistrict,
         }));
         setSaveSuccess("Bio & school district updated successfully.");
+      } else {
+        const updated = await saveTutorSubjectsGrades(token, {
+          subjects: selectedSubjects,
+          grades: selectedGrades,
+        });
+
+        setSelectedSubjects(updated.subjects || []);
+        setSelectedGrades(updated.grades || []);
+        setSaveSuccess("Subjects & grades updated successfully.");
       }
 
       setLastSavedAt(
@@ -1155,10 +1215,10 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
           <button
             type="button"
             onClick={handleProfileSave}
-            disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District") || isSavingProfile}
+            disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District" && activeTab !== "Subjects & Grades") || isSavingProfile}
             className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSavingProfile && (activeTab === "Personal Info" || activeTab === "Bio & School District") ? "Saving..." : "Save Changes"}
+            {isSavingProfile && (activeTab === "Personal Info" || activeTab === "Bio & School District" || activeTab === "Subjects & Grades") ? "Saving..." : "Save Changes"}
           </button>
         </div>
 
@@ -1200,7 +1260,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
               <div className="mt-3 space-y-2 text-[14px]">
                 {[
                   { label: "Total Sessions", value: profile.totalSessions, valueClassName: "text-[#20242b]" },
-                  { label: "Avg Rating", value: `${profile.avgRating} ★`, valueClassName: "text-[#20242b]" },
+                  { label: "Avg Rating", value: `${profile.avgRating} â˜…`, valueClassName: "text-[#20242b]" },
                   { label: "Active Students", value: profile.activeStudents, valueClassName: "text-[#20242b]" },
                   { label: "All-Time Earnings", value: profile.allTimeEarnings, valueClassName: "text-[#1b8a5a]" },
                 ].map((stat) => (
@@ -1272,7 +1332,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] text-[#4b5563] outline-none"
                       />
                       <p className="mt-2 text-[12px] text-[#9ca3af]">
-                        Optional — Enter if you currently teach in a school district.
+                        Optional â€” Enter if you currently teach in a school district.
                       </p>
                     </div>
 
@@ -1314,7 +1374,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                       >
                         <div className="flex items-start gap-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffe7eb] text-[#d61c3f]">
-                            <span className="text-[16px] font-bold">{index === 0 ? "✏" : "▣"}</span>
+                            <span className="text-[16px] font-bold">{index === 0 ? "âœ" : "â–£"}</span>
                           </div>
                           <div>
                             <p className="text-[16px] font-bold leading-6 text-[#20242b]">{entry.title}</p>
@@ -1604,7 +1664,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                                     : "border-[#d8dde6] text-transparent"
                                 }`}
                               >
-                                •
+                                â€¢
                               </span>
                               <span>
                                 <span className="block text-[14px] font-semibold text-[#20242b]">
@@ -1661,7 +1721,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                         <div>
                           <p className="text-[14px] font-semibold text-[#20242b]">Pause Account</p>
                           <p className="mt-1 text-[12px] text-[#9ca3af]">
-                            Hides your profile from student searches. No need to re-register —
+                            Hides your profile from student searches. No need to re-register â€”
                             just toggle back on when ready.
                           </p>
                         </div>
@@ -1752,14 +1812,14 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
                 <button
                   type="button"
                   onClick={handleProfileSave}
-                  disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District") || isSavingProfile}
+                  disabled={(activeTab !== "Personal Info" && activeTab !== "Bio & School District" && activeTab !== "Subjects & Grades") || isSavingProfile}
                   className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {activeTab === "Personal Info"
                     ? isSavingProfile
                       ? "Saving..."
                       : "Save Personal Info"
-                    : activeTab === "Bio & School District" ? isSavingProfile ? "Saving..." : "Save Bio & School District" : "Save"}
+                    : activeTab === "Bio & School District" ? isSavingProfile ? "Saving..." : "Save Bio & School District" : activeTab === "Subjects & Grades" ? isSavingProfile ? "Saving..." : "Save Subjects & Grades" : "Save"}
                 </button>
               </div>
             </div>

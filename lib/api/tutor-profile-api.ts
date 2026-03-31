@@ -1,7 +1,7 @@
 type TutorProfileMethod = "GET" | "PUT";
 type TutorBioSchoolDistrictMethod = "GET" | "PUT";
 type TutorEducationMethod = "GET" | "POST" | "PUT" | "DELETE";
-type TutorWorkExperienceMethod = "GET" | "POST" | "PUT" | "DELETE";
+type TutorWorkExperienceMethod = "GET" | "POST" | "PUT" | "DELETE";`r`ntype TutorSubjectsGradesMethod = "GET" | "PUT";
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -105,6 +105,20 @@ function buildTutorWorkExperienceUrls(method: TutorWorkExperienceMethod, workExp
     directUrl ? applyWorkExperienceIdTemplate(directUrl, workExperienceId) : "",
     ...baseUrls,
   ]);
+}
+
+
+function buildTutorSubjectsGradesUrls(method: TutorSubjectsGradesMethod) {
+  const directUrl =
+    method === "GET"
+      ? process.env.NEXT_PUBLIC_API_TUTOR_SUBJECTS_GRADES_GET_URL?.trim()
+      : process.env.NEXT_PUBLIC_API_TUTOR_SUBJECTS_GRADES_UPDATE_URL?.trim();
+
+  const baseUrl = resolveApiBaseUrl();
+  const fallbackPath = "/tutor/profile/subjects-grades";
+  const baseUrls = baseUrl ? [`${baseUrl}${normalizePath(fallbackPath)}`] : [];
+
+  return uniqueUrls([directUrl ?? "", ...baseUrls]);
 }
 
 export function resolveTutorProfileUrl(method: TutorProfileMethod) {
@@ -241,6 +255,41 @@ export async function requestTutorWorkExperienceWithFallback({
       method,
       headers: {
         ...(method === "POST" || method === "PUT" ? { "Content-Type": "application/json" } : {}),
+        Authorization: `Bearer ${token}`,
+        ...(extraInit?.headers ?? {}),
+      },
+      ...(body ? { body } : {}),
+      ...extraInit,
+    });
+
+    if (response.ok) return response;
+    lastResponse = response;
+    if (![404, 405, 422, 501].includes(response.status)) return response;
+  }
+
+  return lastResponse;
+}
+
+export async function requestTutorSubjectsGradesWithFallback({
+  method,
+  token,
+  body,
+  extraInit,
+}: {
+  method: TutorSubjectsGradesMethod;
+  token: string;
+  body?: string;
+  extraInit?: RequestInit;
+}) {
+  const urls = buildTutorSubjectsGradesUrls(method);
+  if (urls.length === 0) return null;
+
+  let lastResponse: Response | null = null;
+  for (const url of urls) {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        ...(method === "PUT" ? { "Content-Type": "application/json" } : {}),
         Authorization: `Bearer ${token}`,
         ...(extraInit?.headers ?? {}),
       },
