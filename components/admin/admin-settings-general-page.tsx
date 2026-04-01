@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FiCamera, FiMail, FiPhone, FiUser } from "react-icons/fi";
+import { FiCamera, FiLock, FiMail, FiPhone, FiUser } from "react-icons/fi";
 
 import { AdminSettingsLayout } from "@/components/admin/admin-settings-layout";
 import {
   fetchAdminGeneralSettings,
+  updateAdminPassword,
   updateAdminGeneralSettings,
   type AdminProfileSettings,
 } from "@/lib/api/admin-settings-api";
@@ -58,6 +59,12 @@ export function AdminSettingsGeneralPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,6 +136,47 @@ export function AdminSettingsGeneralPage() {
     setForm(initialForm);
     setMessage(null);
     setError(null);
+  };
+
+  const openPasswordModal = () => {
+    setPasswordModalOpen(true);
+    setPasswordError(null);
+  };
+
+  const closePasswordModal = () => {
+    setPasswordModalOpen(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setPasswordError(null);
+  };
+
+  const onPasswordSave = async () => {
+    setPasswordSaving(true);
+    setPasswordError(null);
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError("Fill in all password fields.");
+      setPasswordSaving(false);
+      return;
+    }
+
+    try {
+      const response = await updateAdminPassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_new_password: confirmNewPassword,
+      });
+      setMessage(response.message || "Password updated successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setPasswordModalOpen(false);
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Failed to update admin password.");
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   return (
@@ -251,24 +299,119 @@ export function AdminSettingsGeneralPage() {
         <div className="border-b border-[#eceef2] px-5 py-4">
           <h2 className="text-[34px] font-bold leading-none text-[#20242b]">Password settings</h2>
           <p className="mt-2 text-[22px] text-[#5b5b99]">
-            Password changes are managed through authentication flows
+            Password changes are managed through a secure popup
           </p>
         </div>
 
         <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[22px] font-semibold text-[#20242b]">Password</p>
-            <p className="text-[20px] text-[#5b5b99]">Use the login flow to reset admin credentials</p>
+            <p className="text-[20px] text-[#5b5b99]">Update the admin login password from this popup</p>
           </div>
           <button
             type="button"
-            disabled
-            className="inline-flex h-9 items-center rounded-lg border border-[#d1d5db] bg-white px-4 text-[14px] font-semibold text-[#5b5b99] opacity-50"
+            onClick={openPasswordModal}
+            className="inline-flex h-9 items-center rounded-lg border border-[#d1d5db] bg-white px-4 text-[14px] font-semibold text-[#5b5b99] transition hover:bg-[#f7f7f8]"
           >
             Update Password
           </button>
         </div>
       </article>
+
+      {passwordModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-2xl overflow-hidden rounded-[28px] bg-white shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+            <div className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
+              <div>
+                <h2 className="text-2xl font-bold tracking-[-0.03em] text-[#111827]">Change Password</h2>
+                <p className="mt-1 text-sm text-[#6b7280]">
+                  Update the admin login password used for dashboard access.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f3f4f6] hover:text-[#111827]"
+                aria-label="Close password popup"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 px-5 py-5">
+              {passwordError ? (
+                <p className="rounded-lg bg-[#fff1f2] px-3 py-2 text-sm text-[#b91c1c]">{passwordError}</p>
+              ) : null}
+
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-[#4b5563]">Current Password</span>
+                <span className="flex h-12 items-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafb] px-3">
+                  <FiLock className="h-4 w-4 text-[#6b6b90]" />
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    className="w-full bg-transparent outline-none"
+                    autoComplete="current-password"
+                  />
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-[#4b5563]">New Password</span>
+                <span className="flex h-12 items-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafb] px-3">
+                  <FiLock className="h-4 w-4 text-[#6b6b90]" />
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    className="w-full bg-transparent outline-none"
+                    autoComplete="new-password"
+                  />
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-[#4b5563]">Confirm New Password</span>
+                <span className="flex h-12 items-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafb] px-3">
+                  <FiLock className="h-4 w-4 text-[#6b6b90]" />
+                  <input
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(event) => setConfirmNewPassword(event.target.value)}
+                    className="w-full bg-transparent outline-none"
+                    autoComplete="new-password"
+                  />
+                </span>
+              </label>
+
+              <p className="text-sm leading-6 text-[#6b7280]">
+                Use at least 8 characters and make sure the confirmation matches exactly.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-[#e5e7eb] px-5 py-4">
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                className="inline-flex h-10 items-center rounded-xl border border-[#d1d5db] bg-white px-4 text-sm font-semibold text-[#4b5563]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void onPasswordSave()}
+                disabled={passwordSaving}
+                className="inline-flex h-10 items-center rounded-xl bg-[#20242b] px-4 text-sm font-semibold text-white transition hover:bg-[#11151b] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {passwordSaving ? "Saving..." : "Update Password"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AdminSettingsLayout>
   );
 }
+

@@ -57,6 +57,16 @@ export type AdminPolicyPageSettingsUpdateRequest = {
   page: AdminPolicyPageSettings;
 };
 
+export type AdminChangePasswordRequest = {
+  current_password: string;
+  new_password: string;
+  confirm_new_password: string;
+};
+
+export type AdminChangePasswordResponse = {
+  message: string;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     cache: "no-store",
@@ -115,6 +125,13 @@ export function fetchAdminPrivacySettings() {
 
 export function updateAdminPrivacySettings(payload: AdminPolicyPageSettingsUpdateRequest) {
   return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/privacy-policy", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAdminPassword(payload: AdminChangePasswordRequest) {
+  return request<AdminChangePasswordResponse>("/api/admin/settings/password", {
     method: "PUT",
     body: JSON.stringify(payload),
   });
