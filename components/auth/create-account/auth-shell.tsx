@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaArrowRightLong } from "react-icons/fa6";
 
 import { FormStatusMessage } from "@/components/shared/form-status-message";
@@ -18,6 +18,7 @@ import {
   AiOutlineHeart,
 } from "react-icons/ai";
 import { submitPublicApi } from "@/lib/api/public-api";
+import { fetchPublicPolicyPage } from "@/lib/api/public-policy-api";
 import {
   ADMIN_DASHBOARD_ROUTE,
   PARENT_DASHBOARD_ROUTE,
@@ -342,6 +343,17 @@ NOW THEREFORE, for and in consideration of the mutual covenants and benefits con
 
 6. Acceptance: Client acknowledges that reading and accepting this Agreement is required in order to create an account and use the Company's services.`;
 
+type PolicySection = {
+  heading: string;
+  body: string;
+};
+
+type PolicyPage = {
+  title: string;
+  editor_content: string;
+  display_sections: PolicySection[];
+};
+
 export function AuthShell({ mode }: AuthShellProps) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -358,7 +370,6 @@ export function AuthShell({ mode }: AuthShellProps) {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [heardFrom, setHeardFrom] = useState("");
-  const [agreementScrolledToEnd, setAgreementScrolledToEnd] = useState(false);
   const [acceptedAgreement, setAcceptedAgreement] = useState(false);
   const [smsConsent, setSmsConsent] = useState<SmsConsent>("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -367,6 +378,12 @@ export function AuthShell({ mode }: AuthShellProps) {
   const [loginSubmitMessage, setLoginSubmitMessage] = useState("");
   const [signupSubmitState, setSignupSubmitState] = useState<SubmitState>("idle");
   const [signupSubmitMessage, setSignupSubmitMessage] = useState("");
+  const [termsPolicy, setTermsPolicy] = useState<PolicyPage | null>(null);
+  const [privacyPolicy, setPrivacyPolicy] = useState<PolicyPage | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyError, setPolicyError] = useState("");
+  const [policyModalOpen, setPolicyModalOpen] = useState(false);
+  const [policyModalTab, setPolicyModalTab] = useState<"terms" | "privacy">("terms");
   const isLogin = mode === "login";
 
   const loginErrors = useMemo(() => {
@@ -388,6 +405,47 @@ export function AuthShell({ mode }: AuthShellProps) {
             : "",
     };
   }, [loginIdentifier, loginPassword]);
+
+  useEffect(() => {
+    if (isLogin) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPolicies = async () => {
+      setPolicyLoading(true);
+      setPolicyError("");
+
+      try {
+        const [termsResponse, privacyResponse] = await Promise.all([
+          fetchPublicPolicyPage("terms-conditions"),
+          fetchPublicPolicyPage("privacy-policy"),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setTermsPolicy(termsResponse.page);
+        setPrivacyPolicy(privacyResponse.page);
+      } catch (error) {
+        if (!cancelled) {
+          setPolicyError(error instanceof Error ? error.message : "Failed to load terms and privacy policy.");
+        }
+      } finally {
+        if (!cancelled) {
+          setPolicyLoading(false);
+        }
+      }
+    };
+
+    void loadPolicies();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLogin]);
 
   const passwordChecks = useMemo(() => {
     const uppercase = /[A-Z]/.test(signupPassword);
@@ -459,22 +517,18 @@ export function AuthShell({ mode }: AuthShellProps) {
             ? "Passwords do not match."
             : "",
       heardFrom:
-        heardFrom.length === 0
+      heardFrom.length === 0
           ? "Select how you heard about Arch City Tutors."
           : "",
-      agreement:
-        acceptedAgreement || !agreementScrolledToEnd
-          ? ""
-          : "Accept the agreement to continue.",
+      agreement: acceptedAgreement ? "" : "Open the terms popup and accept the agreement.",
       smsConsent:
         smsConsent.length === 0 ? "Choose one SMS consent option." : "",
       terms:
-        acceptedTerms ? "" : "You must agree to the Terms of Service.",
+        acceptedTerms ? "" : "You must agree to the Terms of Service and Privacy Policy.",
     };
   }, [
     acceptedAgreement,
     acceptedTerms,
-    agreementScrolledToEnd,
     heardFrom,
     passwordChecks.length,
     passwordChecks.match,
@@ -1055,50 +1109,49 @@ export function AuthShell({ mode }: AuthShellProps) {
                     Read the full agreement carefully
                   </label>
 
-                  <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-                    <div
-                      className="max-h-[22rem] overflow-y-auto px-4 py-4 text-sm leading-7 text-[#6b7280]"
-                      onScroll={(event) => {
-                        const target = event.currentTarget;
-                        const reachedEnd =
-                          target.scrollTop + target.clientHeight >=
-                          target.scrollHeight - 10;
-                        if (reachedEnd) {
-                          setAgreementScrolledToEnd(true);
-                        }
-                      }}
-                    >
-                      {memberAgreement.split("\n\n").map((paragraph) => (
-                        <p key={paragraph} className="mb-4 last:mb-0">
-                          {paragraph}
-                        </p>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 border-t border-[#e5e7eb] px-4 py-4">
+                  <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                    {policyLoading ? (
+                      <p className="text-sm text-[#6b7280]">Loading terms and privacy policy...</p>
+                    ) : null}
+                    {policyError ? (
+                      <p className="text-sm text-[#b91c1c]">{policyError}</p>
+                    ) : null}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm leading-6 text-[#6b7280]">
+                        Review the terms and privacy policy before continuing. The full text opens in a popup.
+                      </p>
                       <button
                         type="button"
-                        disabled={!agreementScrolledToEnd}
                         onClick={() => {
-                          setAcceptedAgreement(true);
-                          markSignupTouched("agreement");
+                          setPolicyModalTab("terms");
+                          setPolicyModalOpen(true);
                         }}
-                        className={`inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold transition ${
-                          agreementScrolledToEnd
-                            ? "bg-[#df1620] text-white hover:bg-[#f02029]"
-                            : "bg-[#e5e7eb] text-[#9ca3af]"
-                        }`}
+                        className="inline-flex h-11 items-center justify-center rounded-xl bg-[#df1620] px-5 text-sm font-semibold text-white transition hover:bg-[#f02029]"
                       >
-                        I accept the terms
+                        View terms
                       </button>
-
-                      <div className="text-right text-xs font-medium text-[#9ca3af]">
-                        {acceptedAgreement
-                          ? "Agreement accepted"
-                          : agreementScrolledToEnd
-                            ? "You can now accept the terms"
-                            : "Please read and scroll to the bottom to accept"}
-                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-3 text-sm font-medium">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPolicyModalTab("terms");
+                          setPolicyModalOpen(true);
+                        }}
+                        className="text-[#ef242a] underline-offset-4 hover:underline"
+                      >
+                        Open Terms
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPolicyModalTab("privacy");
+                          setPolicyModalOpen(true);
+                        }}
+                        className="text-[#ef242a] underline-offset-4 hover:underline"
+                      >
+                        Open Privacy Policy
+                      </button>
                     </div>
                   </div>
                   <FieldError
@@ -1155,9 +1208,16 @@ export function AuthShell({ mode }: AuthShellProps) {
 
                   <p>
                     See our{" "}
-                    <Link href="/privacy-policy" className="text-[#ef242a]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPolicyModalTab("privacy");
+                        setPolicyModalOpen(true);
+                      }}
+                      className="text-[#ef242a] underline-offset-4 hover:underline"
+                    >
                       Privacy Policy
-                    </Link>{" "}
+                    </button>{" "}
                     for details on how we handle your information.
                   </p>
                   <FieldError
@@ -1177,9 +1237,27 @@ export function AuthShell({ mode }: AuthShellProps) {
                   />
                   <span>
                     I agree to the{" "}
-                    <Link href="/terms-of-service" className="text-[#ef242a]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPolicyModalTab("terms");
+                        setPolicyModalOpen(true);
+                      }}
+                      className="text-[#ef242a] underline-offset-4 hover:underline"
+                    >
                       Terms of Service
-                    </Link>
+                    </button>{" "}
+                    and{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPolicyModalTab("privacy");
+                        setPolicyModalOpen(true);
+                      }}
+                      className="text-[#ef242a] underline-offset-4 hover:underline"
+                    >
+                      Privacy Policy
+                    </button>
                   </span>
                 </label>
                 <FieldError
@@ -1221,6 +1299,117 @@ export function AuthShell({ mode }: AuthShellProps) {
 
         <AuthVisualPanel />
       </div>
+
+      {policyModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+            <div className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
+              <div>
+                <h2 className="text-2xl font-bold tracking-[-0.03em] text-[#111827]">
+                  {policyModalTab === "terms"
+                    ? termsPolicy?.title ?? "Terms & Conditions"
+                    : privacyPolicy?.title ?? "Privacy Policy"}
+                </h2>
+                <p className="mt-1 text-sm text-[#6b7280]">
+                  {policyModalTab === "terms"
+                    ? "Review the terms before accepting your account agreement."
+                    : "Review the privacy policy before continuing."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPolicyModalOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f3f4f6] hover:text-[#111827]"
+                aria-label="Close policy popup"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="border-b border-[#e5e7eb] px-5 py-3">
+              <div className="inline-flex rounded-full bg-[#f3f4f6] p-1">
+                <button
+                  type="button"
+                  onClick={() => setPolicyModalTab("terms")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    policyModalTab === "terms" ? "bg-[#df1620] text-white" : "text-[#4b5563]"
+                  }`}
+                >
+                  Terms
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPolicyModalTab("privacy")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    policyModalTab === "privacy" ? "bg-[#df1620] text-white" : "text-[#4b5563]"
+                  }`}
+                >
+                  Privacy
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto px-5 py-5 text-sm leading-7 text-[#374151]">
+              {policyModalTab === "terms" ? (
+                <div className="space-y-5">
+                  <p className="whitespace-pre-line text-[#4b5563]">
+                    {termsPolicy?.editor_content ?? memberAgreement}
+                  </p>
+                  {(termsPolicy?.display_sections ?? []).map((section) => (
+                    <section key={section.heading}>
+                      <h3 className="text-lg font-bold text-[#111827]">{section.heading}</h3>
+                      <p className="mt-2 whitespace-pre-line">{section.body}</p>
+                    </section>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <p className="whitespace-pre-line text-[#4b5563]">
+                    {privacyPolicy?.editor_content ?? memberAgreement}
+                  </p>
+                  {(privacyPolicy?.display_sections ?? []).map((section) => (
+                    <section key={section.heading}>
+                      <h3 className="text-lg font-bold text-[#111827]">{section.heading}</h3>
+                      <p className="mt-2 whitespace-pre-line">{section.body}</p>
+                    </section>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-[#e5e7eb] px-5 py-4">
+              <p className="text-sm text-[#6b7280]">
+                {policyModalTab === "terms"
+                  ? "Accept the terms here, then continue with signup."
+                  : "Close this popup and return to signup when ready."}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPolicyModalOpen(false)}
+                  className="inline-flex h-10 items-center rounded-xl border border-[#d1d5db] bg-white px-4 text-sm font-semibold text-[#4b5563]"
+                >
+                  Close
+                </button>
+                {policyModalTab === "terms" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAcceptedAgreement(true);
+                      markSignupTouched("agreement");
+                      setPolicyModalOpen(false);
+                    }}
+                    className="inline-flex h-10 items-center rounded-xl bg-[#df1620] px-4 text-sm font-semibold text-white transition hover:bg-[#f02029]"
+                  >
+                    I accept
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
