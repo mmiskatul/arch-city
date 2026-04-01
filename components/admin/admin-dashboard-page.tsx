@@ -75,7 +75,7 @@ const defaultMeta: EndpointMeta = {
 
 export const defaultAdminDashboardOverviewData: AdminDashboardOverviewData = {
   meta: defaultMeta,
-  today_label: "Friday, March 20, 2026",
+  today_label: "-",
   summary_meta: defaultMeta,
   recent_sessions_meta: defaultMeta,
   pending_actions_meta: defaultMeta,
@@ -83,32 +83,32 @@ export const defaultAdminDashboardOverviewData: AdminDashboardOverviewData = {
   summary_cards: [
     {
       title: "Total Students",
-      value: "248",
-      subtitle: "Active students on platform",
+      value: "0",
+      subtitle: "Verified student accounts",
       action: "View all",
       action_route: "/admin-dashboard/students",
       icon: "FiUsers",
     },
     {
       title: "Total Tutors",
-      value: "64",
-      subtitle: "Approved tutors active",
+      value: "0",
+      subtitle: "Verified tutor accounts",
       action: "View all",
       action_route: "/admin-dashboard/tutors",
       icon: "FiUser",
     },
     {
       title: "Sessions Today",
-      value: "31",
-      subtitle: "Sessions scheduled today",
+      value: "0",
+      subtitle: "Sessions module not connected yet",
       action: "View schedule",
       action_route: "/admin-dashboard/schedules",
       icon: "FiCalendar",
     },
     {
       title: "Monthly Revenue",
-      value: "$18,420",
-      subtitle: "Revenue this month",
+      value: "$0",
+      subtitle: "Revenue module not connected yet",
       action: "View finances",
       action_route: "/admin-dashboard/finances",
       icon: "FiDollarSign",
@@ -216,25 +216,6 @@ function PendingActionsSkeleton() {
   );
 }
 
-function TopTutorsSkeleton() {
-  return (
-    <div className="mt-4 space-y-3">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 animate-pulse rounded-full bg-[#eceef2]" />
-            <div className="space-y-1">
-              <div className="h-4 w-28 animate-pulse rounded bg-[#eceef2]" />
-              <div className="h-3 w-20 animate-pulse rounded bg-[#f1f3f6]" />
-            </div>
-          </div>
-          <div className="h-4 w-16 animate-pulse rounded bg-[#eceef2]" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function AdminDashboardPage({
   data: initialData = defaultAdminDashboardOverviewData,
   loadError,
@@ -245,7 +226,8 @@ export function AdminDashboardPage({
   lazySections?: boolean;
 }) {
   const [data, setData] = useState<AdminDashboardOverviewData>(initialData);
-  const [isSectionsLoading, setIsSectionsLoading] = useState<boolean>(lazySections);
+  const [isRecentLoading, setIsRecentLoading] = useState<boolean>(lazySections);
+  const [isPendingLoading, setIsPendingLoading] = useState<boolean>(lazySections);
   const [sectionsError, setSectionsError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -254,7 +236,8 @@ export function AdminDashboardPage({
     let cancelled = false;
 
     const loadSections = async () => {
-      setIsSectionsLoading(true);
+      setIsRecentLoading(true);
+      setIsPendingLoading(true);
       setSectionsError(undefined);
 
       try {
@@ -268,12 +251,10 @@ export function AdminDashboardPage({
 
         setData((current) => ({
           ...current,
-          recent_sessions: payload.recent_sessions,
-          pending_actions: payload.pending_actions,
-          top_tutors_this_month: payload.top_tutors_this_month,
-          recent_sessions_meta: payload.recent_sessions_meta,
-          pending_actions_meta: payload.pending_actions_meta,
-          top_tutors_meta: payload.top_tutors_meta,
+          recent_sessions: Array.isArray(payload?.recent_sessions) ? payload.recent_sessions : [],
+          pending_actions: Array.isArray(payload?.pending_actions) ? payload.pending_actions : [],
+          recent_sessions_meta: payload?.recent_sessions_meta ?? current.recent_sessions_meta,
+          pending_actions_meta: payload?.pending_actions_meta ?? current.pending_actions_meta,
         }));
       } catch (error) {
         if (!cancelled) {
@@ -281,7 +262,8 @@ export function AdminDashboardPage({
         }
       } finally {
         if (!cancelled) {
-          setIsSectionsLoading(false);
+          setIsRecentLoading(false);
+          setIsPendingLoading(false);
         }
       }
     };
@@ -293,7 +275,11 @@ export function AdminDashboardPage({
     };
   }, [lazySections]);
 
-  const summaryCards: SummaryCard[] = data.summary_cards.map((card) => ({
+  const summaryCardsSource = Array.isArray(data?.summary_cards)
+    ? data.summary_cards
+    : defaultAdminDashboardOverviewData.summary_cards;
+
+  const summaryCards: SummaryCard[] = summaryCardsSource.map((card) => ({
     ...card,
     iconComponent: getSummaryIcon(card.icon),
     iconClassName: getSummaryIconClass(card.title),
@@ -340,11 +326,11 @@ export function AdminDashboardPage({
                   <span>Fee</span>
                 </div>
 
-                {isSectionsLoading ? (
+                {isRecentLoading ? (
                   <RecentSessionsSkeleton />
                 ) : (
                   <div className="divide-y divide-[#eceef2]">
-                    {data.recent_sessions.map((row, index) => (
+                    {(Array.isArray(data?.recent_sessions) ? data.recent_sessions : []).map((row, index) => (
                       <div
                         key={`${row.student}-${row.tutor}-${row.date_time}`}
                         className="grid grid-cols-[1.5fr_1.2fr_0.9fr_1fr_0.85fr_0.95fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563]"
@@ -372,7 +358,7 @@ export function AdminDashboardPage({
                       </div>
                     ))}
 
-                    {data.recent_sessions.length === 0 ? (
+                    {(Array.isArray(data?.recent_sessions) ? data.recent_sessions : []).length === 0 ? (
                       <div className="px-4 py-8 text-center text-[13px] text-[#6b7280]">No recent sessions found.</div>
                     ) : null}
                   </div>
@@ -385,11 +371,11 @@ export function AdminDashboardPage({
             <div className="rounded-[14px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <h3 className="text-[24px] font-bold text-[#20242b]">Pending Actions</h3>
 
-              {isSectionsLoading ? (
+              {isPendingLoading ? (
                 <PendingActionsSkeleton />
               ) : (
                 <div className="mt-4 space-y-3">
-                  {data.pending_actions.map((action, index) => (
+                  {(Array.isArray(data?.pending_actions) ? data.pending_actions : []).map((action, index) => (
                     <article key={`${action.title}-${index}`} className="flex items-center justify-between rounded-xl bg-[#f4f5f7] px-3 py-2.5">
                       <div>
                         <p className="text-[14px] font-semibold text-[#374151]">{action.title}</p>
@@ -404,7 +390,7 @@ export function AdminDashboardPage({
                     </article>
                   ))}
 
-                  {data.pending_actions.length === 0 ? (
+                  {(Array.isArray(data?.pending_actions) ? data.pending_actions : []).length === 0 ? (
                     <div className="rounded-xl bg-[#f4f5f7] px-3 py-3 text-[13px] text-[#6b7280]">No pending actions found.</div>
                   ) : null}
                 </div>
@@ -414,30 +400,26 @@ export function AdminDashboardPage({
             <div className="rounded-[14px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <h3 className="text-[24px] font-bold text-[#20242b]">Top Tutors This Month</h3>
 
-              {isSectionsLoading ? (
-                <TopTutorsSkeleton />
-              ) : (
-                <div className="mt-4 space-y-3">
-                  {data.top_tutors_this_month.map((tutor, index) => (
-                    <div key={`${tutor.name}-${index}`} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ${getInitialBadgeClass(index)}`}>
-                          {getInitials(tutor.name)}
-                        </span>
-                        <div>
-                          <p className="text-[14px] font-semibold text-[#20242b]">{tutor.name}</p>
-                          <p className="text-[12px] text-[#6b7280]">{tutor.subjects.join(", ")}</p>
-                        </div>
+              <div className="mt-4 space-y-3">
+                {(Array.isArray(data?.top_tutors_this_month) ? data.top_tutors_this_month : []).map((tutor, index) => (
+                  <div key={`${tutor.name}-${index}`} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ${getInitialBadgeClass(index)}`}>
+                        {getInitials(tutor.name)}
+                      </span>
+                      <div>
+                        <p className="text-[14px] font-semibold text-[#20242b]">{tutor.name}</p>
+                        <p className="text-[12px] text-[#6b7280]">{tutor.subjects.join(", ")}</p>
                       </div>
-                      <span className="text-[14px] font-bold text-[#239157]">{tutor.earned_mtd}</span>
                     </div>
-                  ))}
+                    <span className="text-[14px] font-bold text-[#239157]">{tutor.earned_mtd}</span>
+                  </div>
+                ))}
 
-                  {data.top_tutors_this_month.length === 0 ? (
-                    <div className="text-[13px] text-[#6b7280]">No tutor ranking data yet.</div>
-                  ) : null}
-                </div>
-              )}
+                {(Array.isArray(data?.top_tutors_this_month) ? data.top_tutors_this_month : []).length === 0 ? (
+                  <div className="text-[13px] text-[#6b7280]">No tutor ranking data yet.</div>
+                ) : null}
+              </div>
             </div>
           </div>
         </section>

@@ -7,10 +7,6 @@ import {
   type AdminDashboardOverviewData,
 } from "@/components/admin/admin-dashboard-page";
 
-type DashboardSummaryCard = AdminDashboardOverviewData["summary_cards"][number];
-type DashboardSummaryResponse = {
-  data: DashboardSummaryCard[];
-};
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -30,7 +26,7 @@ function todayLabel() {
   }).format(new Date());
 }
 
-async function fetchAdminDashboardSummary(): Promise<DashboardSummaryCard[]> {
+async function fetchAdminDashboardOverview(): Promise<AdminDashboardOverviewData> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
@@ -41,7 +37,7 @@ async function fetchAdminDashboardSummary(): Promise<DashboardSummaryCard[]> {
     redirect("/login");
   }
 
-  const response = await fetch(`${baseUrl}/admin-dashboard/summary`, {
+  const response = await fetch(`${baseUrl}/admin-dashboard/overview`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -54,30 +50,43 @@ async function fetchAdminDashboardSummary(): Promise<DashboardSummaryCard[]> {
   }
 
   if (!response.ok) {
-    throw new Error(`Dashboard summary API failed (${response.status}).`);
+    throw new Error(`Dashboard overview API failed (${response.status}).`);
   }
 
-  const payload = (await response.json()) as DashboardSummaryResponse;
-  return payload.data;
+  const payload = (await response.json()) as AdminDashboardOverviewData;
+  if (!payload || !Array.isArray(payload.summary_cards)) {
+    return defaultAdminDashboardOverviewData;
+  }
+
+  return {
+    ...defaultAdminDashboardOverviewData,
+    ...payload,
+    summary_cards: payload.summary_cards,
+    recent_sessions: Array.isArray(payload.recent_sessions) ? payload.recent_sessions : [],
+    pending_actions: Array.isArray(payload.pending_actions) ? payload.pending_actions : [],
+    top_tutors_this_month: Array.isArray(payload.top_tutors_this_month) ? payload.top_tutors_this_month : [],
+  };
 }
 
 export default async function AdminDashboardRoute() {
-  let summaryCards = defaultAdminDashboardOverviewData.summary_cards;
-
-  try {
-    summaryCards = await fetchAdminDashboardSummary();
-  } catch {
-    // Keep fallback summary cards when summary endpoint is temporarily unavailable.
-  }
-
-  const initialData: AdminDashboardOverviewData = {
+  let initialData: AdminDashboardOverviewData = {
     ...defaultAdminDashboardOverviewData,
     today_label: todayLabel(),
-    summary_cards: summaryCards,
-    recent_sessions: [],
-    pending_actions: [],
-    top_tutors_this_month: [],
   };
+
+  try {
+    const overview = await fetchAdminDashboardOverview();
+    initialData = {
+      ...initialData,
+      ...overview,
+      // Keep section placeholders for client-side section skeleton reload.
+      recent_sessions: [],
+      pending_actions: [],
+      top_tutors_this_month: overview.top_tutors_this_month,
+    };
+  } catch {
+    // Keep fallback overview when backend is temporarily unavailable.
+  }
 
   return <AdminDashboardPage data={initialData} lazySections />;
 }

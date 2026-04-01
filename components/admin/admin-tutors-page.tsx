@@ -1,16 +1,60 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiDownload, FiStar } from "react-icons/fi";
 
 import { AdminShell } from "@/components/admin/admin-shell";
-import { adminTutors, type AdminTutorStatus, type AdminTutorRow } from "@/lib/admin/tutors-data";
+import type { AdminTutorStatus, AdminTutorRow } from "@/lib/admin/tutors-data";
 import { ADMIN_TUTOR_APPLICATIONS_ROUTE, ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
 type TutorFilter = "All Tutors" | "Approved" | "Pending Review" | "Suspended";
 
+type TutorApiStatus = "approved" | "pending" | "suspended";
+
+type TutorsApiItem = {
+  tutor_id: string;
+  name: string;
+  email: string;
+  subjects: string[];
+  sessions: number;
+  rating: string;
+  hourly_rate: string;
+  earned_mtd: string;
+  status: TutorApiStatus;
+  application_id?: string | null;
+};
+
+type TutorsApiResponse = {
+  total: number;
+  items: TutorsApiItem[];
+};
+
+type TutorStatsResponse = {
+  total: number;
+  approved: number;
+  pending: number;
+  suspended: number;
+};
+
 const pageSize = 6;
+
+function initialsFromName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "TU";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
+function initialsClassFromIndex(index: number) {
+  const classes = [
+    "bg-[#ffe7eb] text-[#d94a62]",
+    "bg-[#f1f1f1] text-[#6b7280]",
+    "bg-[#ebf7ef] text-[#239157]",
+    "bg-[#fff6de] text-[#b58112]",
+  ];
+  return classes[index % classes.length];
+}
 
 function statusClassName(status: AdminTutorStatus) {
   if (status === "Approved") return "bg-[#ebf7ef] text-[#239157]";
@@ -18,32 +62,104 @@ function statusClassName(status: AdminTutorStatus) {
   return "bg-[#ffecef] text-[#d94a62]";
 }
 
-function toStatus(filter: TutorFilter): AdminTutorStatus | null {
-  if (filter === "Approved") return "Approved";
-  if (filter === "Pending Review") return "Pending";
-  if (filter === "Suspended") return "Suspended";
+function toStatus(filter: TutorFilter): TutorApiStatus | null {
+  if (filter === "Approved") return "approved";
+  if (filter === "Pending Review") return "pending";
+  if (filter === "Suspended") return "suspended";
   return null;
 }
 
+function toUiStatus(status: TutorApiStatus): AdminTutorStatus {
+  if (status === "approved") return "Approved";
+  if (status === "pending") return "Pending";
+  return "Suspended";
+}
+
+function toUiTutor(item: TutorsApiItem, index: number): AdminTutorRow {
+  return {
+    id: item.tutor_id,
+    initials: initialsFromName(item.name),
+    initialsClassName: initialsClassFromIndex(index),
+    name: item.name,
+    email: item.email,
+    subjects: Array.isArray(item.subjects) ? item.subjects : [],
+    sessions: Number.isFinite(item.sessions) ? item.sessions : 0,
+    rating: item.rating || "New",
+    hourlyRate: item.hourly_rate || "-",
+    earnedMtd: item.earned_mtd || "$0",
+    status: toUiStatus(item.status),
+    applicationId: item.application_id || undefined,
+  };
+}
+
 export function AdminTutorsPage() {
-  const [tutors] = useState<AdminTutorRow[]>(adminTutors);
+  const [tutors, setTutors] = useState<AdminTutorRow[]>([]);
+  const [stats, setStats] = useState<TutorStatsResponse>({ total: 0, approved: 0, pending: 0, suspended: 0 });
   const [filter, setFilter] = useState<TutorFilter>("All Tutors");
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredTutors = useMemo(() => {
-    const status = toStatus(filter);
-    return status ? tutors.filter((item) => item.status === status) : tutors;
-  }, [tutors, filter]);
+  useEffect(() => {
+    let cancelled = false;
+    const loadStats = async () => {
+      try {
+        const response = await fetch("/api/admin/tutors/stats", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = (await response.json()) as TutorStatsResponse;
+        if (!cancelled) setStats(payload);
+      } catch {
+        // no-op
+      }
+    };
 
-  const totalPages = Math.max(1, Math.ceil(filteredTutors.length / pageSize));
+    void loadStats();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTutors = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
+      const params = new URLSearchParams();
+      const status = toStatus(filter);
+      if (status) params.set("status_filter", status);
+
+      try {
+        const response = await fetch(`/api/admin/tutors?${params.toString()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error("Failed to load tutors.");
+
+        const payload = (await response.json()) as TutorsApiResponse;
+        if (cancelled) return;
+
+        setTutors((payload.items || []).map((item, index) => toUiTutor(item, index)));
+      } catch (error) {
+        if (cancelled) return;
+        setTutors([]);
+        setLoadError(error instanceof Error ? error.message : "Failed to load tutors.");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void loadTutors();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filter]);
+
+  const totalPages = Math.max(1, Math.ceil(tutors.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const pageRows = filteredTutors.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const pageRows = useMemo(() => tutors.slice((safePage - 1) * pageSize, safePage * pageSize), [tutors, safePage]);
 
-  const startIndex = filteredTutors.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const endIndex = Math.min(safePage * pageSize, filteredTutors.length);
-
-  const approvedCount = tutors.filter((item) => item.status === "Approved").length;
-  const pendingCount = tutors.filter((item) => item.status === "Pending").length;
+  const startIndex = tutors.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endIndex = Math.min(safePage * pageSize, tutors.length);
 
   const handleFilter = (next: TutorFilter) => {
     setFilter(next);
@@ -56,7 +172,9 @@ export function AdminTutorsPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-[38px] font-bold leading-none text-[#20242b]">Tutors</h1>
-            <p className="mt-2 text-[14px] text-[#6b7280]">64 approved - 4 pending review</p>
+            <p className="mt-2 text-[14px] text-[#6b7280]">
+              {stats.approved} approved - {stats.pending} pending review
+            </p>
           </div>
           <button
             type="button"
@@ -87,18 +205,22 @@ export function AdminTutorsPage() {
                 {item}
                 {showApprovedBadge ? (
                   <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d61c3f] px-1 text-[10px] font-semibold text-white">
-                    {approvedCount}
+                    {stats.approved}
                   </span>
                 ) : null}
                 {showPendingBadge ? (
                   <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#8f6b10] px-1 text-[10px] font-semibold text-white">
-                    {pendingCount}
+                    {stats.pending}
                   </span>
                 ) : null}
               </button>
             );
           })}
         </div>
+
+        {loadError ? (
+          <p className="mt-3 rounded-md border border-[#ffecef] bg-[#fff5f7] px-3 py-2 text-[12px] text-[#d61c3f]">{loadError}</p>
+        ) : null}
 
         <section className="mt-4 overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="overflow-x-auto">
@@ -115,73 +237,80 @@ export function AdminTutorsPage() {
               </div>
 
               <div className="divide-y divide-[#eceef2]">
-                {pageRows.map((tutor) => (
-                  <div
-                    key={tutor.id}
-                    className={`grid grid-cols-[1.7fr_1.45fr_0.75fr_0.7fr_0.9fr_0.95fr_0.85fr_0.95fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563] ${
-                      tutor.status === "Pending" ? "bg-[#fffdf3]" : "bg-white"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${tutor.initialsClassName}`}
-                      >
-                        {tutor.initials}
+                {isLoading ? (
+                  <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">Loading tutors...</div>
+                ) : pageRows.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">No tutors found.</div>
+                ) : (
+                  pageRows.map((tutor) => (
+                    <div
+                      key={tutor.id}
+                      className={`grid grid-cols-[1.7fr_1.45fr_0.75fr_0.7fr_0.9fr_0.95fr_0.85fr_0.95fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563] ${
+                        tutor.status === "Pending" ? "bg-[#fffdf3]" : "bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${tutor.initialsClassName}`}
+                        >
+                          {tutor.initials}
+                        </span>
+                        <div>
+                          <p className="font-semibold text-[#20242b]">{tutor.name}</p>
+                          <p className="text-[12px] text-[#6b7280]">{tutor.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1">
+                        {tutor.subjects.map((subject) => (
+                          <span
+                            key={subject}
+                            className="inline-flex rounded-full border border-[#e5e7eb] bg-[#f7f7f8] px-2.5 py-1 text-[11px] font-medium text-[#6b7280]"
+                          >
+                            {subject}
+                          </span>
+                        ))}
+                        {tutor.subjects.length === 0 ? <span className="text-[12px] text-[#6b7280]">-</span> : null}
+                      </div>
+
+                      <span>{tutor.sessions}</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-[#8f6b10]">
+                        <FiStar className="h-3.5 w-3.5 fill-[#c58b1a] text-[#c58b1a]" />
+                        {tutor.rating}
                       </span>
+                      <span>{tutor.hourlyRate}</span>
+                      <span className="font-semibold text-[#239157]">{tutor.earnedMtd ?? "-"}</span>
                       <div>
-                        <p className="font-semibold text-[#20242b]">{tutor.name}</p>
-                        <p className="text-[12px] text-[#6b7280]">{tutor.email}</p>
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClassName(tutor.status)}`}
+                        >
+                          {tutor.status}
+                        </span>
+                      </div>
+                      <div>
+                        {tutor.status === "Pending" ? (
+                          <Link
+                            href={
+                              tutor.applicationId
+                                ? `${ADMIN_TUTOR_APPLICATIONS_ROUTE}/${tutor.applicationId}`
+                                : ADMIN_TUTOR_APPLICATIONS_ROUTE
+                            }
+                            className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
+                          >
+                            Review
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`${ADMIN_TUTORS_ROUTE}/${encodeURIComponent(tutor.id)}`}
+                            className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
+                          >
+                            View
+                          </Link>
+                        )}
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap gap-1">
-                      {tutor.subjects.map((subject) => (
-                        <span
-                          key={subject}
-                          className="inline-flex rounded-full border border-[#e5e7eb] bg-[#f7f7f8] px-2.5 py-1 text-[11px] font-medium text-[#6b7280]"
-                        >
-                          {subject}
-                        </span>
-                      ))}
-                    </div>
-
-                    <span>{tutor.sessions ?? "-"}</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-[#8f6b10]">
-                      <FiStar className="h-3.5 w-3.5 fill-[#c58b1a] text-[#c58b1a]" />
-                      {tutor.rating}
-                    </span>
-                    <span>{tutor.hourlyRate}</span>
-                    <span className="font-semibold text-[#239157]">{tutor.earnedMtd ?? "-"}</span>
-                    <div>
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClassName(tutor.status)}`}
-                      >
-                        {tutor.status}
-                      </span>
-                    </div>
-                    <div>
-                      {tutor.status === "Pending" ? (
-                        <Link
-                          href={
-                            tutor.applicationId
-                              ? `${ADMIN_TUTOR_APPLICATIONS_ROUTE}/${tutor.applicationId}`
-                              : ADMIN_TUTOR_APPLICATIONS_ROUTE
-                          }
-                          className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
-                        >
-                          Review
-                        </Link>
-                      ) : (
-                        <Link
-                          href={`${ADMIN_TUTORS_ROUTE}/${tutor.id}`}
-                          className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
-                        >
-                          View
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -189,14 +318,14 @@ export function AdminTutorsPage() {
 
         <div className="mt-3 flex flex-col gap-3 text-[13px] text-[#6b7280] sm:flex-row sm:items-center sm:justify-between">
           <p>
-            Showing {startIndex}-{endIndex} of {filteredTutors.length} tutors
+            Showing {startIndex}-{endIndex} of {tutors.length} tutors
           </p>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={safePage === 1}
+              disabled={safePage === 1 || isLoading}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#e5e7eb] bg-white text-[#6b7280] disabled:cursor-not-allowed disabled:opacity-40"
             >
               &#8249;
@@ -222,7 +351,7 @@ export function AdminTutorsPage() {
             <button
               type="button"
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={safePage === totalPages}
+              disabled={safePage === totalPages || isLoading}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#e5e7eb] bg-white text-[#6b7280] disabled:cursor-not-allowed disabled:opacity-40"
             >
               &#8250;
@@ -233,4 +362,3 @@ export function AdminTutorsPage() {
     </AdminShell>
   );
 }
-
