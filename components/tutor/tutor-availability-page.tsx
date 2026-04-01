@@ -1,12 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import {
+  addTutorAvailabilitySlot,
+  clearTutorAvailabilitySlots,
+  fetchTutorAvailability,
+  getFallbackTutorAvailability,
+  updateTutorAvailability,
+  type TutorAvailabilityApiSlot,
+} from "@/lib/api/tutor-availability-api";
+import {
   tutorAvailabilityDays,
-  tutorAvailabilitySlots,
   tutorAvailabilityTimes,
   type TutorAvailabilityDay,
   type TutorAvailabilitySlot,
@@ -18,23 +25,98 @@ function getSlotClass(status: TutorAvailabilitySlot["status"]) {
     : "border-[#f191a5] bg-[#fff1f4] text-[#d61c3f]";
 }
 
+function normalizeSlot(slot: TutorAvailabilityApiSlot): TutorAvailabilityApiSlot {
+  return {
+    id: slot.id,
+    user_id: slot.user_id ?? "",
+    day: slot.day,
+    time: slot.time,
+    label: slot.label,
+    status: slot.status,
+    date: slot.date ?? "",
+    start_time: slot.start_time ?? "",
+    end_time: slot.end_time ?? "",
+  };
+}
+
+const fallbackAvailability = getFallbackTutorAvailability();
+
 export function TutorAvailabilityPage() {
-  const [slots, setSlots] = useState(tutorAvailabilitySlots);
-  const [maxSessionsPerDay, setMaxSessionsPerDay] = useState("3");
-  const [noticeRequired, setNoticeRequired] = useState("");
+  const [slots, setSlots] = useState<TutorAvailabilityApiSlot[]>(fallbackAvailability.slots);
+  const [maxSessionsPerDay, setMaxSessionsPerDay] = useState(String(fallbackAvailability.max_sessions_per_day));
+  const [noticeRequired, setNoticeRequired] = useState(fallbackAvailability.notice_required);
   const [slotDate, setSlotDate] = useState("");
   const [slotStart, setSlotStart] = useState("");
   const [slotEnd, setSlotEnd] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [mutatingSlots, setMutatingSlots] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadAvailability() {
+      try {
+        const data = await fetchTutorAvailability();
+        if (!active) return;
+
+        setSlots(data.slots.map(normalizeSlot));
+        setMaxSessionsPerDay(String(data.max_sessions_per_day || fallbackAvailability.max_sessions_per_day));
+        setNoticeRequired(data.notice_required ?? fallbackAvailability.notice_required);
+        setError(null);
+      } catch (loadError) {
+        if (!active) return;
+
+        setSlots(fallbackAvailability.slots);
+        setMaxSessionsPerDay(String(fallbackAvailability.max_sessions_per_day));
+        setNoticeRequired(fallbackAvailability.notice_required);
+        setError(loadError instanceof Error ? loadError.message : "Failed to load availability.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadAvailability();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const slotMap = useMemo(() => {
-    return slots.reduce<Record<string, TutorAvailabilitySlot>>((map, slot) => {
+    return slots.reduce<Record<string, TutorAvailabilityApiSlot>>((map, slot) => {
       map[`${slot.day}-${slot.time}`] = slot;
       return map;
     }, {});
   }, [slots]);
 
-  function handleAddSlot() {
+  async function handleSaveSettings() {
+    setSavingSettings(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const data = await updateTutorAvailability({
+        slots,
+        max_sessions_per_day: Number(maxSessionsPerDay) || fallbackAvailability.max_sessions_per_day,
+        notice_required: noticeRequired,
+      });
+
+      setSlots(data.slots.map(normalizeSlot));
+      setMaxSessionsPerDay(String(data.max_sessions_per_day || fallbackAvailability.max_sessions_per_day));
+      setNoticeRequired(data.notice_required ?? "");
+      setMessage("Availability settings saved.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save availability settings.");
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  async function handleAddSlot() {
     if (!slotDate || !slotStart || !slotEnd) {
+      setError("Select a date, start time, and end time before adding a slot.");
       return;
     }
 
@@ -43,6 +125,7 @@ export function TutorAvailabilityPage() {
     const day = dayKeys[dayIndex];
 
     if (!day || day === "sun") {
+      setError("Availability slots can only be added on Monday through Saturday.");
       return;
     }
 
@@ -53,25 +136,53 @@ export function TutorAvailabilityPage() {
       minute: "2-digit",
     });
 
-    setSlots((current) => [
-      ...current.filter((slot) => !(slot.day === day && slot.time === timeKey)),
-      {
-        id: `slot-${Date.now()}`,
+    setMutatingSlots(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const created = await addTutorAvailabilitySlot({
         day,
         time: timeKey,
         label: `Available\n${displayStart}-${displayEnd}`,
         status: "available",
-      },
-    ]);
+        date: slotDate,
+        start_time: slotStart,
+        end_time: slotEnd,
+      });
 
-    setSlotDate("");
-    setSlotStart("");
-    setSlotEnd("");
+      setSlots((current) => [
+        ...current.filter((slot) => !(slot.day === created.day && slot.time === created.time)),
+        normalizeSlot(created),
+      ]);
+      setMessage("Availability slot added.");
+      setSlotDate("");
+      setSlotStart("");
+      setSlotEnd("");
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : "Failed to add availability slot.");
+    } finally {
+      setMutatingSlots(false);
+    }
   }
 
-  function handleRemoveAllAvailability() {
-    setSlots((current) => current.filter((slot) => slot.status === "booked"));
+  async function handleRemoveAllAvailability() {
+    setMutatingSlots(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await clearTutorAvailabilitySlots();
+      setSlots((current) => current.filter((slot) => slot.status === "booked"));
+      setMessage("Open availability slots removed.");
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : "Failed to clear availability slots.");
+    } finally {
+      setMutatingSlots(false);
+    }
   }
+
+  const isBusy = loading || savingSettings || mutatingSlots;
 
   return (
     <TutorShell>
@@ -83,19 +194,31 @@ export function TutorAvailabilityPage() {
             <button
               type="button"
               onClick={handleRemoveAllAvailability}
-              className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+              disabled={isBusy}
+              className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
             >
               Remove All
             </button>
             <button
               type="button"
               onClick={handleAddSlot}
-              className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+              disabled={isBusy}
+              className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
             >
               + Add Slot
             </button>
           </div>
         </div>
+
+        {(error || message) && (
+          <div
+            className={`mt-4 rounded-xl border px-4 py-3 text-[14px] ${
+              error ? "border-[#f3c2c9] bg-[#fff5f7] text-[#b4233b]" : "border-[#c8e6c9] bg-[#f4fff4] text-[#226b2b]"
+            }`}
+          >
+            {error ?? message}
+          </div>
+        )}
 
         <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_270px]">
           <section className="rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -152,9 +275,7 @@ export function TutorAvailabilityPage() {
                     key={time}
                     className="grid grid-cols-[84px_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] last:border-b-0"
                   >
-                    <div className="border-r border-[#eceef2] px-2 py-4 text-[13px] text-[#6b7280]">
-                      {time}
-                    </div>
+                    <div className="border-r border-[#eceef2] px-2 py-4 text-[13px] text-[#6b7280]">{time}</div>
                     {tutorAvailabilityDays.map((day) => {
                       const slot = slotMap[`${day.key}-${time}`];
 
@@ -182,7 +303,17 @@ export function TutorAvailabilityPage() {
           </section>
 
           <aside className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            <h2 className="text-[18px] font-bold text-[#20242b]">Availability Settings</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-[18px] font-bold text-[#20242b]">Availability Settings</h2>
+              <button
+                type="button"
+                onClick={handleSaveSettings}
+                disabled={isBusy}
+                className="inline-flex h-9 items-center rounded-full bg-[#20242b] px-4 text-[13px] font-semibold text-white transition hover:bg-[#121418] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Save Settings
+              </button>
+            </div>
 
             <div className="mt-5 space-y-6">
               <div>
@@ -247,7 +378,8 @@ export function TutorAvailabilityPage() {
                   <button
                     type="button"
                     onClick={handleAddSlot}
-                    className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+                    disabled={isBusy}
+                    className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Add Slot
                   </button>
@@ -258,7 +390,8 @@ export function TutorAvailabilityPage() {
                 <button
                   type="button"
                   onClick={handleRemoveAllAvailability}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+                  disabled={isBusy}
+                  className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Remove All Availability
                 </button>
