@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FiCalendar,
@@ -13,16 +13,21 @@ import {
 } from "react-icons/fi";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
+import { browserApiRequest, resolveBrowserApiBaseUrl } from "@/lib/api/browser-api-client";
 import { TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
 import { useSessionChat } from "@/lib/realtime/session-chat";
 import type { TutorScheduleItem } from "@/lib/tutor/schedule-data";
 
 function MessageBubble({
   sender,
+  avatarUrl,
+  initials,
   message,
   timestamp,
 }: {
   sender: "tutor" | "student";
+  avatarUrl?: string;
+  initials: string;
   message: string;
   timestamp: string;
 }) {
@@ -30,27 +35,134 @@ function MessageBubble({
 
   return (
     <div className={`flex ${isTutor ? "justify-end" : "justify-start"}`}>
-      <div className={`flex max-w-[78%] flex-col ${isTutor ? "items-end" : "items-start"}`}>
+      <div className={`flex max-w-[78%] gap-3 ${isTutor ? "flex-row-reverse" : "flex-row"}`}>
         <div
-          className={`rounded-[18px] px-4 py-3 text-[14px] leading-6 ${
-            isTutor ? "bg-[#d61c3f] text-white" : "bg-white text-[#4b5563]"
+          className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
+            isTutor ? "bg-[#ffe7eb] text-[#d61c3f]" : "bg-[#eef0f3] text-[#6b7280]"
           }`}
         >
-          {message}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
+          ) : (
+            initials
+          )}
         </div>
-        <span className="mt-2 text-[12px] text-[#9ca3af]">{timestamp}</span>
+        <div className={`flex flex-col ${isTutor ? "items-end" : "items-start"}`}>
+          <div
+            className={`rounded-[18px] px-4 py-3 text-[14px] leading-6 ${
+              isTutor ? "bg-[#d61c3f] text-white" : "bg-white text-[#4b5563]"
+            }`}
+          >
+            {message}
+          </div>
+          <span className="mt-2 text-[12px] text-[#9ca3af]">{timestamp}</span>
+        </div>
       </div>
     </div>
   );
 }
 
+function initialsFromName(name: string, fallback: string) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return fallback;
+}
+
+function profileInitialsFromName(firstName: string, lastName: string, fallback: string) {
+  const first = String(firstName || "").trim();
+  const last = String(lastName || "").trim();
+  if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+  if (first) return first.slice(0, 2).toUpperCase();
+  return fallback;
+}
+
+function resolveProfileAvatarUrl(profile: {
+  avatar_url?: string;
+  avatarUrl?: string;
+  profile_image_url?: string;
+  profileImageUrl?: string;
+  image_url?: string;
+  imageUrl?: string;
+  photo_url?: string;
+  photoUrl?: string;
+}) {
+  return (
+    profile.avatarUrl ||
+    profile.avatar_url ||
+    profile.profileImageUrl ||
+    profile.profile_image_url ||
+    profile.imageUrl ||
+    profile.image_url ||
+    profile.photoUrl ||
+    profile.photo_url ||
+    ""
+  ).trim();
+}
+
 export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem }) {
+  const [tutorInitials, setTutorInitials] = useState("TU");
+  const [tutorAvatarUrl, setTutorAvatarUrl] = useState("");
+  const studentInitials = session.studentInitials || initialsFromName(session.studentName, "ST");
   const { messages, draft, setDraft, sendMessage, connected, loading, error, clearError } =
     useSessionChat({
       bookingId: session.id,
       initialMessages: session.chat,
+      senderRole: "tutor",
+      senderInitials: tutorInitials,
+      senderAvatarUrl: tutorAvatarUrl || undefined,
+      counterpartInitials: studentInitials,
+      counterpartAvatarUrl: undefined,
     });
   const [isSending, setIsSending] = useState(false);
+  const messagesPaneRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const pane = messagesPaneRef.current;
+    if (!pane) return;
+    pane.scrollTop = pane.scrollHeight;
+  }, [messages]);
+
+  useEffect(() => {
+    async function loadProfileInitials() {
+      const baseUrl = resolveBrowserApiBaseUrl();
+      if (!baseUrl) return;
+
+      try {
+        const profile = await browserApiRequest<{
+          first_name: string;
+          last_name: string;
+          initials: string;
+          avatar_url?: string;
+          avatarUrl?: string;
+          profile_image_url?: string;
+          profileImageUrl?: string;
+          image_url?: string;
+          imageUrl?: string;
+          photo_url?: string;
+          photoUrl?: string;
+        }>({
+          url: `${baseUrl}/tutor/profile`,
+          method: "GET",
+        });
+
+        setTutorInitials(profile.initials || profileInitialsFromName(profile.first_name, profile.last_name, "TU"));
+        setTutorAvatarUrl(resolveProfileAvatarUrl(profile));
+      } catch {
+        setTutorInitials("TU");
+        setTutorAvatarUrl("");
+      }
+    }
+
+    loadProfileInitials();
+  }, []);
 
   function handleSendMessage() {
     const text = draft.trim();
@@ -179,7 +291,10 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
               </div>
             </div>
 
-            <div className="min-h-[640px] bg-[#fcfcfd]">
+            <div
+              ref={messagesPaneRef}
+              className="max-h-[calc(100vh-340px)] overflow-y-auto bg-[#fcfcfd]"
+            >
               <div className="px-4 py-3 text-center">
                 <span className="inline-flex rounded-full bg-[#eef0f3] px-3 py-1 text-[12px] text-[#6b7280]">
                   Session created - {session.fullDate}
@@ -196,6 +311,8 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
                   <MessageBubble
                     key={message.id}
                     sender={message.sender}
+                    avatarUrl={message.avatarUrl}
+                    initials={message.senderInitials || (message.sender === "tutor" ? tutorInitials : studentInitials)}
                     message={message.message}
                     timestamp={message.timestamp}
                   />

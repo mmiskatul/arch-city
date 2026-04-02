@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FiBell, FiPaperclip, FiSearch } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
@@ -15,6 +15,45 @@ import {
   type SessionMessageThreadSummary,
 } from "@/lib/api/session-messages-api";
 import { studentMessageThreads as studentMessageFallbackThreads } from "@/lib/student/messages-data";
+
+function parseMessageTimestamp(value: string) {
+  const raw = String(value || "").trim();
+  if (!raw) return Number.POSITIVE_INFINITY;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return Number.POSITIVE_INFINITY;
+
+  return parsed.getTime();
+}
+
+function sortMessagesChronologically(messages: SessionMessage[]) {
+  return [...messages].sort((left, right) => parseMessageTimestamp(left.timestamp) - parseMessageTimestamp(right.timestamp));
+}
+
+function parseThreadTimestamp(value: string) {
+  const raw = String(value || "").trim();
+  if (!raw) return Number.NEGATIVE_INFINITY;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return Number.NEGATIVE_INFINITY;
+
+  return parsed.getTime();
+}
+
+function sortThreadsByRecent(
+  threads: SessionMessageThreadSummary[],
+  fallbackOrder: Record<string, number>,
+) {
+  return [...threads].sort((left, right) => {
+    const leftTime = parseThreadTimestamp(left.last_message_at || left.updated_at);
+    const rightTime = parseThreadTimestamp(right.last_message_at || right.updated_at);
+    if (leftTime !== rightTime) return rightTime - leftTime;
+
+    const leftFallback = fallbackOrder[left.booking_id] ?? Number.MAX_SAFE_INTEGER;
+    const rightFallback = fallbackOrder[right.booking_id] ?? Number.MAX_SAFE_INTEGER;
+    return leftFallback - rightFallback;
+  });
+}
 
 function MessageBubble({
   sender,
@@ -54,8 +93,16 @@ function formatSessionMeta(thread: SessionMessageThreadSummary) {
 
 export function StudentMessagesPage() {
   const { tokenPresent } = useDashboardAuth();
+  const fallbackOrder = useMemo(
+    () =>
+      Object.fromEntries(
+        studentMessageFallbackThreads.map((thread, index) => [thread.sessionId, index]),
+      ) as Record<string, number>,
+    [],
+  );
   const [threads, setThreads] = useState<SessionMessageThreadSummary[]>(
-    studentMessageFallbackThreads.map((thread) => ({
+    sortThreadsByRecent(
+      studentMessageFallbackThreads.map((thread) => ({
       thread_id: thread.id,
       booking_id: thread.sessionId,
       student_email: "",
@@ -76,13 +123,23 @@ export function StudentMessagesPage() {
       updated_at: "",
       unread_count_student: thread.unreadCount,
       unread_count_tutor: 0,
-    })),
+      })),
+      fallbackOrder,
+    ),
   );
   const [activeThreadId, setActiveThreadId] = useState(studentMessageFallbackThreads[0]?.sessionId ?? "");
   const [activeMessages, setActiveMessages] = useState<SessionMessage[]>(
-    studentMessageFallbackThreads[0]?.messages ?? [],
+    sortMessagesChronologically(studentMessageFallbackThreads[0]?.messages ?? []),
   );
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const messagesPaneRef = useRef<HTMLDivElement | null>(null);
+  const sortedThreads = useMemo(() => sortThreadsByRecent(threads, fallbackOrder), [fallbackOrder, threads]);
+
+  useEffect(() => {
+    const pane = messagesPaneRef.current;
+    if (!pane) return;
+    pane.scrollTop = pane.scrollHeight;
+  }, [activeMessages, activeThreadId]);
 
   useEffect(() => {
     if (!tokenPresent) return;
@@ -94,12 +151,13 @@ export function StudentMessagesPage() {
         const data = await getStudentMessageThreads();
         if (cancelled) return;
 
-        const nextThreads = data.items;
+        const nextThreads = sortThreadsByRecent(data.items, fallbackOrder);
         setThreads(nextThreads);
         setActiveThreadId((current) => current || nextThreads[0]?.booking_id || "");
       } catch {
         if (!cancelled) {
-          setThreads(studentMessageFallbackThreads.map((thread) => ({
+          setThreads(sortThreadsByRecent(
+            studentMessageFallbackThreads.map((thread) => ({
             thread_id: thread.id,
             booking_id: thread.sessionId,
             student_email: "",
@@ -120,7 +178,9 @@ export function StudentMessagesPage() {
             updated_at: "",
             unread_count_student: thread.unreadCount,
             unread_count_tutor: 0,
-          })));
+            })),
+            fallbackOrder,
+          ));
         }
       }
     }
@@ -143,7 +203,7 @@ export function StudentMessagesPage() {
         const detail = await getStudentMessageThread(activeThreadId);
         if (cancelled) return;
 
-        setActiveMessages(detail.messages);
+        setActiveMessages(sortMessagesChronologically(detail.messages));
         await markStudentMessageThreadRead(activeThreadId);
         window.dispatchEvent(new Event("arch-messages-updated"));
         setThreads((current) =>
@@ -170,8 +230,8 @@ export function StudentMessagesPage() {
   }, [tokenPresent, activeThreadId]);
 
   const activeThread = useMemo(
-    () => threads.find((thread) => thread.booking_id === activeThreadId) ?? threads[0],
-    [activeThreadId, threads],
+    () => sortedThreads.find((thread) => thread.booking_id === activeThreadId) ?? sortedThreads[0],
+    [activeThreadId, sortedThreads],
   );
 
   const unreadCount = useMemo(
@@ -288,7 +348,10 @@ export function StudentMessagesPage() {
                 </span>
               </div>
 
-              <div className="min-h-[520px] space-y-8 bg-[#fcfcfd] px-4 py-6">
+              <div
+                ref={messagesPaneRef}
+                className="max-h-[calc(100vh-340px)] space-y-8 overflow-y-auto bg-[#fcfcfd] px-4 py-6"
+              >
                 {loadingMessages ? (
                   <p className="text-[13px] text-[#6b7280]">Loading messages...</p>
                 ) : null}
