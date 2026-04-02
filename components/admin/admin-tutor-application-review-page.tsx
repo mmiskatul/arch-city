@@ -6,6 +6,7 @@ import { useState } from "react";
 import { FiCheckCircle, FiLoader, FiXCircle } from "react-icons/fi";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { ADMIN_TUTOR_APPLICATIONS_ROUTE } from "@/lib/routes";
 import type { ApplicationStatus, TutorApplication } from "@/lib/admin/tutor-applications-data";
 
@@ -47,18 +48,11 @@ export function AdminTutorApplicationReviewPage({
     const nextStatus = actionState.action === "confirm" ? "approved" : "rejected";
 
     try {
-      const response = await fetch(`/api/admin/tutor-applications/${application.id}/status`, {
+      await browserApiRequest({
+        url: `/api/admin/tutor-applications/${application.id}/status`,
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: nextStatus }),
+        data: { status: nextStatus },
       });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { detail?: string };
-        throw new Error(data.detail || "Failed to update application status.");
-      }
 
       setCurrentStatus(actionState.action === "confirm" ? "Approved" : "Rejected");
       router.push(ADMIN_TUTOR_APPLICATIONS_ROUTE);

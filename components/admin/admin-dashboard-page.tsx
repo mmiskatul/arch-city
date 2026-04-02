@@ -6,6 +6,7 @@ import type { IconType } from "react-icons";
 import { FiCalendar, FiDollarSign, FiUser, FiUsers } from "react-icons/fi";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 
 export type DataMode = "static" | "dynamic" | "hybrid";
 
@@ -263,12 +264,10 @@ export function AdminDashboardPage({
       setSectionsError(undefined);
 
       try {
-        const response = await fetch("/api/admin/dashboard/overview", { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error("Failed to load dashboard sections.");
-        }
-
-        const payload = (await response.json()) as AdminDashboardOverviewData;
+        const payload = await browserApiRequest<AdminDashboardOverviewData>({
+          url: "/api/admin/dashboard/overview",
+          method: "GET",
+        });
         if (cancelled) return;
 
         setData((current) => ({

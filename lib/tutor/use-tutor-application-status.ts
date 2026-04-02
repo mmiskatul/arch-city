@@ -49,7 +49,7 @@ export function useTutorApplicationStatus() {
   }, []);
 
   const isApproved = status === "approved";
-  const isNotApproved = !isApproved;
+  const isNotApproved = status === "pending";
 
   return {
     status,

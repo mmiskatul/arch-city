@@ -28,8 +28,9 @@ import {
   TUTOR_SCHEDULE_ROUTE,
   TUTOR_SETTINGS_ROUTE,
 } from "@/lib/routes";
-import { requestTutorProfileWithFallback } from "@/lib/api/tutor-profile-api";
-import { tutorMessagesUnreadCount } from "@/lib/tutor/messages-data";
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
+import { getTutorMessageCount } from "@/lib/api/session-messages-api";
 
 type NavItem = {
   label: string;
@@ -47,12 +48,7 @@ const menuItems: NavItem[] = [
   { label: "Dashboard", href: TUTOR_DASHBOARD_ROUTE, icon: FiGrid },
   { label: "My Schedule", href: TUTOR_SCHEDULE_ROUTE, icon: FiCalendar },
   { label: "Availability", href: TUTOR_AVAILABILITY_ROUTE, icon: FiClock },
-  {
-    label: "Messages",
-    href: TUTOR_MESSAGES_ROUTE,
-    icon: FiMessageSquare,
-    badge: tutorMessagesUnreadCount > 0 ? String(tutorMessagesUnreadCount) : undefined,
-  },
+  { label: "Messages", href: TUTOR_MESSAGES_ROUTE, icon: FiMessageSquare },
   { label: "Earnings", href: TUTOR_EARNINGS_ROUTE, icon: FiDollarSign },
   { label: "Profile", href: TUTOR_PROFILE_ROUTE, icon: FiUser },
   { label: "Settings", href: TUTOR_SETTINGS_ROUTE, icon: FiSettings },
@@ -83,14 +79,6 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-function readCookie(name: string) {
-  if (typeof document === "undefined") return "";
-  const prefix = `${name}=`;
-  const parts = document.cookie.split(";").map((part) => part.trim());
-  const match = parts.find((part) => part.startsWith(prefix));
-  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
-}
-
 function clearAuthCookies() {
   document.cookie = "arch_access_token=; Path=/; Max-Age=0; SameSite=Lax";
   document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
@@ -111,9 +99,11 @@ export function TutorShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { tokenPresent } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [messagesUnreadCount, setMessagesUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
     initials: "TU",
     name: "Tutor",
@@ -123,23 +113,32 @@ export function TutorShell({
   const topUserMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    async function loadProfile() {
-      const token = readCookie("arch_access_token");
-      if (!token) return;
+    async function loadMessagesCount() {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+      if (!baseUrl || !tokenPresent) return;
 
       try {
-        const response = await requestTutorProfileWithFallback({
-          method: "GET",
-          token,
-        });
-        if (!response || !response.ok) return;
+        const data = await getTutorMessageCount();
+        setMessagesUnreadCount(data.unread_count || 0);
+      } catch {
+        setMessagesUnreadCount(0);
+      }
+    }
 
-        const data = (await response.json()) as {
+    async function loadProfile() {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+      if (!baseUrl || !tokenPresent) return;
+
+      try {
+        const data = await browserApiRequest<{
           first_name: string;
           last_name: string;
           email: string;
           initials: string;
-        };
+        }>({
+          url: `${baseUrl}/tutor/profile`,
+          method: "GET",
+        });
 
         setUserProfile({
           initials: data.initials || "TU",
@@ -170,12 +169,15 @@ export function TutorShell({
     }
 
     loadProfile();
+    loadMessagesCount();
     window.addEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+    window.addEventListener("arch-messages-updated", loadMessagesCount);
 
     return () => {
       window.removeEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+      window.removeEventListener("arch-messages-updated", loadMessagesCount);
     };
-  }, []);
+  }, [tokenPresent]);
   useEffect(() => {
     function onMouseDown(event: MouseEvent) {
       const target = event.target as Node;
@@ -201,15 +203,11 @@ export function TutorShell({
     setIsLoggingOut(true);
 
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
-    const token = readCookie("arch_access_token");
-
-    if (baseUrl && token) {
+    if (baseUrl) {
       try {
-        await fetch(`${baseUrl}/auth/logout`, {
+        await browserApiRequest({
+          url: `${baseUrl}/auth/logout`,
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         });
       } catch {
         // Ignore network errors on logout and clear local session anyway.
@@ -217,6 +215,7 @@ export function TutorShell({
     }
 
     clearAuthCookies();
+    window.dispatchEvent(new Event("arch-session-updated"));
     setUserMenuOpen(false);
     setTopUserMenuOpen(false);
     router.replace("/login");
@@ -234,7 +233,7 @@ export function TutorShell({
       TUTOR_SETTINGS_ROUTE,
     ].includes(pathname);
   const resolvedMessagesUnreadCount =
-    messagesUnreadCountOverride ?? tutorMessagesUnreadCount;
+    messagesUnreadCountOverride ?? messagesUnreadCount;
   const resolvedMenuItems: NavItem[] = menuItems.map((item) =>
     item.href === TUTOR_MESSAGES_ROUTE
       ? {

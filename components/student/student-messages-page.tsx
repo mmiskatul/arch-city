@@ -1,12 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiBell, FiPaperclip, FiSearch } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
-import { studentMessageThreads } from "@/lib/student/messages-data";
+import {
+  getStudentMessageThread,
+  getStudentMessageThreads,
+  markStudentMessageThreadRead,
+  type SessionMessage,
+  type SessionMessageThreadSummary,
+} from "@/lib/api/session-messages-api";
+import { studentMessageThreads as studentMessageFallbackThreads } from "@/lib/student/messages-data";
 
 function MessageBubble({
   sender,
@@ -21,26 +29,159 @@ function MessageBubble({
 
   return (
     <div className={`flex ${isStudent ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[72%] ${isStudent ? "items-end" : "items-start"} flex flex-col`}>
+      <div className={`max-w-[78%] ${isStudent ? "items-end" : "items-start"} flex flex-col`}>
         <div
-          className={`rounded-[18px] px-4 py-3 text-[14px] leading-6 ${
-            isStudent ? "bg-[#d61c3f] text-white" : "bg-white text-[#4b5563]"
+          className={`rounded-[20px] px-5 py-3 text-[14px] leading-7 ${
+            isStudent
+              ? "bg-[#d61c3f] text-white shadow-[0_8px_24px_rgba(214,28,63,0.18)]"
+              : "max-w-[620px] bg-transparent px-0 py-0 text-[#20242b]"
           }`}
         >
           {message}
         </div>
-        <span className="mt-2 text-[12px] text-[#9ca3af]">{timestamp}</span>
+        <span className={`mt-2 text-[12px] text-[#6b7280] ${isStudent ? "text-right" : "text-left"}`}>
+          {timestamp}
+        </span>
       </div>
     </div>
   );
 }
 
+function formatSessionMeta(thread: SessionMessageThreadSummary) {
+  const parts = [thread.subject, thread.session_date, thread.session_time].filter(Boolean);
+  return parts.join(" · ");
+}
+
 export function StudentMessagesPage() {
-  const [activeThreadId, setActiveThreadId] = useState(studentMessageThreads[0]?.id ?? "");
-  const activeThread = useMemo(
-    () => studentMessageThreads.find((thread) => thread.id === activeThreadId) ?? studentMessageThreads[0],
-    [activeThreadId],
+  const { tokenPresent } = useDashboardAuth();
+  const [threads, setThreads] = useState<SessionMessageThreadSummary[]>(
+    studentMessageFallbackThreads.map((thread) => ({
+      thread_id: thread.id,
+      booking_id: thread.sessionId,
+      student_email: "",
+      student_name: "",
+      student_initials: "",
+      tutor_email: "",
+      tutor_name: thread.tutorName,
+      tutor_initials: thread.tutorInitials,
+      subject: thread.subject,
+      session_date: thread.sessionMeta.split(" · ")[1] ?? "",
+      session_time: thread.sessionMeta.split(" · ")[2] ?? "",
+      session_type: "",
+      duration_minutes: 0,
+      status: thread.statusLabel || "Upcoming",
+      last_message: thread.preview,
+      last_sender_role: "",
+      last_message_at: "",
+      updated_at: "",
+      unread_count_student: thread.unreadCount,
+      unread_count_tutor: 0,
+    })),
   );
+  const [activeThreadId, setActiveThreadId] = useState(studentMessageFallbackThreads[0]?.sessionId ?? "");
+  const [activeMessages, setActiveMessages] = useState<SessionMessage[]>(
+    studentMessageFallbackThreads[0]?.messages ?? [],
+  );
+  const [loadingMessages, setLoadingMessages] = useState(false);
+
+  useEffect(() => {
+    if (!tokenPresent) return;
+
+    let cancelled = false;
+
+    async function loadThreads() {
+      try {
+        const data = await getStudentMessageThreads();
+        if (cancelled) return;
+
+        const nextThreads = data.items;
+        setThreads(nextThreads);
+        setActiveThreadId((current) => current || nextThreads[0]?.booking_id || "");
+      } catch {
+        if (!cancelled) {
+          setThreads(studentMessageFallbackThreads.map((thread) => ({
+            thread_id: thread.id,
+            booking_id: thread.sessionId,
+            student_email: "",
+            student_name: "",
+            student_initials: "",
+            tutor_email: "",
+            tutor_name: thread.tutorName,
+            tutor_initials: thread.tutorInitials,
+            subject: thread.subject,
+            session_date: thread.sessionMeta.split(" · ")[1] ?? "",
+            session_time: thread.sessionMeta.split(" · ")[2] ?? "",
+            session_type: "",
+            duration_minutes: 0,
+            status: thread.statusLabel || "Upcoming",
+            last_message: thread.preview,
+            last_sender_role: "",
+            last_message_at: "",
+            updated_at: "",
+            unread_count_student: thread.unreadCount,
+            unread_count_tutor: 0,
+          })));
+        }
+      }
+    }
+
+    loadThreads();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tokenPresent]);
+
+  useEffect(() => {
+    if (!tokenPresent || !activeThreadId) return;
+
+    let cancelled = false;
+
+    async function loadThread() {
+      setLoadingMessages(true);
+      try {
+        const detail = await getStudentMessageThread(activeThreadId);
+        if (cancelled) return;
+
+        setActiveMessages(detail.messages);
+        await markStudentMessageThreadRead(activeThreadId);
+        window.dispatchEvent(new Event("arch-messages-updated"));
+        setThreads((current) =>
+          current.map((thread) =>
+            thread.booking_id === activeThreadId ? { ...thread, unread_count_student: 0 } : thread,
+          ),
+        );
+      } catch {
+        if (!cancelled) {
+          setActiveMessages([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingMessages(false);
+        }
+      }
+    }
+
+    loadThread();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tokenPresent, activeThreadId]);
+
+  const activeThread = useMemo(
+    () => threads.find((thread) => thread.booking_id === activeThreadId) ?? threads[0],
+    [activeThreadId, threads],
+  );
+
+  const unreadCount = useMemo(
+    () => threads.reduce((total, thread) => total + thread.unread_count_student, 0),
+    [threads],
+  );
+
+  const activeThreadLabel = activeThread
+    ? formatSessionMeta(activeThread)
+    : "No active thread";
 
   return (
     <StudentShell>
@@ -75,39 +216,43 @@ export function StudentMessagesPage() {
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {studentMessageThreads.map((thread) => {
-                const active = thread.id === activeThread?.id;
+              {threads.map((thread) => {
+                const active = thread.booking_id === activeThread?.booking_id;
 
                 return (
                   <button
-                    key={thread.id}
+                    key={thread.booking_id}
                     type="button"
-                    onClick={() => setActiveThreadId(thread.id)}
+                    onClick={() => setActiveThreadId(thread.booking_id)}
                     className={`flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left ${
                       active ? "border-[#d61c3f] bg-[#fff1f4]" : "border-transparent bg-white"
                     }`}
                   >
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d61c3f]">
-                      {thread.tutorInitials}
+                      {thread.tutor_initials || "TU"}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-[14px] font-semibold text-[#20242b]">{thread.tutorName}</p>
+                          <p className="truncate text-[14px] font-semibold text-[#20242b]">
+                            {thread.tutor_name || "Tutor"}
+                          </p>
                           <p className="truncate text-[13px] text-[#6b7280]">
                             {thread.subject}
-                            {thread.statusLabel ? ` (${thread.statusLabel})` : ""}
+                            {thread.status ? ` (${thread.status})` : ""}
                           </p>
                         </div>
                         <span className="shrink-0 text-[12px] font-medium text-[#d94a62]">
-                          {thread.timestampLabel}
+                          {thread.session_time || thread.session_date}
                         </span>
                       </div>
-                      <p className="mt-1 truncate text-[13px] text-[#4b5563]">{thread.preview}</p>
+                      <p className="mt-1 truncate text-[13px] text-[#4b5563]">
+                        {thread.last_message || "Session booked"}
+                      </p>
                     </div>
-                    {thread.unreadCount > 0 ? (
+                    {thread.unread_count_student > 0 ? (
                       <span className="mt-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d61c3f] px-1.5 text-[10px] font-semibold text-white">
-                        {thread.unreadCount}
+                        {thread.unread_count_student}
                       </span>
                     ) : null}
                   </button>
@@ -121,16 +266,16 @@ export function StudentMessagesPage() {
               <div className="flex items-center justify-between gap-4 border-b border-[#eceef2] px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d61c3f]">
-                    {activeThread.tutorInitials}
+                    {activeThread.tutor_initials || "TU"}
                   </div>
                   <div>
-                    <p className="font-semibold text-[#20242b]">{activeThread.tutorName}</p>
-                    <p className="text-[13px] text-[#6b7280]">{activeThread.sessionMeta}</p>
+                    <p className="font-semibold text-[#20242b]">{activeThread.tutor_name || "Tutor"}</p>
+                    <p className="text-[13px] text-[#6b7280]">{activeThreadLabel}</p>
                   </div>
                 </div>
 
                 <Link
-                  href={`${STUDENT_SCHEDULE_ROUTE}/${activeThread.sessionId}`}
+                  href={`${STUDENT_SCHEDULE_ROUTE}/${activeThread.booking_id}`}
                   className="inline-flex rounded-full border border-[#d61c3f] px-4 py-2 text-[13px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
                 >
                   View Session
@@ -139,12 +284,15 @@ export function StudentMessagesPage() {
 
               <div className="bg-[#fcfcfd] px-4 py-3 text-center">
                 <span className="inline-flex rounded-full bg-[#eef1f4] px-3 py-1 text-[12px] text-[#6b7280]">
-                  Session created — Monday, March 30, 2026
+                  Session created - Monday, March 30, 2026
                 </span>
               </div>
 
-              <div className="min-h-[520px] space-y-5 bg-[#fcfcfd] px-4 py-5">
-                {activeThread.messages.map((message) => (
+              <div className="min-h-[520px] space-y-8 bg-[#fcfcfd] px-4 py-6">
+                {loadingMessages ? (
+                  <p className="text-[13px] text-[#6b7280]">Loading messages...</p>
+                ) : null}
+                {activeMessages.map((message) => (
                   <MessageBubble
                     key={message.id}
                     sender={message.sender}
@@ -177,6 +325,8 @@ export function StudentMessagesPage() {
             </section>
           ) : null}
         </div>
+
+        <div className="sr-only">Unread message count: {unreadCount}</div>
       </div>
     </StudentShell>
   );

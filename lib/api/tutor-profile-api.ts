@@ -1,3 +1,5 @@
+import { browserApiRequestRaw } from "@/lib/api/browser-api-client";
+
 type TutorProfileMethod = "GET" | "PUT";
 type TutorBioSchoolDistrictMethod = "GET" | "PUT";
 type TutorEducationMethod = "GET" | "POST" | "PUT" | "DELETE";
@@ -6,6 +8,13 @@ type TutorSubjectsGradesMethod = "GET" | "PUT";
 type TutorRatesMethod = "GET" | "PUT";
 type TutorPreferencesMethod = "GET" | "PUT";
 type TutorLocationMethod = "GET" | "POST" | "PUT" | "DELETE" | "PREFER";
+
+type ResponseLike = {
+  ok: boolean;
+  status: number;
+  json: () => Promise<unknown>;
+  text: () => Promise<string>;
+};
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -194,23 +203,25 @@ async function requestWithFallback({
 }: {
   urls: string[];
   method: string;
-  token: string;
+  token?: string;
   body?: string;
   extraInit?: RequestInit;
 }) {
   if (urls.length === 0) return null;
 
-  let lastResponse: Response | null = null;
+  let lastResponse: ResponseLike | null = null;
   for (const url of urls) {
-    const response = await fetch(url, {
+    const parsedBody = body ? JSON.parse(body) : undefined;
+    const response = await browserApiRequestRaw({
+      url,
       method,
+      data: parsedBody,
       headers: {
-        ...((method === "POST" || method === "PUT") ? { "Content-Type": "application/json" } : {}),
-        Authorization: `Bearer ${token}`,
-        ...(extraInit?.headers ?? {}),
+        ...(method === "POST" || method === "PUT" ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(extraInit?.headers as Record<string, string> | undefined),
       },
-      ...(body ? { body } : {}),
-      ...extraInit,
+      includeAuth: !token,
     });
 
     if (response.ok) return response;
@@ -221,35 +232,35 @@ async function requestWithFallback({
   return lastResponse;
 }
 
-export async function requestTutorProfileWithFallback({ method, token, body, extraInit }: { method: TutorProfileMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+export async function requestTutorProfileWithFallback({ method, token, body, extraInit }: { method: TutorProfileMethod; token?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({ urls: buildTutorProfileUrls(method), method, token, body, extraInit });
 }
 
-export async function requestTutorBioSchoolDistrictWithFallback({ method, token, body, extraInit }: { method: TutorBioSchoolDistrictMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+export async function requestTutorBioSchoolDistrictWithFallback({ method, token, body, extraInit }: { method: TutorBioSchoolDistrictMethod; token?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({ urls: buildTutorBioSchoolDistrictUrls(method), method, token, body, extraInit });
 }
 
-export async function requestTutorEducationWithFallback({ method, token, educationId, body, extraInit }: { method: TutorEducationMethod; token: string; educationId?: string; body?: string; extraInit?: RequestInit; }) {
+export async function requestTutorEducationWithFallback({ method, token, educationId, body, extraInit }: { method: TutorEducationMethod; token?: string; educationId?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({ urls: buildTutorEducationUrls(method, educationId), method, token, body, extraInit });
 }
 
-export async function requestTutorWorkExperienceWithFallback({ method, token, workExperienceId, body, extraInit }: { method: TutorWorkExperienceMethod; token: string; workExperienceId?: string; body?: string; extraInit?: RequestInit; }) {
+export async function requestTutorWorkExperienceWithFallback({ method, token, workExperienceId, body, extraInit }: { method: TutorWorkExperienceMethod; token?: string; workExperienceId?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({ urls: buildTutorWorkExperienceUrls(method, workExperienceId), method, token, body, extraInit });
 }
 
-export async function requestTutorSubjectsGradesWithFallback({ method, token, body, extraInit }: { method: TutorSubjectsGradesMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+export async function requestTutorSubjectsGradesWithFallback({ method, token, body, extraInit }: { method: TutorSubjectsGradesMethod; token?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({ urls: buildTutorSubjectsGradesUrls(method), method, token, body, extraInit });
 }
 
-export async function requestTutorRatesWithFallback({ method, token, body, extraInit }: { method: TutorRatesMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+export async function requestTutorRatesWithFallback({ method, token, body, extraInit }: { method: TutorRatesMethod; token?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({ urls: buildTutorRatesUrls(method), method, token, body, extraInit });
 }
 
-export async function requestTutorPreferencesWithFallback({ method, token, body, extraInit }: { method: TutorPreferencesMethod; token: string; body?: string; extraInit?: RequestInit; }) {
+export async function requestTutorPreferencesWithFallback({ method, token, body, extraInit }: { method: TutorPreferencesMethod; token?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({ urls: buildTutorPreferencesUrls(method), method, token, body, extraInit });
 }
 
-export async function requestTutorLocationWithFallback({ method, token, locationId, body, extraInit }: { method: TutorLocationMethod; token: string; locationId?: string; body?: string; extraInit?: RequestInit; }) {
+export async function requestTutorLocationWithFallback({ method, token, locationId, body, extraInit }: { method: TutorLocationMethod; token?: string; locationId?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({
     urls: buildTutorLocationUrls(method, locationId),
     method: method === "PREFER" ? "PUT" : method,

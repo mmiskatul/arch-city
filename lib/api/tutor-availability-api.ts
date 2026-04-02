@@ -1,3 +1,4 @@
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { tutorAvailabilitySlots, type TutorAvailabilityDay, type TutorAvailabilitySlot } from "@/lib/tutor/availability-data";
 
 export type TutorAvailabilityApiSlot = TutorAvailabilitySlot & {
@@ -29,45 +30,18 @@ export type TutorAvailabilitySlotRequest = {
   end_time: string;
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, method: "GET" | "PUT" | "POST" | "DELETE", data?: unknown): Promise<T> {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
-  const token = readCookie("arch_access_token");
-  if (!token) {
-    throw new Error("Unauthorized");
-  }
-
-  const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-
-  const response = await fetch(`${normalizedBaseUrl}${path}`, {
-    cache: "no-store",
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
+  return browserApiRequest<T>({
+    url: `${baseUrl}${path}`,
+    method,
+    data,
   });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const detail = typeof data?.detail === "string" ? data.detail : `Request failed (${response.status}).`;
-    throw new Error(detail);
-  }
-
-  return data as T;
-}
-
-function readCookie(name: string) {
-  if (typeof document === "undefined") return "";
-  const prefix = `${name}=`;
-  const parts = document.cookie.split(";").map((part) => part.trim());
-  const match = parts.find((part) => part.startsWith(prefix));
-  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
 }
 
 export function getFallbackTutorAvailability(): TutorAvailabilityResponse {
@@ -79,38 +53,25 @@ export function getFallbackTutorAvailability(): TutorAvailabilityResponse {
 }
 
 export function fetchTutorAvailability() {
-  return request<TutorAvailabilityResponse>("/tutor/availability");
+  return request<TutorAvailabilityResponse>("/tutor/availability", "GET");
 }
 
 export function updateTutorAvailability(payload: TutorAvailabilityUpdateRequest) {
-  return request<TutorAvailabilityResponse>("/tutor/availability", {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return request<TutorAvailabilityResponse>("/tutor/availability", "PUT", payload);
 }
 
 export function addTutorAvailabilitySlot(payload: TutorAvailabilitySlotRequest) {
-  return request<TutorAvailabilityApiSlot>("/tutor/availability/slots", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return request<TutorAvailabilityApiSlot>("/tutor/availability/slots", "POST", payload);
 }
 
 export function updateTutorAvailabilitySlot(slotId: string, payload: TutorAvailabilitySlotRequest) {
-  return request<TutorAvailabilityApiSlot>(`/tutor/availability/slots/${slotId}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return request<TutorAvailabilityApiSlot>(`/tutor/availability/slots/${slotId}`, "PUT", payload);
 }
 
 export function deleteTutorAvailabilitySlot(slotId: string) {
-  return request<void>(`/tutor/availability/slots/${slotId}`, {
-    method: "DELETE",
-  });
+  return request<void>(`/tutor/availability/slots/${slotId}`, "DELETE");
 }
 
 export function clearTutorAvailabilitySlots() {
-  return request<void>("/tutor/availability/slots", {
-    method: "DELETE",
-  });
+  return request<void>("/tutor/availability/slots", "DELETE");
 }

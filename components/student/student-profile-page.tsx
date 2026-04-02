@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FiBell, FiCheckCircle, FiHelpCircle, FiLogOut } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { studentScheduleItems } from "@/lib/student/schedule-data";
 
 export type StudentProfileData = {
@@ -61,24 +62,6 @@ const faqItems = [
   },
 ];
 
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") {
-    return null;
-  }
-
-  const encodedName = `${encodeURIComponent(name)}=`;
-  const parts = document.cookie.split(";");
-
-  for (const part of parts) {
-    const cookie = part.trim();
-    if (cookie.startsWith(encodedName)) {
-      return decodeURIComponent(cookie.slice(encodedName.length));
-    }
-  }
-
-  return null;
-}
-
 function deriveInitials(firstName: string, lastName: string): string {
   const first = firstName.trim();
   const last = lastName.trim();
@@ -101,7 +84,6 @@ function resolveApiBaseUrl() {
 }
 
 async function updateStudentProfile(
-  token: string,
   payload: StudentProfileUpdatePayload,
 ): Promise<StudentProfileData> {
   const baseUrl = resolveApiBaseUrl();
@@ -109,33 +91,7 @@ async function updateStudentProfile(
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
-  const response = await fetch(`${baseUrl}/student/profile`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("Authentication required. Please login again.");
-  }
-
-  if (!response.ok) {
-    let detail: string | undefined;
-
-    try {
-      const data = (await response.json()) as { detail?: string };
-      detail = data.detail;
-    } catch {
-      // Ignore non-JSON error responses.
-    }
-
-    throw new Error(detail ?? `Failed to update profile (${response.status}).`);
-  }
-
-  const data = (await response.json()) as {
+  const data = await browserApiRequest<{
     first_name: string;
     last_name: string;
     email: string;
@@ -145,7 +101,11 @@ async function updateStudentProfile(
     plan_price: string;
     renews_on: string;
     active_plan_label: string;
-  };
+  }>({
+    url: `${baseUrl}/student/profile`,
+    method: "PUT",
+    data: payload,
+  });
 
   return {
     firstName: data.first_name,
@@ -427,19 +387,12 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
       return;
     }
 
-    const token = readCookie("arch_access_token");
-    if (!token) {
-      setSaveError("Authentication required. Please login again.");
-      setSaveSuccess(null);
-      return;
-    }
-
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
 
     try {
-      const updated = await updateStudentProfile(token, {
+      const updated = await updateStudentProfile({
         first_name: firstName,
         last_name: lastName,
         grade_level: gradeLevel,

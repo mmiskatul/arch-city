@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { FiCheck, FiEdit2, FiMail, FiPhone } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import {
   parentBillingHistory,
   parentProfileHistoryItems,
@@ -43,21 +44,6 @@ type ParentProfileForm = {
 };
 
 const profileTabs: ParentProfileTab[] = ["Personal Info", "Plan & Billing", "History"];
-
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const encodedName = `${encodeURIComponent(name)}=`;
-  const parts = document.cookie.split(";");
-
-  for (const part of parts) {
-    const cookie = part.trim();
-    if (cookie.startsWith(encodedName)) {
-      return decodeURIComponent(cookie.slice(encodedName.length));
-    }
-  }
-
-  return null;
-}
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -104,37 +90,53 @@ function mapParentProfile(data: {
   };
 }
 
-async function getParentProfile(token: string): Promise<ParentProfileData> {
+async function getParentProfile(): Promise<ParentProfileData> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
-  const response = await fetch(`${baseUrl}/parent/profile`, {
+  const data = await browserApiRequest<{
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+    street_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    initials: string;
+    title: string;
+    status: string;
+  }>({
+    url: `${baseUrl}/parent/profile`,
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load profile (${response.status}).`);
-  }
-
-  return mapParentProfile((await response.json()) as never);
+  return mapParentProfile(data as never);
 }
 
-async function saveParentProfile(token: string, values: ParentProfileForm): Promise<ParentProfileData> {
+async function saveParentProfile(values: ParentProfileForm): Promise<ParentProfileData> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
-  const response = await fetch(`${baseUrl}/parent/profile`, {
+  const data = await browserApiRequest<{
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+    street_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    initials: string;
+    title: string;
+    status: string;
+  }>({
+    url: `${baseUrl}/parent/profile`,
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
+    data: {
       first_name: values.firstName.trim(),
       last_name: values.lastName.trim(),
       phone_number: values.phone.trim(),
@@ -142,22 +144,9 @@ async function saveParentProfile(token: string, values: ParentProfileForm): Prom
       city: values.city.trim(),
       state: values.state.trim(),
       zip_code: values.zipCode.trim(),
-    }),
+    },
   });
-
-  if (!response.ok) {
-    let detail: string | undefined;
-    try {
-      const data = (await response.json()) as { detail?: string };
-      detail = data.detail;
-    } catch {
-      // Ignore non-JSON errors.
-    }
-
-    throw new Error(detail ?? `Failed to save profile (${response.status}).`);
-  }
-
-  return mapParentProfile((await response.json()) as never);
+  return mapParentProfile(data as never);
 }
 
 function InputField({
@@ -461,10 +450,7 @@ export function ParentProfilePage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = readCookie("arch_access_token");
-    if (!token) return;
-
-    getParentProfile(token)
+    getParentProfile()
       .then((profileData) => {
         setCurrentProfile(profileData);
         setFormValues({
@@ -505,18 +491,12 @@ export function ParentProfilePage() {
   };
 
   const handleSave = async () => {
-    const token = readCookie("arch_access_token");
-    if (!token) {
-      setSaveError("Authentication required. Please login again.");
-      return;
-    }
-
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
 
     try {
-      const updated = await saveParentProfile(token, formValues);
+      const updated = await saveParentProfile(formValues);
       setCurrentProfile(updated);
       setFormValues({
         firstName: updated.firstName,

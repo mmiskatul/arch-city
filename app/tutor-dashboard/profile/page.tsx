@@ -1,11 +1,8 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-
 import {
   TutorProfilePage,
   type TutorProfileData,
 } from "@/components/tutor/tutor-profile-page";
-import { requestTutorProfileWithFallback } from "@/lib/api/tutor-profile-api";
+import { apiGet } from "@/lib/api/api-client";
 
 type TutorProfileApiResponse = {
   first_name: string;
@@ -65,37 +62,7 @@ function mapTutorProfile(data: TutorProfileApiResponse): TutorProfileData {
 }
 
 async function fetchTutorProfile(): Promise<TutorProfileData> {
-  const token = (await cookies()).get("arch_access_token")?.value;
-  if (!token) {
-    redirect("/login");
-  }
-
-  const response = await requestTutorProfileWithFallback({
-    method: "GET",
-    token,
-    extraInit: { cache: "no-store" },
-  });
-
-  if (!response) {
-    throw new Error("Tutor profile API URL is not configured.");
-  }
-
-  if (response.status === 401 || response.status === 403) {
-    redirect("/login");
-  }
-
-  if (!response.ok) {
-    let detail = "";
-    try {
-      const data = (await response.json()) as { detail?: string };
-      detail = data.detail ? `: ${data.detail}` : "";
-    } catch {
-      // Ignore non-JSON errors.
-    }
-    throw new Error(`Tutor profile API failed (${response.status})${detail}.`);
-  }
-
-  const data = (await response.json()) as TutorProfileApiResponse;
+  const data = await apiGet<TutorProfileApiResponse>("/tutor/profile");
   return mapTutorProfile(data);
 }
 

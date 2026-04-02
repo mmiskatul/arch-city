@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { browserApiRequest, browserApiRequestWithFallback } from "@/lib/api/browser-api-client";
+
 type ChangePasswordResponse = {
   message: string;
 };
@@ -14,35 +16,10 @@ type ChangePasswordPanelProps = {
   scope?: SettingsScope;
 };
 
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-
-  const encodedName = `${encodeURIComponent(name)}=`;
-  const parts = document.cookie.split(";");
-
-  for (const part of parts) {
-    const cookie = part.trim();
-    if (cookie.startsWith(encodedName)) {
-      return decodeURIComponent(cookie.slice(encodedName.length));
-    }
-  }
-
-  return null;
-}
-
 function clearAuthCookies() {
   if (typeof document === "undefined") return;
   document.cookie = "arch_access_token=; Path=/; Max-Age=0; SameSite=Lax";
   document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
-}
-
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
 }
 
 function wait(ms: number) {
@@ -63,40 +40,23 @@ function getChangePasswordEndpoints(scope: SettingsScope) {
 }
 
 async function postWithEndpointFallback({
-  baseUrl,
-  token,
   endpoints,
   body,
 }: {
-  baseUrl: string;
-  token: string;
   endpoints: string[];
-  body: string;
-}) {
-  let lastResponse: Response | null = null;
-
-  for (const endpoint of endpoints) {
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body,
-    });
-
-    if (response.ok) {
-      return response;
-    }
-
-    lastResponse = response;
-    if (![404, 405, 501].includes(response.status)) {
-      return response;
-    }
+  body: Record<string, unknown>;
+}): Promise<ChangePasswordResponse | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+  if (!baseUrl) {
+    return null;
   }
 
-  return lastResponse;
-}
+  return browserApiRequestWithFallback({
+    urls: endpoints.map((endpoint) => `${baseUrl}${endpoint}`),
+    method: "POST",
+      data: body,
+    });
+  }
 
 export function ChangePasswordPanel({
   confirmPlaceholder = "Re-enter new password",
@@ -120,13 +80,11 @@ export function ChangePasswordPanel({
     );
   }, [confirmNewPassword, currentPassword, newPassword]);
 
-  async function triggerLogoutAndRedirect(token: string, baseUrl: string) {
+  async function triggerLogoutAndRedirect(baseUrl: string) {
     try {
-      await fetch(`${baseUrl}/auth/logout`, {
+      await browserApiRequest({
+        url: `${baseUrl}/auth/logout`,
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
     } catch {
       // Ignore logout API failure and continue local logout.
@@ -138,11 +96,10 @@ export function ChangePasswordPanel({
   }
 
   async function handleUpdatePassword() {
-    const baseUrl = resolveApiBaseUrl();
-    const token = readCookie("arch_access_token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
 
-    if (!baseUrl || !token) {
-      setError("Missing API configuration or authentication token.");
+    if (!baseUrl) {
+      setError("Missing API configuration.");
       setSuccess(null);
       return;
     }
@@ -158,30 +115,19 @@ export function ChangePasswordPanel({
     setSuccess(null);
 
     try {
-      const response = await postWithEndpointFallback({
-        baseUrl,
-        token,
+      const data = await postWithEndpointFallback({
         endpoints: getChangePasswordEndpoints(scope),
-        body: JSON.stringify({
+        body: {
           current_password: currentPassword,
           new_password: newPassword,
           confirm_new_password: confirmNewPassword,
-        }),
+        },
       });
 
-      if (!response || !response.ok) {
-        let detail: string | undefined;
-        try {
-          const data = (await response?.json()) as { detail?: string };
-          detail = data.detail;
-        } catch {
-          // Ignore non-JSON responses.
-        }
-
-        throw new Error(detail ?? `Failed to update password (${response?.status ?? "no-response"}).`);
+      if (!data) {
+        throw new Error("Failed to update password.");
       }
 
-      const data = (await response.json()) as ChangePasswordResponse;
       setSuccess(data.message || "Password changed successfully.");
       setCurrentPassword("");
       setNewPassword("");
@@ -190,7 +136,7 @@ export function ChangePasswordPanel({
       setShowSuccessPopup(true);
       setIsCompletingLogout(true);
       await wait(1200);
-      await triggerLogoutAndRedirect(token, baseUrl);
+      await triggerLogoutAndRedirect(baseUrl);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Failed to update password.");
       setShowSuccessPopup(false);

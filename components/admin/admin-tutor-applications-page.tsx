@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { ApplicationStatus, TutorApplication } from "@/lib/admin/tutor-applications-data";
 import { ADMIN_TUTOR_APPLICATIONS_ROUTE } from "@/lib/routes";
 
@@ -130,17 +131,16 @@ export function AdminTutorApplicationsPage({
       setLoadError(undefined);
 
       try {
-        const [listRes, statsRes] = await Promise.all([
-          fetch(`/api/admin/tutor-applications?view=${activeView}`, { cache: "no-store" }),
-          fetch("/api/admin/tutor-applications/stats", { cache: "no-store" }),
+        const [listData, statsData] = await Promise.all([
+          browserApiRequest<ListResponse>({
+            url: `/api/admin/tutor-applications?view=${activeView}`,
+            method: "GET",
+          }),
+          browserApiRequest<StatsResponse>({
+            url: "/api/admin/tutor-applications/stats",
+            method: "GET",
+          }),
         ]);
-
-        if (!listRes.ok || !statsRes.ok) {
-          throw new Error("Failed to load tutor applications.");
-        }
-
-        const listData = (await listRes.json()) as ListResponse;
-        const statsData = (await statsRes.json()) as StatsResponse;
 
         if (cancelled) return;
 

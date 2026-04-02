@@ -1,6 +1,4 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-
+import { apiGet } from "@/lib/api/api-client";
 import type { TutorScheduleItem, TutorScheduleStatus } from "@/lib/tutor/schedule-data";
 
 export type TutorScheduleChatApiItem = {
@@ -38,15 +36,6 @@ export type TutorScheduleApiItem = {
 export type TutorScheduleListResponse = {
   items: TutorScheduleApiItem[];
 };
-
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
 
 function formatDateLabel(value: string) {
   const parsed = new Date(value);
@@ -116,33 +105,7 @@ function mapScheduleItem(api: TutorScheduleApiItem): TutorScheduleItem {
 }
 
 async function requestSchedule(path: string): Promise<TutorScheduleListResponse | TutorScheduleApiItem> {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
-  }
-
-  const token = (await cookies()).get("arch_access_token")?.value;
-  if (!token) {
-    redirect("/login");
-  }
-
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    redirect("/login");
-  }
-
-  if (!response.ok) {
-    throw new Error(`API failed (${response.status}).`);
-  }
-
-  return (await response.json()) as TutorScheduleListResponse | TutorScheduleApiItem;
+  return apiGet<TutorScheduleListResponse | TutorScheduleApiItem>(path);
 }
 
 export async function fetchTutorScheduleItems(): Promise<TutorScheduleItem[]> {

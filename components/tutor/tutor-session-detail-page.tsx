@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import {
   FiCalendar,
@@ -11,6 +14,7 @@ import {
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import { TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
+import { useSessionChat } from "@/lib/realtime/session-chat";
 import type { TutorScheduleItem } from "@/lib/tutor/schedule-data";
 
 function MessageBubble({
@@ -41,6 +45,26 @@ function MessageBubble({
 }
 
 export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem }) {
+  const { messages, draft, setDraft, sendMessage, connected, loading, error, clearError } =
+    useSessionChat({
+      bookingId: session.id,
+      initialMessages: session.chat,
+    });
+  const [isSending, setIsSending] = useState(false);
+
+  function handleSendMessage() {
+    const text = draft.trim();
+    if (!text) return;
+
+    setIsSending(true);
+    const sent = sendMessage(text);
+    if (sent) {
+      setDraft("");
+      clearError();
+    }
+    setIsSending(false);
+  }
+
   return (
     <TutorShell>
       <div className="w-full">
@@ -150,7 +174,7 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
                 <p className="font-semibold text-[#20242b]">{session.studentName}</p>
                 <div className="flex items-center gap-1.5 text-[12px] text-[#1b8a5a]">
                   <span className="h-2 w-2 rounded-full bg-[#1b8a5a]" />
-                  <span>Online</span>
+                  <span>{connected ? "Online" : "Connecting..."}</span>
                 </div>
               </div>
             </div>
@@ -158,12 +182,17 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
             <div className="min-h-[640px] bg-[#fcfcfd]">
               <div className="px-4 py-3 text-center">
                 <span className="inline-flex rounded-full bg-[#eef0f3] px-3 py-1 text-[12px] text-[#6b7280]">
-                  Session created — {session.fullDate}
+                  Session created - {session.fullDate}
                 </span>
               </div>
 
               <div className="space-y-5 px-4 py-4">
-                {session.chat.map((message) => (
+                {loading ? (
+                  <div className="rounded-[18px] bg-white px-4 py-3 text-[14px] text-[#6b7280]">
+                    Loading chat...
+                  </div>
+                ) : null}
+                {messages.map((message) => (
                   <MessageBubble
                     key={message.id}
                     sender={message.sender}
@@ -183,16 +212,31 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
                 >
                   +
                 </button>
-                <div className="flex-1 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#9ca3af]">
-                  Type a message...
-                </div>
+                <input
+                  value={draft}
+                  onChange={(event) => {
+                    setDraft(event.target.value);
+                    if (error) clearError();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder="Type a message..."
+                  className="flex-1 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#374151] outline-none placeholder:text-[#9ca3af]"
+                />
                 <button
                   type="button"
-                  className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white"
+                  onClick={handleSendMessage}
+                  disabled={!draft.trim() || !connected || isSending}
+                  className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Send
+                  {isSending ? "Sending..." : "Send"}
                 </button>
               </div>
+              {error ? <p className="mt-2 text-[12px] text-[#d61c3f]">{error}</p> : null}
             </div>
           </section>
         </div>

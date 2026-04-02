@@ -1,3 +1,4 @@
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { StudentTutor } from "@/lib/student/tutors-data";
 
 type PublicTutorAvailabilityItem = {
@@ -49,15 +50,6 @@ type PublicTutorsResponse = {
   total: number;
   items: PublicTutorItem[];
 };
-
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
 
 function formatAvailabilityTime(slot: PublicTutorAvailabilityItem) {
   const raw = slot.label || slot.time || "";
@@ -140,23 +132,19 @@ function mapTutor(item: PublicTutorItem): StudentTutor {
 }
 
 export async function fetchAvailableStudentTutors(): Promise<StudentTutor[]> {
-  const baseUrl = resolveApiBaseUrl();
-
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
-  const response = await fetch(`${baseUrl}/public/tutors/available`, {
-    cache: "no-store",
+  const data = await browserApiRequest<PublicTutorsResponse>({
+    url: `${baseUrl}/public/tutors/available`,
+    method: "GET",
+    includeAuth: false,
+    withCredentials: false,
   });
 
-  const data = (await response.json().catch(() => ({}))) as PublicTutorsResponse | { detail?: string };
-  if (!response.ok) {
-    const detail = typeof data?.detail === "string" ? data.detail : `Request failed (${response.status}).`;
-    throw new Error(detail);
-  }
-
-  const items = Array.isArray((data as PublicTutorsResponse).items) ? (data as PublicTutorsResponse).items : [];
+  const items = Array.isArray(data.items) ? data.items : [];
   return items.map(mapTutor);
 }
 

@@ -1,7 +1,7 @@
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { AdminTutorDetailPage } from "@/components/admin/admin-tutor-detail-page";
+import { apiGet } from "@/lib/api/api-client";
 import type { AdminTutorDetail } from "@/lib/admin/tutors-data";
 
 type TutorApiStatus = "approved" | "pending" | "suspended";
@@ -69,15 +69,6 @@ type TutorDetailApiResponse = {
     }>;
   };
 };
-
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
 
 function initialsFromName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -184,33 +175,18 @@ export default async function AdminTutorDetailRoute({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) {
-    notFound();
-  }
-
-  const token = (await cookies()).get("arch_access_token")?.value;
-  if (!token) {
-    redirect("/login");
-  }
-
   const { id } = await params;
+  let payload: TutorDetailApiResponse;
+  try {
+    payload = await apiGet<TutorDetailApiResponse>(`/admin-dashboard/tutors/${encodeURIComponent(id)}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("(401)") || message.includes("(403)")) {
+      redirect("/login");
+    }
 
-  const response = await fetch(`${baseUrl}/admin-dashboard/tutors/${encodeURIComponent(id)}`, {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    redirect("/login");
-  }
-
-  if (response.status === 404 || !response.ok) {
     notFound();
   }
-
-  const payload = (await response.json()) as TutorDetailApiResponse;
   if (!payload?.item) {
     notFound();
   }

@@ -1,3 +1,5 @@
+import { browserApiRequest } from "@/lib/api/browser-api-client";
+
 export type AdminProfileSettings = {
   first_name: string;
   last_name: string;
@@ -67,72 +69,46 @@ export type AdminChangePasswordResponse = {
   message: string;
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    cache: "no-store",
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+async function request<T>(path: string, method: "GET" | "PUT", data?: unknown): Promise<T> {
+  return browserApiRequest<T>({
+    url: path,
+    method,
+    data,
   });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const detail = typeof data?.detail === "string" ? data.detail : `Request failed (${response.status}).`;
-    throw new Error(detail);
-  }
-
-  return data as T;
 }
 
 export function fetchAdminGeneralSettings() {
-  return request<AdminProfileSettingsResponse>("/api/admin/settings/general");
+  return request<AdminProfileSettingsResponse>("/api/admin/settings/general", "GET");
 }
 
 export function updateAdminGeneralSettings(payload: AdminProfileSettingsUpdateRequest) {
-  return request<AdminProfileSettingsResponse>("/api/admin/settings/general", {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return request<AdminProfileSettingsResponse>("/api/admin/settings/general", "PUT", payload);
 }
 
 export function fetchAdminPricingSettings() {
-  return request<AdminPricingSettingsResponse>("/api/admin/settings/pricing-fees");
+  return request<AdminPricingSettingsResponse>("/api/admin/settings/pricing-fees", "GET");
 }
 
 export function updateAdminPricingSettings(payload: AdminPricingSettingsUpdateRequest) {
-  return request<AdminPricingSettingsResponse>("/api/admin/settings/pricing-fees", {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return request<AdminPricingSettingsResponse>("/api/admin/settings/pricing-fees", "PUT", payload);
 }
 
 export function fetchAdminTermsSettings() {
-  return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/terms-conditions");
+  return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/terms-conditions", "GET");
 }
 
 export function updateAdminTermsSettings(payload: AdminPolicyPageSettingsUpdateRequest) {
-  return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/terms-conditions", {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/terms-conditions", "PUT", payload);
 }
 
 export function fetchAdminPrivacySettings() {
-  return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/privacy-policy");
+  return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/privacy-policy", "GET");
 }
 
 export function updateAdminPrivacySettings(payload: AdminPolicyPageSettingsUpdateRequest) {
-  return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/privacy-policy", {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return request<AdminPolicyPageSettingsResponse>("/api/admin/settings/privacy-policy", "PUT", payload);
 }
 
 export function updateAdminPassword(payload: AdminChangePasswordRequest) {
-  return request<AdminChangePasswordResponse>("/api/admin/settings/password", {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return request<AdminChangePasswordResponse>("/api/admin/settings/password", "PUT", payload);
 }

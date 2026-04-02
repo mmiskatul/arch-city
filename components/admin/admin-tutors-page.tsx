@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FiDownload, FiStar } from "react-icons/fi";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { AdminTutorStatus, AdminTutorRow } from "@/lib/admin/tutors-data";
 import { ADMIN_TUTOR_APPLICATIONS_ROUTE, ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
@@ -104,9 +105,10 @@ export function AdminTutorsPage() {
     let cancelled = false;
     const loadStats = async () => {
       try {
-        const response = await fetch("/api/admin/tutors/stats", { cache: "no-store" });
-        if (!response.ok) return;
-        const payload = (await response.json()) as TutorStatsResponse;
+        const payload = await browserApiRequest<TutorStatsResponse>({
+          url: "/api/admin/tutors/stats",
+          method: "GET",
+        });
         if (!cancelled) setStats(payload);
       } catch {
         // no-op
@@ -131,10 +133,10 @@ export function AdminTutorsPage() {
       if (status) params.set("status_filter", status);
 
       try {
-        const response = await fetch(`/api/admin/tutors?${params.toString()}`, { cache: "no-store" });
-        if (!response.ok) throw new Error("Failed to load tutors.");
-
-        const payload = (await response.json()) as TutorsApiResponse;
+        const payload = await browserApiRequest<TutorsApiResponse>({
+          url: `/api/admin/tutors?${params.toString()}`,
+          method: "GET",
+        });
         if (cancelled) return;
 
         setTutors((payload.items || []).map((item, index) => toUiTutor(item, index)));

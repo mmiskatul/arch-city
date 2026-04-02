@@ -15,6 +15,7 @@ import {
 } from "react-icons/fi";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import {
   requestTutorBioSchoolDistrictWithFallback,
   requestTutorEducationWithFallback,
@@ -275,7 +276,7 @@ function mapTutorProfileApiToUi(data: TutorProfileApiModel): TutorProfileData {
   };
 }
 
-async function fetchTutorProfile(token: string): Promise<TutorProfileData> {
+async function fetchTutorProfile(token?: string): Promise<TutorProfileData> {
   const response = await requestTutorProfileWithFallback({
     method: "GET",
     token,
@@ -352,7 +353,7 @@ async function saveTutorBioSchoolDistrict(
 
   return (await response.json()) as TutorBioSchoolDistrictApiModel;
 }
-async function fetchTutorEducationEntries(token: string): Promise<TutorEducationApiItem[]> {
+async function fetchTutorEducationEntries(token?: string): Promise<TutorEducationApiItem[]> {
   const response = await requestTutorEducationWithFallback({
     method: "GET",
     token,
@@ -443,7 +444,7 @@ async function deleteTutorEducationEntry(token: string, educationId: string): Pr
   }
 }
 
-async function fetchTutorWorkExperienceEntries(token: string): Promise<TutorWorkExperienceApiItem[]> {
+async function fetchTutorWorkExperienceEntries(token?: string): Promise<TutorWorkExperienceApiItem[]> {
   const response = await requestTutorWorkExperienceWithFallback({
     method: "GET",
     token,
@@ -521,7 +522,7 @@ async function updateTutorWorkExperienceEntry(
 
   return (await response.json()) as TutorWorkExperienceApiItem;
 }
-async function fetchTutorSubjectsGrades(token: string): Promise<TutorSubjectsGradesApiModel> {
+async function fetchTutorSubjectsGrades(token?: string): Promise<TutorSubjectsGradesApiModel> {
   const response = await requestTutorSubjectsGradesWithFallback({
     method: "GET",
     token,
@@ -573,7 +574,7 @@ async function saveTutorSubjectsGrades(
   };
 }
 
-async function fetchTutorRates(token: string): Promise<TutorRatesApiModel> {
+async function fetchTutorRates(token?: string): Promise<TutorRatesApiModel> {
   const response = await requestTutorRatesWithFallback({
     method: "GET",
     token,
@@ -624,7 +625,7 @@ async function saveTutorRates(token: string, payload: TutorRatesApiModel): Promi
   };
 }
 
-async function fetchTutorPreferences(token: string): Promise<TutorPreferencesApiModel> {
+async function fetchTutorPreferences(token?: string): Promise<TutorPreferencesApiModel> {
   const response = await requestTutorPreferencesWithFallback({
     method: "GET",
     token,
@@ -692,7 +693,7 @@ function normalizeTutorLocationItem(item: TutorLocationApiItem): TutorLocationAp
   };
 }
 
-async function fetchTutorLocations(token: string): Promise<TutorLocationApiItem[]> {
+async function fetchTutorLocations(token?: string): Promise<TutorLocationApiItem[]> {
   const response = await requestTutorLocationWithFallback({ method: "GET", token });
 
   if (!response || !response.ok) {
@@ -1059,14 +1060,14 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
   const isSavingSubjectsGrades = isSavingProfile && activeTab === "Subjects & Grades";
   const isSavingRates = isSavingProfile && activeTab === "Rates";
   const isSavingPreferences = isSavingProfile && activeTab === "Preferences";
+  const { tokenPresent } = useDashboardAuth();
 
   useEffect(() => {
     if (initialProfile) return;
 
-    const token = readCookie("arch_access_token");
-    if (!token) return;
+    if (!tokenPresent) return;
 
-    fetchTutorProfile(token)
+    fetchTutorProfile()
       .then((loadedProfile) => {
         setProfile(loadedProfile);
         setProfileForm({
@@ -1089,14 +1090,13 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       .catch(() => {
         // Keep static fallback data.
       });
-  }, [initialProfile]);
+  }, [initialProfile, tokenPresent]);
 
 
   useEffect(() => {
-    const token = readCookie("arch_access_token");
-    if (!token) return;
+    if (!tokenPresent) return;
 
-    fetchTutorEducationEntries(token)
+    fetchTutorEducationEntries()
       .then((items) => {
         if (items.length > 0) {
           setEducationEntries(items);
@@ -1105,13 +1105,12 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       .catch(() => {
         // Keep static fallback entries.
       });
-  }, []);
+  }, [tokenPresent]);
 
   useEffect(() => {
-    const token = readCookie("arch_access_token");
-    if (!token) return;
+    if (!tokenPresent) return;
 
-    fetchTutorWorkExperienceEntries(token)
+    fetchTutorWorkExperienceEntries()
       .then((items) => {
         if (items.length > 0) {
           setWorkExperienceEntries(items);
@@ -1120,13 +1119,12 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       .catch(() => {
         // Keep static fallback entries.
       });
-  }, []);
+  }, [tokenPresent]);
 
   useEffect(() => {
-    const token = readCookie("arch_access_token");
-    if (!token) return;
+    if (!tokenPresent) return;
 
-    fetchTutorSubjectsGrades(token)
+    fetchTutorSubjectsGrades()
       .then((data) => {
         setSelectedSubjects(data.subjects || []);
         setSelectedGrades(data.grades || []);
@@ -1134,13 +1132,12 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       .catch(() => {
         // Keep static fallback chips.
       });
-  }, []);
+  }, [tokenPresent]);
 
   useEffect(() => {
-    const token = readCookie("arch_access_token");
-    if (!token) return;
+    if (!tokenPresent) return;
 
-    fetchTutorRates(token)
+    fetchTutorRates()
       .then((data) => {
         setVirtual45Rate(data.virtual_45_rate || "");
         setVirtual60Rate(data.virtual_60_rate || "");
@@ -1150,13 +1147,12 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       .catch(() => {
         // Keep static fallback values.
       });
-  }, []);
+  }, [tokenPresent]);
 
   useEffect(() => {
-    const token = readCookie("arch_access_token");
-    if (!token) return;
+    if (!tokenPresent) return;
 
-    fetchTutorPreferences(token)
+    fetchTutorPreferences()
       .then((data) => {
         setIsClassroomTeacher(Boolean(data.is_classroom_teacher));
         setOffersVirtual(Boolean(data.offers_virtual));
@@ -1168,20 +1164,19 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       .catch(() => {
         // Keep static fallback values.
       });
-  }, []);
+  }, [tokenPresent]);
 
   useEffect(() => {
-    const token = readCookie("arch_access_token");
-    if (!token) return;
+    if (!tokenPresent) return;
 
-    fetchTutorLocations(token)
+    fetchTutorLocations()
       .then((items) => {
         setLocationEntries(items);
       })
       .catch(() => {
         // Keep static fallback values.
       });
-  }, []);
+  }, [tokenPresent]);
 
 
   function openEducationModal(entry?: TutorEducationApiItem) {

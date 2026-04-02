@@ -119,6 +119,7 @@ function persistSessionCookies(data: unknown) {
 
   document.cookie = `arch_access_token=${encodeURIComponent(token)}; Path=/; Max-Age=${oneWeekInSeconds}; SameSite=Lax${secureSuffix}`;
   document.cookie = `arch_user_role=${encodeURIComponent(role)}; Path=/; Max-Age=${oneWeekInSeconds}; SameSite=Lax${secureSuffix}`;
+  window.dispatchEvent(new Event("arch-session-updated"));
 }
 
 function EyeIcon({ open }: { open: boolean }) {

@@ -1,3 +1,5 @@
+import { browserApiRequest } from "@/lib/api/browser-api-client";
+
 type PolicyPageKey = "terms-conditions" | "privacy-policy";
 
 export type PolicySection = {
@@ -31,15 +33,9 @@ export async function fetchPublicPolicyPage(page: PolicyPageKey): Promise<Policy
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
-  const response = await fetch(`${baseUrl}/public/settings/${page}`, {
-    cache: "no-store",
+  return browserApiRequest<PolicyPageResponse>({
+    url: `${baseUrl}/public/settings/${page}`,
+    includeAuth: false,
+    withCredentials: false,
   });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const detail = typeof data?.detail === "string" ? data.detail : `Request failed (${response.status}).`;
-    throw new Error(detail);
-  }
-
-  return data as PolicyPageResponse;
 }

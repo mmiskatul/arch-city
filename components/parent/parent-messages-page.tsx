@@ -120,15 +120,15 @@ export function ParentMessagesPage() {
                 Session created - Monday, March 30
               </div>
 
-              <div className="mt-6 space-y-6">
+              <div className="mt-6 space-y-8">
                 {activeThread.messages.map((message, index) => (
                   <div key={`${message.time}-${index}`}>
-                    <div className={message.sender === "tutor" ? "flex justify-end" : "flex justify-start"}>
+                    <div className={message.sender === "student" ? "flex justify-end" : "flex justify-start"}>
                       <div
-                        className={`max-w-[720px] rounded-[16px] px-5 py-4 text-[15px] leading-6 ${
-                          message.sender === "tutor"
-                            ? "bg-[#d61c3f] text-white"
-                            : "bg-transparent text-[#20242b]"
+                        className={`max-w-[78%] rounded-[20px] px-5 py-3 text-[14px] leading-7 ${
+                          message.sender === "student"
+                            ? "bg-[#d61c3f] text-white shadow-[0_8px_24px_rgba(214,28,63,0.18)]"
+                            : "max-w-[620px] bg-transparent px-0 py-0 text-[#20242b]"
                         }`}
                       >
                         {message.text}
@@ -136,7 +136,7 @@ export function ParentMessagesPage() {
                     </div>
                     <p
                       className={`mt-2 text-[12px] text-[#6b7280] ${
-                        message.sender === "tutor" ? "text-right" : "text-left"
+                        message.sender === "student" ? "text-right" : "text-left"
                       }`}
                     >
                       {message.time} - {message.senderLabel}

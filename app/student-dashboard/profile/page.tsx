@@ -1,10 +1,8 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-
 import {
   StudentProfilePage,
   type StudentProfileData,
 } from "@/components/student/student-profile-page";
+import { apiGet } from "@/lib/api/api-client";
 
 type StudentProfileApiResponse = {
   first_name: string;
@@ -17,15 +15,6 @@ type StudentProfileApiResponse = {
   renews_on: string;
   active_plan_label: string;
 };
-
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
 
 function mapStudentProfile(data: StudentProfileApiResponse): StudentProfileData {
   return {
@@ -42,33 +31,7 @@ function mapStudentProfile(data: StudentProfileApiResponse): StudentProfileData 
 }
 
 async function fetchStudentProfile(): Promise<StudentProfileData> {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
-  }
-
-  const token = (await cookies()).get("arch_access_token")?.value;
-  if (!token) {
-    redirect("/login");
-  }
-
-  const response = await fetch(`${baseUrl}/student/profile`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    redirect("/login");
-  }
-
-  if (!response.ok) {
-    throw new Error(`Student profile API failed (${response.status}).`);
-  }
-
-  const data = (await response.json()) as StudentProfileApiResponse;
+  const data = await apiGet<StudentProfileApiResponse>("/student/profile");
   return mapStudentProfile(data);
 }
 

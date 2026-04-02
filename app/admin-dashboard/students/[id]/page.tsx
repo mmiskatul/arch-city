@@ -1,7 +1,7 @@
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { AdminStudentDetailPage } from "@/components/admin/admin-student-detail-page";
+import { apiGet } from "@/lib/api/api-client";
 import type { AdminStudentDetail } from "@/lib/admin/students-data";
 
 type LegacyStudentDetailApiItem = {
@@ -84,15 +84,6 @@ type StudentDetailApiItem = LegacyStudentDetailApiItem | RichStudentDetailApiIte
 type StudentDetailApiResponse = {
   item: StudentDetailApiItem;
 };
-
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
 
 function initialsFromName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -258,37 +249,18 @@ export default async function AdminStudentDetailRoute({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) {
-    notFound();
-  }
-
-  const token = (await cookies()).get("arch_access_token")?.value;
-  if (!token) {
-    redirect("/login");
-  }
-
   const { id } = await params;
+  let payload: StudentDetailApiResponse;
+  try {
+    payload = await apiGet<StudentDetailApiResponse>(`/admin-dashboard/students/${encodeURIComponent(id)}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("(401)") || message.includes("(403)")) {
+      redirect("/login");
+    }
 
-  const response = await fetch(`${baseUrl}/admin-dashboard/students/${encodeURIComponent(id)}`, {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    redirect("/login");
-  }
-
-  if (response.status === 404) {
     notFound();
   }
-
-  if (!response.ok) {
-    notFound();
-  }
-
-  const payload = (await response.json()) as StudentDetailApiResponse;
   if (!payload?.item) {
     notFound();
   }

@@ -1,6 +1,4 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-
+import { apiGet } from "@/lib/api/api-client";
 import type { StudentScheduleItem } from "@/lib/student/schedule-data";
 
 export type StudentScheduleApiItem = {
@@ -27,15 +25,6 @@ export type StudentScheduleApiItem = {
 export type StudentScheduleListResponse = {
   items: StudentScheduleApiItem[];
 };
-
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -112,33 +101,7 @@ function mapStudentScheduleItem(item: StudentScheduleApiItem): StudentScheduleIt
 }
 
 async function requestSchedule(path: string): Promise<StudentScheduleListResponse | StudentScheduleApiItem> {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
-  }
-
-  const token = (await cookies()).get("arch_access_token")?.value;
-  if (!token) {
-    redirect("/login");
-  }
-
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    redirect("/login");
-  }
-
-  if (!response.ok) {
-    throw new Error(`API failed (${response.status}).`);
-  }
-
-  return (await response.json()) as StudentScheduleListResponse | StudentScheduleApiItem;
+  return apiGet<StudentScheduleListResponse | StudentScheduleApiItem>(path);
 }
 
 export async function fetchStudentScheduleItems(): Promise<StudentScheduleItem[]> {

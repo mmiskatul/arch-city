@@ -1,5 +1,4 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 
 export type AdminTutorApplicationStatus = "pending" | "approved" | "rejected";
 
@@ -50,58 +49,43 @@ export type AdminTutorApplicationStatsResponse = {
   rejected: number;
 };
 
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
-
-async function request<T>(path: string): Promise<T> {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
-  }
-
-  const token = (await cookies()).get("arch_access_token")?.value;
-  if (!token) {
-    redirect("/login");
-  }
-
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    redirect("/login");
-  }
-
-  if (!response.ok) {
-    throw new Error(`API failed (${response.status}).`);
-  }
-
-  return (await response.json()) as T;
-}
-
 export async function fetchAdminTutorApplications(view: "pending" | "all" = "pending") {
   const path =
     view === "all"
       ? "/admin-dashboard/tutor-applications/all"
       : "/admin-dashboard/tutor-applications/pending";
 
-  return request<AdminTutorApplicationsListResponse>(path);
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+  }
+
+  return browserApiRequest<AdminTutorApplicationsListResponse>({
+    url: `${baseUrl}${path}`,
+    method: "GET",
+  });
 }
 
 export async function fetchAdminTutorApplicationById(applicationId: string) {
-  return request<AdminTutorApplicationDetailResponse>(`/admin-dashboard/tutor-applications/${applicationId}`);
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+  }
+
+  return browserApiRequest<AdminTutorApplicationDetailResponse>({
+    url: `${baseUrl}/admin-dashboard/tutor-applications/${applicationId}`,
+    method: "GET",
+  });
 }
 
 export async function fetchAdminTutorApplicationStats() {
-  return request<AdminTutorApplicationStatsResponse>("/admin-dashboard/tutor-applications/stats");
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+  }
+
+  return browserApiRequest<AdminTutorApplicationStatsResponse>({
+    url: `${baseUrl}/admin-dashboard/tutor-applications/stats`,
+    method: "GET",
+  });
 }

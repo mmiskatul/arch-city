@@ -1,3 +1,5 @@
+import { browserApiRequestRaw } from "@/lib/api/browser-api-client";
+
 export type TutorApplicationStatus = "not_submitted" | "pending" | "approved" | "rejected";
 
 export type TutorApplicationPayload = {
@@ -34,6 +36,13 @@ type TutorApplicationResponse = {
   status: TutorApplicationStatus;
   message: string;
   application?: Record<string, unknown> | null;
+};
+
+type ResponseLike = {
+  ok: boolean;
+  status: number;
+  json: () => Promise<unknown>;
+  text: () => Promise<string>;
 };
 
 function normalizeBaseUrl(url: string) {
@@ -79,15 +88,17 @@ async function requestWithFallback({
 }) {
   if (urls.length === 0) return null;
 
-  let lastResponse: Response | null = null;
+  let lastResponse: ResponseLike | null = null;
   for (const url of urls) {
-    const response = await fetch(url, {
+    const response = await browserApiRequestRaw({
+      url,
       method,
       headers: {
         ...(method === "POST" ? { "Content-Type": "application/json" } : {}),
         Authorization: `Bearer ${token}`,
       },
-      ...(body ? { body } : {}),
+      data: body ? JSON.parse(body) : undefined,
+      includeAuth: false,
     });
 
     if (response.ok) return response;

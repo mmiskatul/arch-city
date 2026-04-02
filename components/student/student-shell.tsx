@@ -24,7 +24,9 @@ import {
   STUDENT_SCHEDULE_ROUTE,
   STUDENT_SETTINGS_ROUTE,
 } from "@/lib/routes";
-import { studentMessagesUnreadCount } from "@/lib/student/messages-data";
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
+import { getStudentMessageCount } from "@/lib/api/session-messages-api";
 
 type NavItem = {
   label: string;
@@ -46,7 +48,7 @@ const menuItems: NavItem[] = [
     label: "Messages",
     href: STUDENT_MESSAGES_ROUTE,
     icon: FiMessageSquare,
-    badge: studentMessagesUnreadCount > 0 ? String(studentMessagesUnreadCount) : undefined,
+    badge: undefined,
   },
   { label: "Profile", href: STUDENT_PROFILE_ROUTE, icon: FiUser },
   { label: "Settings", href: STUDENT_SETTINGS_ROUTE, icon: FiSettings },
@@ -78,14 +80,6 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-function readCookie(name: string) {
-  if (typeof document === "undefined") return "";
-  const prefix = `${name}=`;
-  const parts = document.cookie.split(";").map((part) => part.trim());
-  const match = parts.find((part) => part.startsWith(prefix));
-  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
-}
-
 function clearAuthCookies() {
   document.cookie = "arch_access_token=; Path=/; Max-Age=0; SameSite=Lax";
   document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
@@ -100,9 +94,11 @@ type ShellUserProfile = {
 export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { tokenPresent } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [messagesUnreadCount, setMessagesUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
     initials: "ST",
     name: "Student",
@@ -112,26 +108,32 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const topUserMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    async function loadProfile() {
+    async function loadMessagesCount() {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
-      const token = readCookie("arch_access_token");
-      if (!baseUrl || !token) return;
+      if (!baseUrl || !tokenPresent) return;
 
       try {
-        const response = await fetch(`${baseUrl}/student/profile`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) return;
+        const data = await getStudentMessageCount();
+        setMessagesUnreadCount(data.unread_count || 0);
+      } catch {
+        setMessagesUnreadCount(0);
+      }
+    }
 
-        const data = (await response.json()) as {
+    async function loadProfile() {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+      if (!baseUrl || !tokenPresent) return;
+
+      try {
+        const data = await browserApiRequest<{
           first_name: string;
           last_name: string;
           email: string;
           initials: string;
-        };
+        }>({
+          url: `${baseUrl}/student/profile`,
+          method: "GET",
+        });
 
         setUserProfile({
           initials: data.initials || "ST",
@@ -162,12 +164,15 @@ export function StudentShell({ children }: { children: ReactNode }) {
     }
 
     loadProfile();
+    loadMessagesCount();
     window.addEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+    window.addEventListener("arch-messages-updated", loadMessagesCount);
 
     return () => {
       window.removeEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+      window.removeEventListener("arch-messages-updated", loadMessagesCount);
     };
-  }, []);
+  }, [tokenPresent]);
   useEffect(() => {
     function onMouseDown(event: MouseEvent) {
       const target = event.target as Node;
@@ -192,23 +197,20 @@ export function StudentShell({ children }: { children: ReactNode }) {
 
     setIsLoggingOut(true);
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
-    const token = readCookie("arch_access_token");
-
-    if (baseUrl && token) {
-      try {
-        await fetch(`${baseUrl}/auth/logout`, {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+      if (baseUrl) {
+        await browserApiRequest({
+          url: `${baseUrl}/auth/logout`,
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         });
-      } catch {
-        // Ignore network errors on logout and clear local session anyway.
       }
+    } catch {
+      // Ignore network errors on logout and clear local session anyway.
     }
 
     clearAuthCookies();
+    window.dispatchEvent(new Event("arch-session-updated"));
     setUserMenuOpen(false);
     setTopUserMenuOpen(false);
     router.replace("/login");
@@ -243,7 +245,15 @@ export function StudentShell({ children }: { children: ReactNode }) {
               {menuItems.map((item) => (
                 <SidebarLink
                   key={item.label}
-                  item={item}
+                  item={
+                    item.href === STUDENT_MESSAGES_ROUTE
+                      ? {
+                          ...item,
+                          badge:
+                            messagesUnreadCount > 0 ? String(messagesUnreadCount) : undefined,
+                        }
+                      : item
+                  }
                   active={
                     pathname === item.href ||
                     (item.href !== STUDENT_DASHBOARD_ROUTE && pathname.startsWith(`${item.href}/`))

@@ -28,6 +28,8 @@ import {
   ADMIN_STUDENTS_ROUTE,
   ADMIN_TUTORS_ROUTE,
 } from "@/lib/routes";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 
 type NavItem = {
   label: string;
@@ -76,14 +78,6 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-function readCookie(name: string) {
-  if (typeof document === "undefined") return "";
-  const prefix = `${name}=`;
-  const parts = document.cookie.split(";").map((part) => part.trim());
-  const match = parts.find((part) => part.startsWith(prefix));
-  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
-}
-
 function clearAuthCookies() {
   document.cookie = "arch_access_token=; Path=/; Max-Age=0; SameSite=Lax";
   document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
@@ -92,6 +86,7 @@ function clearAuthCookies() {
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { tokenPresent } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -123,15 +118,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
     setIsLoggingOut(true);
 
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
-    const token = readCookie("arch_access_token");
-
-    if (baseUrl && token) {
+    if (baseUrl && tokenPresent) {
       try {
-        await fetch(`${baseUrl}/auth/logout`, {
+        await browserApiRequest({
+          url: `${baseUrl}/auth/logout`,
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         });
       } catch {
         // Ignore network errors on logout and clear local session anyway.
@@ -139,6 +130,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     }
 
     clearAuthCookies();
+    window.dispatchEvent(new Event("arch-session-updated"));
     setUserMenuOpen(false);
     router.replace("/login");
     router.refresh();

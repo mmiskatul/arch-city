@@ -181,35 +181,33 @@ export function AdminMessagesPage({ selectedConversationId }: { selectedConversa
                       Today, March 20, 2026
                     </p>
 
-                    <div className="mt-4 space-y-5">
+                    <div className="mt-4 space-y-8">
                       {mergedMessages.map((message) => {
-                        const isOutgoing = message.senderRole === "student" || message.senderRole === "admin";
+                        const isOutgoing = message.senderRole === "admin";
                         return (
                           <div key={message.id} className={isOutgoing ? "flex justify-end" : "flex justify-start"}>
-                            {!isOutgoing ? (
-                              <div className="flex max-w-[760px] gap-2.5">
-                                <span className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
-                                  {message.senderInitials}
-                                </span>
-                                <div>
-                                  <p className="text-[13px] font-semibold text-[#20242b]">
-                                    {message.senderName}
-                                    <span className="ml-1 text-[12px] font-normal text-[#6b7280]">{message.time}</span>
-                                  </p>
-                                  <p className="mt-1 text-[16px] leading-7 text-[#374151]">{message.text}</p>
-                                </div>
+                            <div
+                              className={`max-w-[78%] flex flex-col ${
+                                isOutgoing ? "items-end" : "items-start"
+                              }`}
+                            >
+                              <div
+                                className={`rounded-[20px] px-5 py-3 text-[14px] leading-7 ${
+                                  isOutgoing
+                                    ? "bg-[#d61c3f] text-white shadow-[0_8px_24px_rgba(214,28,63,0.18)]"
+                                    : "max-w-[620px] bg-transparent px-0 py-0 text-[#20242b]"
+                                }`}
+                              >
+                                {message.text}
                               </div>
-                            ) : (
-                              <div className="max-w-[760px]">
-                                <p className="mb-1 text-right text-[12px] text-[#6b7280]">
-                                  {message.time} <span className="font-semibold text-[#374151]">{message.senderName}</span>{" "}
-                                  <span className="font-semibold text-[#374151]">{message.senderInitials}</span>
-                                </p>
-                                <div className="rounded-2xl bg-[#d61c3f] px-4 py-2.5 text-[16px] font-medium text-white">
-                                  {message.text}
-                                </div>
-                              </div>
-                            )}
+                              <span
+                                className={`mt-2 text-[12px] text-[#6b7280] ${
+                                  isOutgoing ? "text-right" : "text-left"
+                                }`}
+                              >
+                                {message.time}
+                              </span>
+                            </div>
                           </div>
                         );
                       })}

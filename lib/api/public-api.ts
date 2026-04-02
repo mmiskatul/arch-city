@@ -1,3 +1,5 @@
+import { browserApiRequestRaw } from "@/lib/api/browser-api-client";
+
 type PublicApiEndpointKey =
   | "login"
   | "signup"
@@ -17,14 +19,6 @@ type PublicApiResponse<T = unknown> = {
   error: string;
 };
 
-const endpointEnvMap: Record<PublicApiEndpointKey, string | undefined> = {
-  login: process.env.NEXT_PUBLIC_API_LOGIN_URL,
-  signup: process.env.NEXT_PUBLIC_API_SIGNUP_URL,
-  verifyEmail: process.env.NEXT_PUBLIC_API_VERIFY_EMAIL_URL,
-  contact: process.env.NEXT_PUBLIC_API_CONTACT_URL,
-  checkEmail: process.env.NEXT_PUBLIC_API_CHECK_EMAIL_URL,
-};
-
 const endpointPathMap: Record<PublicApiEndpointKey, string> = {
   login: "/auth/login",
   signup: "/auth/register",
@@ -42,12 +36,6 @@ function normalizePath(path: string) {
 }
 
 export function resolvePublicApiUrl(endpoint: PublicApiEndpointKey) {
-  const directUrl = endpointEnvMap[endpoint]?.trim();
-
-  if (directUrl) {
-    return directUrl;
-  }
-
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
   if (!baseUrl) {
@@ -57,7 +45,7 @@ export function resolvePublicApiUrl(endpoint: PublicApiEndpointKey) {
   return `${normalizeBaseUrl(baseUrl)}${normalizePath(endpointPathMap[endpoint])}`;
 }
 
-function resolveErrorMessage<T>(response: Response, data: T | null): string {
+function resolveErrorMessage<T>(status: number, data: T | null): string {
   if (data && typeof data === "object") {
     const record = data as Record<string, unknown>;
 
@@ -70,7 +58,7 @@ function resolveErrorMessage<T>(response: Response, data: T | null): string {
     }
   }
 
-  return `Request failed with status ${response.status}.`;
+  return `Request failed with status ${status}.`;
 }
 
 export async function submitPublicApi<T = unknown>({
@@ -89,25 +77,22 @@ export async function submitPublicApi<T = unknown>({
   }
 
   try {
-    const response = await fetch(url, {
+    const response = await browserApiRequestRaw<T>({
+      url,
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+      data: payload,
+      includeAuth: false,
+      withCredentials: false,
     });
 
-    const contentType = response.headers.get("content-type") ?? "";
-    const data = contentType.includes("application/json")
-      ? ((await response.json()) as T)
-      : null;
+    const data = response.ok ? await response.json() : await response.json().catch(() => null);
 
     if (!response.ok) {
       return {
         ok: false,
         status: response.status,
         data,
-        error: resolveErrorMessage(response, data),
+        error: resolveErrorMessage(response.status, data),
       };
     }
 

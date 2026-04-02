@@ -1,3 +1,5 @@
+import { browserApiRequest } from "@/lib/api/browser-api-client";
+
 type StudentSessionCheckoutPayload = {
   paymentEmail: string;
   cardholderName: string;
@@ -43,69 +45,17 @@ type StudentCheckoutResponse = {
   message: string;
 };
 
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") {
-    return null;
-  }
-
-  const encodedName = `${encodeURIComponent(name)}=`;
-  const parts = document.cookie.split(";");
-
-  for (const part of parts) {
-    const cookie = part.trim();
-    if (cookie.startsWith(encodedName)) {
-      return decodeURIComponent(cookie.slice(encodedName.length));
-    }
-  }
-
-  return null;
-}
-
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
-
 async function submitStudentCheckout(path: string, payload: Record<string, unknown>): Promise<StudentCheckoutResponse> {
-  const baseUrl = resolveApiBaseUrl();
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
-  const token = readCookie("arch_access_token");
-  if (!token) {
-    throw new Error("Authentication required. Please login again.");
-  }
-
-  const response = await fetch(`${baseUrl}${path}`, {
+  return browserApiRequest<StudentCheckoutResponse>({
+    url: `${baseUrl}${path}`,
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
+    data: payload,
   });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("Authentication required. Please login again.");
-  }
-
-  if (!response.ok) {
-    let detail: string | undefined;
-    try {
-      const data = (await response.json()) as { detail?: string };
-      detail = data.detail;
-    } catch {
-      // Ignore non-JSON error responses.
-    }
-    throw new Error(detail ?? `Checkout request failed (${response.status}).`);
-  }
-
-  return (await response.json()) as StudentCheckoutResponse;
 }
 
 export async function createStudentSessionCheckout(

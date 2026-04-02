@@ -25,6 +25,8 @@ import {
   PARENT_SETTINGS_ROUTE,
   PARENT_STUDENTS_ROUTE,
 } from "@/lib/routes";
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { parentMessagesUnreadCount } from "@/lib/parent/messages-data";
 
 type NavItem = {
@@ -80,14 +82,6 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-function readCookie(name: string) {
-  if (typeof document === "undefined") return "";
-  const prefix = `${name}=`;
-  const parts = document.cookie.split(";").map((part) => part.trim());
-  const match = parts.find((part) => part.startsWith(prefix));
-  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
-}
-
 function clearAuthCookies() {
   document.cookie = "arch_access_token=; Path=/; Max-Age=0; SameSite=Lax";
   document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
@@ -109,6 +103,7 @@ export function ParentShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { tokenPresent } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
@@ -122,25 +117,19 @@ export function ParentShell({
   useEffect(() => {
     async function loadProfile() {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
-      const token = readCookie("arch_access_token");
-      if (!baseUrl || !token) return;
+      if (!baseUrl || !tokenPresent) return;
 
       try {
-        const response = await fetch(`${baseUrl}/parent/profile`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) return;
-
-        const data = (await response.json()) as {
+        const data = await browserApiRequest<{
           first_name: string;
           last_name: string;
           email: string;
           phone_number: string;
           initials: string;
-        };
+        }>({
+          url: `${baseUrl}/parent/profile`,
+          method: "GET",
+        });
 
         setUserProfile({
           initials: data.initials || "PA",
@@ -179,7 +168,7 @@ export function ParentShell({
     return () => {
       window.removeEventListener("arch-profile-updated", onProfileUpdated as EventListener);
     };
-  }, []);
+  }, [tokenPresent]);
   useEffect(() => {
     function onMouseDown(event: MouseEvent) {
       const target = event.target as Node;
@@ -199,15 +188,11 @@ export function ParentShell({
     setIsLoggingOut(true);
 
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
-    const token = readCookie("arch_access_token");
-
-    if (baseUrl && token) {
+    if (baseUrl) {
       try {
-        await fetch(`${baseUrl}/auth/logout`, {
+        await browserApiRequest({
+          url: `${baseUrl}/auth/logout`,
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         });
       } catch {
         // Ignore network errors on logout and clear local session anyway.
@@ -215,6 +200,7 @@ export function ParentShell({
     }
 
     clearAuthCookies();
+    window.dispatchEvent(new Event("arch-session-updated"));
     setUserMenuOpen(false);
     router.replace("/login");
     router.refresh();

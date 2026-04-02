@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { ADMIN_STUDENTS_ROUTE } from "@/lib/routes";
 
 type AdminStudentStatus = "Active" | "Inactive";
@@ -126,9 +127,10 @@ export function AdminStudentsPage() {
 
     const loadStats = async () => {
       try {
-        const response = await fetch("/api/admin/students/stats", { cache: "no-store" });
-        if (!response.ok) return;
-        const payload = (await response.json()) as StudentsStatsResponse;
+        const payload = await browserApiRequest<StudentsStatsResponse>({
+          url: "/api/admin/students/stats",
+          method: "GET",
+        });
         if (!cancelled) {
           setStats(payload);
         }
@@ -160,12 +162,10 @@ export function AdminStudentsPage() {
       }
 
       try {
-        const response = await fetch(`/api/admin/students?${params.toString()}`, { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error("Failed to load students.");
-        }
-
-        const payload = (await response.json()) as StudentsApiResponse;
+        const payload = await browserApiRequest<StudentsApiResponse>({
+          url: `/api/admin/students?${params.toString()}`,
+          method: "GET",
+        });
         if (cancelled) return;
 
         setStudents(payload.items.map((item, index) => toUiStudent(item, index)));
