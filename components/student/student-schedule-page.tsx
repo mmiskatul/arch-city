@@ -34,21 +34,22 @@ function statusClass(status: StudentScheduleItem["status"]) {
   return "bg-[#fff6de] text-[#b58112]";
 }
 
-export function StudentSchedulePage() {
+export function StudentSchedulePage({ initialSessions }: { initialSessions?: StudentScheduleItem[] }) {
   const [activeTab, setActiveTab] = useState<ScheduleTab>("Upcoming");
+  const sessions = initialSessions ?? studentScheduleItems;
 
   const filteredSessions = useMemo(
-    () => studentScheduleItems.filter((item) => item.status === activeTab),
-    [activeTab],
+    () => sessions.filter((item) => item.status === activeTab),
+    [activeTab, sessions],
   );
 
   const counts = useMemo(
     () => ({
-      Upcoming: studentScheduleItems.filter((item) => item.status === "Upcoming").length,
-      Completed: studentScheduleItems.filter((item) => item.status === "Completed").length,
-      Cancelled: studentScheduleItems.filter((item) => item.status === "Cancelled").length,
+      Upcoming: sessions.filter((item) => item.status === "Upcoming").length,
+      Completed: sessions.filter((item) => item.status === "Completed").length,
+      Cancelled: sessions.filter((item) => item.status === "Cancelled").length,
     }),
-    [],
+    [sessions],
   );
 
   return (

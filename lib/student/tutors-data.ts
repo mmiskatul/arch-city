@@ -27,6 +27,7 @@ export type StudentTutor = {
   availability: Array<{
     day: string;
     time: string;
+    date?: string;
   }>;
   price45: number;
   price60: number;

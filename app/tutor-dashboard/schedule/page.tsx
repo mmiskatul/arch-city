@@ -1,5 +1,8 @@
+import { fetchTutorScheduleItems } from "@/lib/api/tutor-schedule-api";
 import { TutorSchedulePage } from "@/components/tutor/tutor-schedule-page";
 
-export default function TutorScheduleRoute() {
-  return <TutorSchedulePage />;
+export default async function TutorScheduleRoute() {
+  const sessions = await fetchTutorScheduleItems();
+
+  return <TutorSchedulePage initialSessions={sessions} />;
 }

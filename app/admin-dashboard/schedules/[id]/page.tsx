@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { AdminScheduleDetailPage } from "@/components/admin/admin-schedule-detail-page";
-import { getAdminScheduleDetailById } from "@/lib/admin/schedules-data";
+import { fetchAdminScheduleDetailById } from "@/lib/api/admin-schedule-api";
 
 export default async function AdminScheduleDetailRoute({
   params,
@@ -9,7 +9,7 @@ export default async function AdminScheduleDetailRoute({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = getAdminScheduleDetailById(id);
+  const session = await fetchAdminScheduleDetailById(id);
 
   if (!session) {
     notFound();

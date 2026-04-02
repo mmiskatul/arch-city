@@ -16,7 +16,6 @@ type RangeFilter = "Today" | "Week" | "Month";
 type StatusFilter = "All" | AdminScheduleStatus;
 
 const pageSize = 6;
-const tutorFilters = ["All Tutors", ...Array.from(new Set(adminScheduleRows.map((item) => item.tutor)))];
 const typeFilters = ["All Types", "In-Person", "Virtual"] as const;
 
 function FilterDropdown({
@@ -92,21 +91,23 @@ function statusClassName(status: AdminScheduleStatus) {
   return "bg-[#ffecef] text-[#d94a62]";
 }
 
-export function AdminSchedulesPage() {
+export function AdminSchedulesPage({ initialRows }: { initialRows?: typeof adminScheduleRows }) {
   const [rangeFilter, setRangeFilter] = useState<RangeFilter>("Today");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [tutorFilter, setTutorFilter] = useState<string>("All Tutors");
   const [typeFilter, setTypeFilter] = useState<(typeof typeFilters)[number]>("All Types");
   const [currentPage, setCurrentPage] = useState(1);
+  const rows = initialRows ?? adminScheduleRows;
+  const tutorFilters = ["All Tutors", ...Array.from(new Set(rows.map((item) => item.tutor)))];
 
   const filteredRows = useMemo(() => {
-    return adminScheduleRows.filter((item) => {
+    return rows.filter((item) => {
       const statusMatch = statusFilter === "All" ? true : item.status === statusFilter;
       const tutorMatch = tutorFilter === "All Tutors" ? true : item.tutor === tutorFilter;
       const typeMatch = typeFilter === "All Types" ? true : item.type === typeFilter;
       return statusMatch && tutorMatch && typeMatch;
     });
-  }, [statusFilter, tutorFilter, typeFilter]);
+  }, [rows, statusFilter, tutorFilter, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);

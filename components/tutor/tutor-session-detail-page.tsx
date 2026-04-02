@@ -105,7 +105,7 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
               <p className="text-[14px] font-semibold text-[#20242b]">Virtual Session Link</p>
               <div className="mt-3 flex items-center gap-2">
                 <div className="flex-1 rounded-full border border-[#e5e7eb] bg-white px-4 py-2.5 text-[13px] text-[#6b7280]">
-                  {session.sessionLink}
+                  {session.sessionLink || "Link will be shared after confirmation"}
                 </div>
                 <button
                   type="button"

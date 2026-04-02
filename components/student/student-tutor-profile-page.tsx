@@ -141,7 +141,7 @@ export function StudentTutorProfilePage({ tutor }: { tutor: StudentTutor }) {
               <div className="mt-3 space-y-2">
                 {tutor.availability.map((slot) => (
                   <div
-                    key={slot.day}
+                    key={`${slot.day}-${slot.time}`}
                     className="flex items-center justify-between rounded-lg bg-[#fafafb] px-3 py-3"
                   >
                     <div className="flex items-start gap-2">

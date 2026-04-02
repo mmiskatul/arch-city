@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { StudentSessionDetailPage } from "@/components/student/student-session-detail-page";
-import { getStudentScheduleItemById } from "@/lib/student/schedule-data";
+import { fetchStudentScheduleItemById } from "@/lib/api/student-schedule-api";
 
 export default async function Page({
   params,
@@ -9,7 +9,7 @@ export default async function Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = getStudentScheduleItemById(id);
+  const session = await fetchStudentScheduleItemById(id);
 
   if (!session) {
     notFound();

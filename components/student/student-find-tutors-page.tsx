@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiChevronDown, FiStar } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
 import { STUDENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
+import { fetchAvailableStudentTutors } from "@/lib/api/public-tutors-api";
 import { studentTutors, type StudentTutor } from "@/lib/student/tutors-data";
 
 type SortOption = "featured" | "rating" | "price-low" | "price-high";
@@ -43,9 +44,7 @@ function FilterGroup({
 }) {
   return (
     <div className="border-b border-[#eceef2] pb-4 last:border-b-0">
-      <h3 className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">
-        {title}
-      </h3>
+      <h3 className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">{title}</h3>
       <div className="mt-3 space-y-2">
         {items.map((item) => {
           const active = selected === item;
@@ -69,6 +68,9 @@ function FilterGroup({
 }
 
 function TutorCardView({ tutor }: { tutor: StudentTutor }) {
+  const nextSlot = tutor.availability[0];
+  const openSlotCount = tutor.availability.length;
+
   return (
     <Link
       href={`${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}`}
@@ -79,16 +81,20 @@ function TutorCardView({ tutor }: { tutor: StudentTutor }) {
           {tutor.initials}
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[15px] font-bold text-[#20242b]">{tutor.name}</h2>
-          <div className="mt-1 flex items-center gap-1 text-[12px] text-[#f3b300]">
-            {[0, 1, 2, 3, 4].map((star) => (
-              <FiStar key={star} className="h-3 w-3 fill-current" />
-            ))}
-            <span className="ml-1 font-semibold text-[#6b7280]">({tutor.reviews})</span>
-          </div>
-          <div className="mt-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="truncate text-[15px] font-bold text-[#20242b]">{tutor.name}</h2>
+              <div className="mt-1 flex items-center gap-1 text-[12px] text-[#f3b300]">
+                {[0, 1, 2, 3, 4].map((star) => (
+                  <FiStar key={star} className="h-3 w-3 fill-current" />
+                ))}
+                <span className="ml-1 font-semibold text-[#6b7280]">
+                  {tutor.rating > 0 ? `(${tutor.rating.toFixed(1)} - ${tutor.reviews} reviews)` : "(New tutor)"}
+                </span>
+              </div>
+            </div>
             <span
-              className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium ${
                 tutor.mode === "In-Person" ? "bg-[#f1f1f1] text-[#6b7280]" : "bg-[#ffecef] text-[#d94a62]"
               }`}
             >
@@ -99,7 +105,7 @@ function TutorCardView({ tutor }: { tutor: StudentTutor }) {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {tutor.subjects.slice(1).map((subject) => (
+        {tutor.subjects.slice(0, 3).map((subject) => (
           <span
             key={subject}
             className="rounded-md border border-[#e5e7eb] bg-[#f8fafc] px-2 py-1 text-[11px] font-medium text-[#6b7280]"
@@ -110,16 +116,28 @@ function TutorCardView({ tutor }: { tutor: StudentTutor }) {
       </div>
 
       <p className="mt-3 text-[13px] text-[#6b7280]">
-        {tutor.grades} · {tutor.district}
+        {tutor.grades} - {tutor.district}
       </p>
+
+      <div className="mt-3 rounded-[12px] border border-[#eceef2] bg-[#fafbfc] px-3 py-2 text-[12px] text-[#4b5563]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-semibold text-[#20242b]">{openSlotCount} open slot{openSlotCount === 1 ? "" : "s"}</span>
+          <span className="rounded-full bg-[#fff6de] px-2 py-0.5 text-[10px] font-medium text-[#b58112]">
+            Available
+          </span>
+        </div>
+        {nextSlot ? <p className="mt-1 text-[12px] text-[#6b7280]">{nextSlot.day} - {nextSlot.time}</p> : null}
+      </div>
 
       <div className="mt-3 border-t border-[#eceef2] pt-3 text-[13px] text-[#6b7280]">
         <div className="flex items-center justify-between gap-3">
           <span>
             {tutor.mode === "In-Person" ? "In-Person" : "Virtual"}:{" "}
-            <span className="font-bold text-[#20242b]">${tutor.price45}/45min</span>
+            <span className="font-bold text-[#20242b]">
+              {tutor.price45 > 0 ? `$${tutor.price45}/45min` : "Contact"}
+            </span>
           </span>
-          <span>${tutor.price60}/60min</span>
+          <span>{tutor.price60 > 0 ? `$${tutor.price60}/60min` : "Contact"}</span>
         </div>
       </div>
     </Link>
@@ -132,9 +150,41 @@ export function StudentFindTutorsPage() {
   const [selectedTutoringMode, setSelectedTutoringMode] = useState<string | null>(null);
   const [selectedMinRating, setSelectedMinRating] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("featured");
+  const [tutors, setTutors] = useState<StudentTutor[]>(studentTutors);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadTutors() {
+      try {
+        setLoadError(null);
+        const liveTutors = await fetchAvailableStudentTutors();
+        if (mounted) {
+          setTutors(liveTutors);
+        }
+      } catch (error) {
+        if (mounted) {
+          setTutors(studentTutors);
+          setLoadError(error instanceof Error ? error.message : "Unable to load live tutor availability.");
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadTutors();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredTutors = useMemo(() => {
-    const filtered = studentTutors.filter((tutor) => {
+    const filtered = tutors.filter((tutor) => {
       const matchesSubject = !selectedSubject || tutor.subjects.includes(selectedSubject);
       const matchesGrade = !selectedGradeLevel || tutor.gradeGroup === selectedGradeLevel;
       const matchesMode =
@@ -156,10 +206,10 @@ export function StudentFindTutorsPage() {
         case "price-high":
           return b.price45 - a.price45;
         default:
-          return 0;
+          return b.availability.length - a.availability.length || b.rating - a.rating || a.name.localeCompare(b.name);
       }
     });
-  }, [selectedGradeLevel, selectedMinRating, selectedSubject, selectedTutoringMode, sortBy]);
+  }, [selectedGradeLevel, selectedMinRating, selectedSubject, selectedTutoringMode, sortBy, tutors]);
 
   function resetFilters() {
     setSelectedSubject(null);
@@ -177,10 +227,30 @@ export function StudentFindTutorsPage() {
             <div className="pr-4">
               <h1 className="text-[18px] font-bold text-[#20242b]">Filters</h1>
               <div className="mt-4 space-y-4">
-                <FilterGroup title="Subject" items={filterOptions.subject} selected={selectedSubject} onSelect={setSelectedSubject} />
-                <FilterGroup title="Grade Level" items={filterOptions.gradeLevel} selected={selectedGradeLevel} onSelect={setSelectedGradeLevel} />
-                <FilterGroup title="Tutoring Mode" items={filterOptions.tutoringMode} selected={selectedTutoringMode} onSelect={setSelectedTutoringMode} />
-                <FilterGroup title="Min Rating" items={filterOptions.minRating} selected={selectedMinRating} onSelect={setSelectedMinRating} />
+                <FilterGroup
+                  title="Subject"
+                  items={filterOptions.subject}
+                  selected={selectedSubject}
+                  onSelect={setSelectedSubject}
+                />
+                <FilterGroup
+                  title="Grade Level"
+                  items={filterOptions.gradeLevel}
+                  selected={selectedGradeLevel}
+                  onSelect={setSelectedGradeLevel}
+                />
+                <FilterGroup
+                  title="Tutoring Mode"
+                  items={filterOptions.tutoringMode}
+                  selected={selectedTutoringMode}
+                  onSelect={setSelectedTutoringMode}
+                />
+                <FilterGroup
+                  title="Min Rating"
+                  items={filterOptions.minRating}
+                  selected={selectedMinRating}
+                  onSelect={setSelectedMinRating}
+                />
               </div>
 
               <button
@@ -195,9 +265,12 @@ export function StudentFindTutorsPage() {
 
           <section className="pt-6 xl:pl-4 xl:pt-0">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-[16px] font-bold text-[#20242b]">
-                {filteredTutors.length} tutor{filteredTutors.length === 1 ? "" : "s"} found
-              </h2>
+              <div>
+                <h2 className="text-[16px] font-bold text-[#20242b]">
+                  {isLoading ? "Loading tutors..." : `${filteredTutors.length} tutor${filteredTutors.length === 1 ? "" : "s"} found`}
+                </h2>
+                {loadError ? <p className="mt-1 text-[12px] text-[#8a5b00]">{loadError}</p> : null}
+              </div>
               <div className="flex items-center gap-2 self-start sm:self-auto">
                 <label htmlFor="sort-by" className="text-[13px] font-medium text-[#6b7280]">
                   Sort by:
@@ -225,7 +298,7 @@ export function StudentFindTutorsPage() {
               ))}
             </div>
 
-            {filteredTutors.length === 0 ? (
+            {!isLoading && filteredTutors.length === 0 ? (
               <div className="mt-8 rounded-[14px] border border-[#eceef2] bg-white px-5 py-8 text-center text-[14px] text-[#6b7280]">
                 No tutors match the selected filters.
               </div>

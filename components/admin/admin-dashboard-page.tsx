@@ -29,10 +29,11 @@ type SessionRowApi = {
   student: string;
   tutor: string;
   subject: string;
-  date_time: string;
+  session_date: string;
+  session_time: string;
   session_type: string;
   status: string;
-  fee: string;
+  amount: string;
 };
 
 type PendingActionApi = {
@@ -144,6 +145,27 @@ function getInitialBadgeClass(index: number) {
     "bg-[#fff6de] text-[#b58112]",
   ];
   return classes[index % classes.length];
+}
+
+function formatDateLabel(value: string) {
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+    }).format(parsed);
+  }
+  return value;
+}
+
+function formatTimeLabel(value: string) {
+  return value.replace(/\s+([AP]M)\b/gi, " $1").trim();
+}
+
+function formatDateTimeLabel(sessionDate: string, sessionTime: string) {
+  const dateLabel = formatDateLabel(sessionDate);
+  const timeLabel = formatTimeLabel(sessionTime);
+  return [dateLabel, timeLabel].filter(Boolean).join(" · ");
 }
 
 function getSummaryIcon(iconName: string): IconType {
@@ -332,7 +354,7 @@ export function AdminDashboardPage({
                   <div className="divide-y divide-[#eceef2]">
                     {(Array.isArray(data?.recent_sessions) ? data.recent_sessions : []).map((row, index) => (
                       <div
-                        key={`${row.student}-${row.tutor}-${row.date_time}`}
+                        key={`${row.student}-${row.tutor}-${row.session_date}-${row.session_time}`}
                         className="grid grid-cols-[1.5fr_1.2fr_0.9fr_1fr_0.85fr_0.95fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563]"
                       >
                         <div className="flex items-center gap-2.5">
@@ -343,7 +365,7 @@ export function AdminDashboardPage({
                         </div>
                         <span>{row.tutor}</span>
                         <span>{row.subject}</span>
-                        <span>{row.date_time}</span>
+                        <span>{formatDateTimeLabel(row.session_date, row.session_time)}</span>
                         <div>
                           <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getModeClassName(row.session_type)}`}>
                             {row.session_type}
@@ -354,7 +376,7 @@ export function AdminDashboardPage({
                             {row.status}
                           </span>
                         </div>
-                        <span className="font-semibold text-[#374151]">{row.fee}</span>
+                        <span className="font-semibold text-[#374151]">{row.amount}</span>
                       </div>
                     ))}
 

@@ -1,61 +1,247 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FiAlertTriangle } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
+import { createStudentSessionCheckout } from "@/lib/api/student-checkout-api";
 import { STUDENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
 import type { StudentTutor } from "@/lib/student/tutors-data";
 
-const dates = [
-  { dayLabel: "Sun", day: "30", active: false },
-  { dayLabel: "Mon", day: "31", active: true },
-  { dayLabel: "Tue", day: "1", active: false },
-  { dayLabel: "Wed", day: "2", active: false },
-  { dayLabel: "Thu", day: "3", active: false },
-  { dayLabel: "Fri", day: "4", active: false },
-  { dayLabel: "Sat", day: "5", active: false },
-];
-
-const timeSlots = ["3:00 PM", "3:15 PM", "3:30 PM", "3:45 PM", "4:00 PM", "4:15 PM", "4:30 PM", "5:00 PM"];
-
 type SessionType = "Virtual" | "In-Person";
 type DurationType = 45 | 60;
+type BookingStep = 1 | 2 | 3 | 4;
+type StepStatus = "read" | "current" | "next";
 
 function StepItem({
   step,
   label,
-  active,
+  status,
+  href,
 }: {
   step: number;
   label: string;
-  active?: boolean;
+  status: StepStatus;
+  href: string;
 }) {
+  const isCurrent = status === "current";
+  const isRead = status === "read";
+
   return (
-    <div className="flex items-center gap-3">
+    <Link href={href} className="flex items-center gap-3">
       <span
         className={`flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-bold ${
-          active ? "bg-[#d61c3f] text-white" : "bg-[#eef1f4] text-[#6b7280]"
+          isCurrent
+            ? "bg-[#d61c3f] text-white"
+            : isRead
+              ? "bg-[#eef1f4] text-[#6b7280]"
+              : "bg-[#eef1f4] text-[#6b7280]"
         }`}
       >
-        {step}
+        {isRead ? "✓" : step}
       </span>
-      <span className={`text-[14px] ${active ? "font-semibold text-[#d61c3f]" : "text-[#6b7280]"}`}>
-        {label}
-      </span>
-    </div>
+      <div className="leading-tight">
+        <span className={`block text-[14px] ${isCurrent ? "font-semibold text-[#d61c3f]" : isRead ? "font-semibold text-[#6b7280]" : "text-[#6b7280]"}`}>
+          {label}
+        </span>
+        <span className={`block text-[10px] uppercase tracking-[0.08em] ${isCurrent ? "text-[#d61c3f]" : isRead ? "text-[#9ca3af]" : "text-[#9ca3af]"}`}>
+          {isRead ? "Read" : isCurrent ? "Current" : "Next"}
+        </span>
+      </div>
+    </Link>
   );
 }
 
+type AvailabilityGroup = {
+  value: string;
+  label: string;
+  slots: StudentTutor["availability"];
+};
+
+function groupAvailabilityByDate(availability: StudentTutor["availability"]) {
+  const groups = new Map<string, AvailabilityGroup>();
+
+  availability.forEach((slot) => {
+    const value = slot.date?.trim() || slot.day?.trim() || "Available";
+    const label = slot.day?.trim() || value;
+    const group = groups.get(value) ?? {
+      value,
+      label,
+      slots: [],
+    };
+    group.slots.push(slot);
+    groups.set(value, group);
+  });
+
+  return [...groups.values()];
+}
+
+function formatDateLabel(label: string, index: number) {
+  const parsed = new Date(label);
+  if (!Number.isNaN(parsed.getTime())) {
+    return {
+      weekday: new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(parsed).toUpperCase(),
+      day: new Intl.DateTimeFormat("en-US", { day: "numeric" }).format(parsed),
+    };
+  }
+
+  const fallback = label.replace(/,/g, " ").trim().split(/\s+/);
+  return {
+    weekday: fallback[0]?.slice(0, 3).toUpperCase() || "DAY",
+    day: fallback[1] || String(index + 1),
+  };
+}
+
+function SummaryCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <h2 className="text-[16px] font-bold text-[#20242b]">{title}</h2>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+function buildQueryString(values: Record<string, string | number | undefined>) {
+  const params = new URLSearchParams();
+
+  Object.entries(values).forEach(([key, value]) => {
+    if (value === undefined || value === "") {
+      return;
+    }
+    params.set(key, String(value));
+  });
+
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const availabilityGroups = useMemo(() => groupAvailabilityByDate(tutor.availability), [tutor.availability]);
+
   const defaultSessionType: SessionType = tutor.inPersonAvailable && tutor.mode === "In-Person" ? "In-Person" : "Virtual";
-  const [selectedTime, setSelectedTime] = useState("3:00 PM");
-  const [sessionType, setSessionType] = useState<SessionType>(defaultSessionType);
-  const [duration, setDuration] = useState<DurationType>(60);
+  const defaultDate = availabilityGroups[0]?.value ?? "Unavailable";
+  const defaultTime = availabilityGroups[0]?.slots[0]?.time ?? "Unavailable";
+  const initialDateParam = searchParams.get("date");
+  const normalizedInitialDate =
+    availabilityGroups.find((group) => group.value === initialDateParam)?.value ??
+    availabilityGroups.find((group) => group.label === initialDateParam)?.value ??
+    defaultDate;
+
+  const [selectedDate, setSelectedDate] = useState(normalizedInitialDate);
+  const [selectedTime, setSelectedTime] = useState(searchParams.get("time") || defaultTime);
+  const [sessionType, setSessionType] = useState<SessionType>(
+    (searchParams.get("type") as SessionType | null) ?? defaultSessionType,
+  );
+  const [duration, setDuration] = useState<DurationType>(
+    (Number(searchParams.get("duration")) === 45 ? 45 : 60) as DurationType,
+  );
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [paymentEmail, setPaymentEmail] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
+  const [cardCountry, setCardCountry] = useState("Bangladesh");
+  const [savePaymentInfo, setSavePaymentInfo] = useState(false);
+  const [checkoutStatus, setCheckoutStatus] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+
+  const stepParam = searchParams.get("step") || "date-time";
+  const activeStep: BookingStep = stepParam === "confirm" ? 4 : stepParam === "duration" ? 3 : stepParam === "session" ? 2 : 1;
+
+  const selectedGroup = availabilityGroups.find((group) => group.value === selectedDate) ?? availabilityGroups[0];
+  const availableTimes = selectedGroup?.slots ?? [];
+  const selectedDateLabel = selectedGroup?.label ?? selectedDate;
 
   const chargedToday = 5;
   const sessionRate = useMemo(() => (duration === 45 ? tutor.price45 : tutor.price60), [duration, tutor.price45, tutor.price60]);
+
+  const stepRoutes = {
+    dateTime: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "date-time", date: selectedDate, time: selectedTime, type: sessionType, duration })}`,
+    sessionType: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "session", date: selectedDate, time: selectedTime, type: sessionType, duration })}`,
+    duration: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "duration", date: selectedDate, time: selectedTime, type: sessionType, duration })}`,
+    confirm: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "confirm", date: selectedDate, time: selectedTime, type: sessionType, duration })}`,
+  };
+
+  const stepStatus = (step: BookingStep): StepStatus => {
+    if (step < activeStep) {
+      return "read";
+    }
+    if (step === activeStep) {
+      return "current";
+    }
+    return "next";
+  };
+
+  function handleDateChange(dateValue: string) {
+    const nextGroup = availabilityGroups.find((group) => group.value === dateValue);
+    setSelectedDate(dateValue);
+    setSelectedTime(nextGroup?.slots[0]?.time ?? "");
+  }
+
+  function isSlotSelected(time: string) {
+    return selectedTime === time;
+  }
+
+  function closeReviewModal() {
+    setIsReviewOpen(false);
+    setCheckoutSuccess(false);
+    setCheckoutStatus(null);
+    setCheckoutError(null);
+    setCheckoutSubmitting(false);
+  }
+
+  async function handleSessionCheckout() {
+    setCheckoutError(null);
+    setCheckoutStatus(null);
+    setCheckoutSubmitting(true);
+
+    try {
+      const result = await createStudentSessionCheckout({
+        paymentEmail,
+        cardholderName: cardName,
+        cardNumber,
+        cardExpiry,
+        cardCountry,
+        saveInformation: savePaymentInfo,
+        tutorId: tutor.id,
+        tutorName: tutor.name,
+      sessionDate: selectedDate,
+        sessionTime: selectedTime,
+        sessionType,
+        durationMinutes: duration,
+        sessionRate: String(sessionRate),
+        schedulingFee: String(chargedToday),
+        totalAmount: String(sessionRate + chargedToday),
+        currency: "USD",
+      });
+
+      setCheckoutStatus(result.message);
+      setCheckoutSuccess(true);
+      setTimeout(() => {
+        setIsReviewOpen(false);
+        setCheckoutSuccess(false);
+        setCheckoutStatus(null);
+        router.push(STUDENT_FIND_TUTORS_ROUTE);
+      }, 1200);
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "Failed to record payment.");
+    } finally {
+      setCheckoutSubmitting(false);
+    }
+  }
 
   return (
     <StudentShell>
@@ -70,145 +256,240 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-4 rounded-[12px] border border-[#eceef2] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-              <StepItem step={1} label="Date & Time" active />
+              <StepItem step={1} label="Date & Time" status={stepStatus(1)} href={stepRoutes.dateTime} />
               <div className="h-px w-8 bg-[#e5e7eb]" />
-              <StepItem step={2} label="Session Type" />
+              <StepItem step={2} label="Session Type" status={stepStatus(2)} href={stepRoutes.sessionType} />
               <div className="h-px w-8 bg-[#e5e7eb]" />
-              <StepItem step={3} label="Duration" />
-              <div className="h-px w-8 bg-[#e5e7eb]" />
-              <StepItem step={4} label="Confirm & Pay" />
+              <StepItem step={3} label="Duration" status={stepStatus(3)} href={stepRoutes.duration} />
             </div>
 
-            <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-              <h2 className="text-[16px] font-bold text-[#20242b]">Select Date & Time</h2>
+            {activeStep >= 1 ? (
+              activeStep === 1 ? (
+                <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                  <h2 className="text-[16px] font-bold text-[#20242b]">Select Date & Time</h2>
 
-              <div className="mt-4 grid grid-cols-7 gap-3 text-center">
-                {dates.map((item) => (
-                  <div key={`${item.dayLabel}-${item.day}`}>
-                    <p className="text-[12px] font-semibold text-[#6b7280]">{item.dayLabel}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {availabilityGroups.map((group, index) => {
+                      const active = selectedDate === group.value;
+                      const dateLabel = formatDateLabel(group.label, index);
+
+                      return (
+                      <button
+                          key={group.value}
+                          type="button"
+                          onClick={() => handleDateChange(group.value)}
+                          className={`rounded-[14px] border px-3 py-3 text-left shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition ${
+                            active ? "border-[#ef6078] bg-[#fff4f6]" : "border-[#e5e7eb] bg-white hover:border-[#d7dbe0]"
+                          }`}
+                        >
+                          <p className={`text-[11px] font-semibold tracking-[0.08em] ${active ? "text-[#d61c3f]" : "text-[#6b7280]"}`}>
+                            {dateLabel.weekday}
+                          </p>
+                          <p className={`mt-0.5 text-[18px] font-bold leading-none ${active ? "text-[#d61c3f]" : "text-[#20242b]"}`}>
+                            {dateLabel.day}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between gap-3">
+                    <p className="text-[14px] font-semibold text-[#20242b]">Available Times</p>
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {availableTimes.map((slot) => (
+                      <button
+                        key={`${slot.day}-${slot.time}-${slot.start_time}`}
+                        type="button"
+                        onClick={() => setSelectedTime(slot.time)}
+                        className={`flex items-center justify-between rounded-[12px] border px-4 py-3 text-left transition ${
+                          isSlotSelected(slot.time)
+                            ? "border-[#f2a4b2] bg-[#fff1f4]"
+                            : "border-[#e5e7eb] bg-white hover:border-[#d7dbe0]"
+                        }`}
+                        >
+                        <div className="min-w-0">
+                          <p className={`text-[13px] font-bold ${isSlotSelected(slot.time) ? "text-[#d61c3f]" : "text-[#20242b]"}`}>
+                            {slot.time}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <div className="flex gap-3">
+                      <Link
+                        href={`${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}`}
+                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+                      >
+                        Back
+                      </Link>
+                      <Link
+                        href={stepRoutes.sessionType}
+                        className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white"
+                      >
+                        Next
+                      </Link>
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                <SummaryCard title="Date & Time">
+                  <div className="flex items-center justify-between rounded-[12px] bg-[#fafafb] px-4 py-3">
+                      <div>
+                      <p className="text-[12px] font-semibold text-[#20242b]">{selectedDateLabel}</p>
+                      <p className="text-[11px] text-[#6b7280]">{selectedTime}</p>
+                    </div>
+                    <span className="rounded-full bg-[#eef1f4] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">
+                      Read
+                    </span>
+                  </div>
+                </SummaryCard>
+              )
+            ) : null}
+
+            {activeStep >= 2 ? (
+              activeStep === 2 ? (
+                <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                  <h2 className="text-[16px] font-bold text-[#20242b]">Session Type</h2>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <button
                       type="button"
-                      className={`mt-2 h-7 w-full rounded-md text-[14px] font-semibold ${
-                        item.active ? "bg-[#d61c3f] text-white" : item.day === "28" ? "bg-[#ffe8ed] text-[#d61c3f]" : "text-[#6b7280]"
+                      onClick={() => setSessionType("Virtual")}
+                      className={`rounded-[12px] border p-4 text-left ${
+                        sessionType === "Virtual" ? "border-[#ef6078] bg-[#fff1f4]" : "border-[#e5e7eb] bg-white"
                       }`}
                     >
-                      {item.day}
+                      <div className="flex items-center gap-3">
+                        <span className={`h-5 w-5 rounded-full border ${sessionType === "Virtual" ? "border-[#d61c3f]" : "border-[#d1d5db]"}`} />
+                        <div>
+                          <p className="text-[14px] font-semibold text-[#20242b]">Virtual</p>
+                          <p className="text-[13px] text-[#6b7280]">Video call session</p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => tutor.inPersonAvailable && setSessionType("In-Person")}
+                      className={`rounded-[12px] border p-4 text-left ${
+                        sessionType === "In-Person" ? "border-[#ef6078] bg-[#fff1f4]" : "border-[#e5e7eb] bg-white"
+                      } ${!tutor.inPersonAvailable ? "opacity-55" : ""}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`h-5 w-5 rounded-full border ${sessionType === "In-Person" ? "border-[#d61c3f]" : "border-[#d1d5db]"}`} />
+                        <div>
+                          <p className="text-[14px] font-semibold text-[#20242b]">In-Person</p>
+                          <p className="text-[13px] text-[#6b7280]">
+                            {tutor.inPersonAvailable ? "Meet in person" : "Not available for this tutor"}
+                          </p>
+                        </div>
+                      </div>
                     </button>
                   </div>
-                ))}
-              </div>
 
-              <p className="mt-5 text-[14px] font-semibold text-[#20242b]">Available Times — Mon, Mar 31</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {timeSlots.map((time) => (
-                  <button
-                    key={time}
-                    type="button"
-                    onClick={() => setSelectedTime(time)}
-                    className={`rounded-md border px-4 py-2 text-[14px] font-medium ${
-                      selectedTime === time
-                        ? "border-[#f2a4b2] bg-[#fff1f4] text-[#d61c3f]"
-                        : "border-[#e5e7eb] bg-white text-[#4b5563]"
-                    }`}
-                  >
-                    {time}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-              <h2 className="text-[16px] font-bold text-[#20242b]">Session Type</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setSessionType("Virtual")}
-                  className={`rounded-[12px] border p-4 text-left ${
-                    sessionType === "Virtual"
-                      ? "border-[#ef6078] bg-[#fff1f4]"
-                      : "border-[#e5e7eb] bg-white"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`h-5 w-5 rounded-full border ${sessionType === "Virtual" ? "border-[#d61c3f]" : "border-[#d1d5db]"}`} />
-                    <div>
-                      <p className="text-[14px] font-semibold text-[#20242b]">Virtual</p>
-                      <p className="text-[13px] text-[#6b7280]">Video call session</p>
+                  <div className="mt-4 flex justify-end">
+                    <div className="flex gap-3">
+                      <Link
+                        href={stepRoutes.dateTime}
+                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+                      >
+                        Back
+                      </Link>
+                      <Link
+                        href={stepRoutes.duration}
+                        className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white"
+                      >
+                        Next
+                      </Link>
                     </div>
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => tutor.inPersonAvailable && setSessionType("In-Person")}
-                  className={`rounded-[12px] border p-4 text-left ${
-                    sessionType === "In-Person"
-                      ? "border-[#ef6078] bg-[#fff1f4]"
-                      : "border-[#e5e7eb] bg-white"
-                  } ${!tutor.inPersonAvailable ? "opacity-55" : ""}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`h-5 w-5 rounded-full border ${sessionType === "In-Person" ? "border-[#d61c3f]" : "border-[#d1d5db]"}`} />
+                </section>
+              ) : (
+                <SummaryCard title="Session Type">
+                  <div className="flex items-center justify-between rounded-[12px] bg-[#fafafb] px-4 py-3">
                     <div>
-                      <p className="text-[14px] font-semibold text-[#20242b]">In-Person</p>
-                      <p className="text-[13px] text-[#6b7280]">
-                        {tutor.inPersonAvailable ? "Meet in person" : "Not available for this tutor"}
-                      </p>
+                      <p className="text-[12px] font-semibold text-[#20242b]">{sessionType}</p>
+                      <p className="text-[11px] text-[#6b7280]">{sessionType === "Virtual" ? "Video call session" : "In-person session"}</p>
                     </div>
+                    <span className="rounded-full bg-[#eef1f4] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">
+                      Read
+                    </span>
                   </div>
-                </button>
-              </div>
-            </section>
+                </SummaryCard>
+              )
+            ) : null}
 
-            <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-              <h2 className="text-[16px] font-bold text-[#20242b]">Session Duration</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setDuration(45)}
-                  className={`rounded-[12px] border p-4 text-left ${
-                    duration === 45 ? "border-[#ef6078] bg-[#fff1f4]" : "border-[#e5e7eb] bg-white"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`h-5 w-5 rounded-full border ${duration === 45 ? "border-[#d61c3f]" : "border-[#d1d5db]"}`} />
-                    <div>
-                      <p className="text-[14px] font-semibold text-[#20242b]">45 Minutes</p>
-                      <p className="text-[13px] font-semibold text-[#d61c3f]">${tutor.price45}</p>
-                    </div>
+            {activeStep >= 3 ? (
+              activeStep === 3 ? (
+                <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                  <h2 className="text-[16px] font-bold text-[#20242b]">Session Duration</h2>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setDuration(45)}
+                      className={`rounded-[12px] border p-4 text-left ${
+                        duration === 45 ? "border-[#ef6078] bg-[#fff1f4]" : "border-[#e5e7eb] bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`h-5 w-5 rounded-full border ${duration === 45 ? "border-[#d61c3f]" : "border-[#d1d5db]"}`} />
+                        <div>
+                          <p className="text-[14px] font-semibold text-[#20242b]">45 Minutes</p>
+                          <p className="text-[13px] font-semibold text-[#d61c3f]">${tutor.price45}</p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDuration(60)}
+                      className={`rounded-[12px] border p-4 text-left ${
+                        duration === 60 ? "border-[#ef6078] bg-[#fff1f4]" : "border-[#e5e7eb] bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`h-5 w-5 rounded-full border ${duration === 60 ? "border-[#d61c3f]" : "border-[#d1d5db]"}`} />
+                        <div>
+                          <p className="text-[14px] font-semibold text-[#20242b]">60 Minutes</p>
+                          <p className="text-[13px] font-semibold text-[#d61c3f]">${tutor.price60}</p>
+                        </div>
+                      </div>
+                    </button>
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDuration(60)}
-                  className={`rounded-[12px] border p-4 text-left ${
-                    duration === 60 ? "border-[#ef6078] bg-[#fff1f4]" : "border-[#e5e7eb] bg-white"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`h-5 w-5 rounded-full border ${duration === 60 ? "border-[#d61c3f]" : "border-[#d1d5db]"}`} />
-                    <div>
-                      <p className="text-[14px] font-semibold text-[#20242b]">60 Minutes</p>
-                      <p className="text-[13px] font-semibold text-[#d61c3f]">${tutor.price60}</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </section>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href={`${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}`}
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#d61c3f] px-12 text-[14px] font-semibold text-[#d61c3f]"
-              >
-                Back
-              </Link>
-              <Link
-                href="#"
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-[#d61c3f] px-12 text-[14px] font-semibold text-white"
-              >
-                Review & Pay
-              </Link>
-            </div>
+                  <div className="mt-4 flex justify-end">
+                    <div className="flex gap-3">
+                      <Link
+                        href={stepRoutes.sessionType}
+                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+                      >
+                        Back
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setIsReviewOpen(true)}
+                        className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white"
+                      >
+                        Review & Pay
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                <SummaryCard title="Session Duration">
+                  <div className="flex items-center justify-between rounded-[12px] bg-[#fafafb] px-4 py-3">
+                    <div>
+                      <p className="text-[12px] font-semibold text-[#20242b]">{duration} Minutes</p>
+                      <p className="text-[11px] text-[#6b7280]">${duration === 45 ? tutor.price45 : tutor.price60}</p>
+                    </div>
+                    <span className="rounded-full bg-[#eef1f4] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">
+                      Read
+                    </span>
+                  </div>
+                </SummaryCard>
+              )
+            ) : null}
+
           </div>
 
           <aside className="space-y-4">
@@ -227,7 +508,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
               <div className="mt-4 space-y-2 border-b border-[#eceef2] pb-4 text-[14px]">
                 <div className="flex items-center justify-between">
                   <span className="text-[#6b7280]">Date</span>
-                  <span className="font-semibold text-[#20242b]">Mon, Mar 31</span>
+                    <span className="font-semibold text-[#20242b]">{selectedDateLabel}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#6b7280]">Time</span>
@@ -271,6 +552,258 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
           </aside>
         </div>
       </div>
+
+      {isReviewOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-2 py-2 backdrop-blur-[2px]"
+          onClick={closeReviewModal}
+          role="presentation"
+        >
+          <div
+            className="relative w-full max-w-[800px] overflow-hidden rounded-[20px] bg-white shadow-[0_20px_70px_rgba(15,23,42,0.3)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="grid lg:grid-cols-[0.88fr_1.12fr]">
+              <div className="relative overflow-hidden bg-[linear-gradient(180deg,#2f3647_0%,#3c455a_100%)] px-3.5 py-3.5 text-white lg:px-4 lg:py-4">
+                <div className="absolute -left-20 top-8 h-44 w-44 rounded-full bg-white/8 blur-3xl" />
+                <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-[#d61c3f]/18 blur-3xl" />
+
+                <div className="relative flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">Secure checkout</p>
+                    <h3 className="mt-2 text-[22px] font-bold leading-tight">Pay in USD</h3>
+                    <p className="mt-2 max-w-[320px] text-[12px] leading-5 text-white/72">
+                      Complete this booking with Visa, Mastercard, debit, or credit card.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeReviewModal}
+                    className="rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[11px] font-semibold text-white/85 transition hover:bg-white/12"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="relative mt-5 rounded-[18px] border border-white/12 bg-white/8 p-3.5 backdrop-blur-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/58">Total due today</p>
+                    <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/75">
+                      USD
+                    </span>
+                  </div>
+                  <p className="mt-3 text-[30px] font-bold leading-none tracking-[-0.03em]">${sessionRate + chargedToday}</p>
+                  <p className="mt-2 text-[11px] leading-5 text-white/70">Session rate plus scheduling fee for the booking today.</p>
+                </div>
+
+                  <div className="relative mt-3 space-y-1.5">
+                  <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Tutor</span>
+                      <span className="text-right text-[12px] font-semibold">{tutor.name}</span>
+                    </div>
+                  </div>
+                    <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Date & time</span>
+                        <span className="text-right text-[12px] font-semibold">
+                        {selectedDateLabel}
+                          <br />
+                          <span className="text-white/72">{selectedTime}</span>
+                        </span>
+                      </div>
+                    </div>
+                  <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Session type</span>
+                      <span className="text-right text-[12px] font-semibold">{sessionType}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Duration</span>
+                      <span className="text-right text-[12px] font-semibold">{duration} minutes</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative mt-3 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/82">Visa</span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/82">Mastercard</span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/82">Debit</span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/82">Credit</span>
+                </div>
+              </div>
+
+              <div className="bg-[#fbfbfc] px-3.5 py-3.5 lg:px-4 lg:py-4">
+                <button
+                  type="button"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-[4px] bg-[#00d66b] px-4 text-[13px] font-semibold text-[#13211d] shadow-[0_2px_0_rgba(0,0,0,0.06)]"
+                >
+                  Pay with <span className="ml-1 font-bold">link</span>
+                </button>
+
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-[#e5e7eb]" />
+                  <span className="text-[11px] uppercase tracking-[0.12em] text-[#a1a1aa]">OR</span>
+                  <div className="h-px flex-1 bg-[#e5e7eb]" />
+                </div>
+
+                <div className="mt-4">
+                  <h5 className="text-[13px] font-semibold text-[#333333]">Contact information</h5>
+                  <div className="mt-3">
+                    <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
+                      <span>Email</span>
+                      <input
+                        value={paymentEmail}
+                        onChange={(event) => setPaymentEmail(event.target.value)}
+                        type="email"
+                        placeholder="email@example.com"
+                        className="h-9 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[12px] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <h5 className="text-[13px] font-semibold text-[#333333]">Payment method</h5>
+                  <div className="mt-3 rounded-[8px] border border-[#e5e7eb] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+                    <div className="flex items-center gap-3 pb-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-sm bg-[#111827] text-[10px] font-semibold text-white">?</span>
+                        <p className="text-[12px] font-semibold text-[#333333]">Card</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
+                        <span>Card information</span>
+                        <div className="rounded-[8px] border border-[#e5e7eb] bg-white px-3 py-2 shadow-[0_1px_1px_rgba(15,23,42,0.02)] transition focus-within:border-[#d61c3f] focus-within:ring-2 focus-within:ring-[#d61c3f]/10">
+                          <input
+                            value={cardNumber}
+                            onChange={(event) => setCardNumber(event.target.value)}
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="1234 1234 1234 1234"
+                            className="w-full bg-transparent text-[12px] outline-none placeholder:text-[#a1a1aa]"
+                          />
+                          <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
+                          <span className="rounded-sm bg-[#eef2ff] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#4338ca]">Visa</span>
+                            <span className="rounded-sm bg-[#fff2e8] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#c2410c]">Mastercard</span>
+                          </div>
+                        </div>
+                      </label>
+
+                      <div className="grid gap-2.5 sm:grid-cols-[1fr_92px]">
+                        <input
+                          value={cardExpiry}
+                          onChange={(event) => setCardExpiry(event.target.value)}
+                          type="text"
+                          placeholder="MM / YY"
+                          className="h-9 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[12px] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
+                        />
+                        <input
+                          value={cardCvc}
+                          onChange={(event) => setCardCvc(event.target.value)}
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="CVC"
+                          className="h-9 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[12px] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
+                        />
+                      </div>
+
+                      <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
+                        <span>Cardholder name</span>
+                        <input
+                          value={cardName}
+                          onChange={(event) => setCardName(event.target.value)}
+                          type="text"
+                          placeholder="Full name on card"
+                          className="h-9 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[12px] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
+                        />
+                      </label>
+
+                      <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
+                        <span>Country or region</span>
+                        <select
+                          value={cardCountry}
+                          onChange={(event) => setCardCountry(event.target.value)}
+                          className="h-10 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[13px] outline-none transition focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
+                        >
+                          <option>Bangladesh</option>
+                          <option>United States</option>
+                          <option>United Kingdom</option>
+                          <option>Canada</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-[8px] border border-[#e8eaef] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={savePaymentInfo}
+                      onChange={(event) => setSavePaymentInfo(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-[#d1d5db] text-[#d61c3f] focus:ring-[#d61c3f]"
+                    />
+                    <div className="space-y-1">
+                        <p className="text-[11px] font-semibold text-[#333333]">Save my information for faster checkout</p>
+                        <p className="text-[10px] leading-4 text-[#6b7280]">
+                        Pay securely at Arch City Tutors and everywhere Link is accepted.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                  <div className="mt-3 text-[10px] text-[#6b7280]">
+                <p className="font-medium">Purchase Session</p>
+              </div>
+
+                <button
+                  type="button"
+                  onClick={handleSessionCheckout}
+                  disabled={checkoutSubmitting}
+                  className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-[8px] bg-[#d61c3f] px-5 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(214,28,63,0.24)] transition hover:bg-[#bf1736] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {checkoutSubmitting ? "Processing..." : "Subscribe"}
+                </button>
+
+                {checkoutError ? (
+                  <p className="mt-2 text-[10px] leading-4 text-[#d61c3f]">{checkoutError}</p>
+                ) : null}
+
+                {checkoutStatus ? (
+                  <p className="mt-2 text-[10px] leading-4 text-[#1f8a43]">{checkoutStatus}</p>
+                ) : null}
+
+                <p className="mt-2 text-[9px] leading-4 text-[#6b7280]">
+                  By paying, you authorize Arch City Tutors to record this session checkout in USD at the displayed rate.
+                </p>
+              </div>
+                </div>
+              </div>
+
+              {checkoutSuccess ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 backdrop-blur-sm">
+                  <div className="flex flex-col items-center gap-4 rounded-[24px] border border-[#e5f3ea] bg-white px-8 py-7 text-center shadow-[0_16px_48px_rgba(15,23,42,0.14)]">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#e8f7ec] text-[30px] text-[#1f8a43] animate-bounce">
+                      ✓
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-bold text-[#20242b]">Payment successful</p>
+                      <p className="mt-1 text-[12px] text-[#6b7280]">Your session has been added to My Schedule.</p>
+                    </div>
+                    <div className="h-1.5 w-36 overflow-hidden rounded-full bg-[#eef1f4]">
+                      <div className="h-full w-2/3 animate-pulse rounded-full bg-[#1f8a43]" />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+      ) : null}
     </StudentShell>
   );
 }
+

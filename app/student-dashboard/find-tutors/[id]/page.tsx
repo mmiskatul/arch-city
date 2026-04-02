@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { StudentTutorProfilePage } from "@/components/student/student-tutor-profile-page";
+import { fetchAvailableStudentTutorById } from "@/lib/api/public-tutors-api";
 import { getStudentTutorById } from "@/lib/student/tutors-data";
 
 export default async function Page({
@@ -9,7 +10,7 @@ export default async function Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const tutor = getStudentTutorById(id);
+  const tutor = (await fetchAvailableStudentTutorById(id).catch(() => null)) ?? getStudentTutorById(id);
 
   if (!tutor) {
     notFound();

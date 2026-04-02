@@ -7,7 +7,6 @@ import { TutorShell } from "@/components/tutor/tutor-shell";
 import { TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
 import { useTutorApplicationStatus } from "@/lib/tutor/use-tutor-application-status";
 import {
-  getTutorScheduleCounts,
   tutorScheduleItems,
   type TutorScheduleItem,
   type TutorScheduleStatus,
@@ -37,20 +36,34 @@ function statusClass(status: TutorScheduleStatus) {
   return "bg-[#fff6de] text-[#b58112]";
 }
 
-export function TutorSchedulePage() {
+export function TutorSchedulePage({ initialSessions }: { initialSessions?: TutorScheduleItem[] }) {
   const [activeTab, setActiveTab] = useState<TutorScheduleStatus>("Upcoming");
   const { isNotApproved: isPending } = useTutorApplicationStatus();
+  const sessions = initialSessions ?? tutorScheduleItems;
 
   const filteredSessions = useMemo(
     () =>
       isPending
         ? []
-        : tutorScheduleItems.filter((item) => item.status === activeTab),
-    [activeTab, isPending],
+        : sessions.filter((item) => item.status === activeTab),
+    [activeTab, isPending, sessions],
   );
   const counts = useMemo(
-    () => (isPending ? { Upcoming: 0, Completed: 0, Cancelled: 0 } : getTutorScheduleCounts()),
-    [isPending],
+    () =>
+      isPending
+        ? { Upcoming: 0, Completed: 0, Cancelled: 0 }
+        : sessions.reduce<Record<TutorScheduleStatus, number>>(
+            (acc, item) => {
+              acc[item.status] += 1;
+              return acc;
+            },
+            {
+              Upcoming: 0,
+              Completed: 0,
+              Cancelled: 0,
+            },
+          ),
+    [isPending, sessions],
   );
 
   return (
