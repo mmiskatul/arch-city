@@ -46,6 +46,7 @@ export type AdminScheduleApiDetail = {
     paid_at: string;
   };
   student: {
+    student_id: string;
     initials: string;
     initials_class_name: string;
     name: string;
@@ -57,6 +58,7 @@ export type AdminScheduleApiDetail = {
     total_sessions: string;
   };
   tutor: {
+    tutor_id: string;
     initials: string;
     initials_class_name: string;
     name: string;
@@ -151,6 +153,7 @@ function mapAdminScheduleDetail(detail: AdminScheduleApiDetail): AdminScheduleDe
       paidAt: detail.payment.paid_at,
     },
     student: {
+      studentId: detail.student.student_id || "",
       initials: detail.student.initials || "ST",
       initialsClassName: detail.student.initials_class_name || "bg-[#f1f1f1] text-[#6b7280]",
       name: detail.student.name || "Student",
@@ -162,6 +165,7 @@ function mapAdminScheduleDetail(detail: AdminScheduleApiDetail): AdminScheduleDe
       totalSessions: detail.student.total_sessions || "",
     },
     tutor: {
+      tutorId: detail.tutor.tutor_id || "",
       initials: detail.tutor.initials || "TU",
       initialsClassName: detail.tutor.initials_class_name || "bg-[#ebf7ef] text-[#239157]",
       name: detail.tutor.name || "Tutor",

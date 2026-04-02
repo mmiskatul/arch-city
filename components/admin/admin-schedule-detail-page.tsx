@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AdminShell } from "@/components/admin/admin-shell";
 import type { AdminScheduleDetail } from "@/lib/admin/schedules-data";
-import { ADMIN_SCHEDULES_ROUTE } from "@/lib/routes";
+import { ADMIN_SCHEDULES_ROUTE, ADMIN_STUDENTS_ROUTE, ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
 function statusClassName(status: "Upcoming" | "Completed" | "Cancelled") {
   if (status === "Completed") return "bg-[#ebf7ef] text-[#239157]";
@@ -11,6 +11,17 @@ function statusClassName(status: "Upcoming" | "Completed" | "Cancelled") {
 }
 
 export function AdminScheduleDetailPage({ session }: { session: AdminScheduleDetail }) {
+  const studentProfileHref = session.student.studentId
+    ? `${ADMIN_STUDENTS_ROUTE}/${encodeURIComponent(session.student.studentId)}`
+    : session.student.email
+      ? `${ADMIN_STUDENTS_ROUTE}/${encodeURIComponent(session.student.email)}`
+      : ADMIN_STUDENTS_ROUTE;
+  const tutorProfileHref = session.tutor.tutorId
+    ? `${ADMIN_TUTORS_ROUTE}/${encodeURIComponent(session.tutor.tutorId)}`
+    : session.tutor.email
+      ? `${ADMIN_TUTORS_ROUTE}/${encodeURIComponent(session.tutor.email)}`
+      : ADMIN_TUTORS_ROUTE;
+
   return (
     <AdminShell>
       <div className="w-full">
@@ -155,7 +166,7 @@ export function AdminScheduleDetailPage({ session }: { session: AdminScheduleDet
                       <p className="text-[12px] text-[#6b7280]">{session.student.parentPhone}</p>
                     </div>
                   </div>
-                  <Link href="#" className="text-[12px] font-semibold text-[#d61c3f]">
+                  <Link href={studentProfileHref} className="text-[12px] font-semibold text-[#d61c3f]">
                     View Profile →
                   </Link>
                 </div>
@@ -200,7 +211,7 @@ export function AdminScheduleDetailPage({ session }: { session: AdminScheduleDet
                       <p className="text-[12px] font-semibold text-[#8f6b10]">{session.tutor.ratingAndSessions}</p>
                     </div>
                   </div>
-                  <Link href="#" className="text-[12px] font-semibold text-[#d61c3f]">
+                  <Link href={tutorProfileHref} className="text-[12px] font-semibold text-[#d61c3f]">
                     View Profile →
                   </Link>
                 </div>

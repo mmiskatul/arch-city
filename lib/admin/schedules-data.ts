@@ -47,6 +47,7 @@ export type AdminScheduleDetail = {
     paidAt: string;
   };
   student: {
+    studentId: string;
     initials: string;
     initialsClassName: string;
     name: string;
@@ -58,6 +59,7 @@ export type AdminScheduleDetail = {
     totalSessions: string;
   };
   tutor: {
+    tutorId: string;
     initials: string;
     initialsClassName: string;
     name: string;
