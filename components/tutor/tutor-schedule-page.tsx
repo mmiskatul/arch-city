@@ -1,16 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import { TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
+import { fetchTutorScheduleItemsClient } from "@/lib/api/tutor-schedule-browser-api";
 import { useTutorApplicationStatus } from "@/lib/tutor/use-tutor-application-status";
-import {
-  tutorScheduleItems,
-  type TutorScheduleItem,
-  type TutorScheduleStatus,
-} from "@/lib/tutor/schedule-data";
+import { type TutorScheduleItem, type TutorScheduleStatus } from "@/lib/tutor/schedule-data";
 
 const tabs: Array<{ key: TutorScheduleStatus; label: string }> = [
   { key: "Upcoming", label: "Upcoming" },
@@ -36,10 +33,67 @@ function statusClass(status: TutorScheduleStatus) {
   return "bg-[#fff6de] text-[#b58112]";
 }
 
-export function TutorSchedulePage({ initialSessions }: { initialSessions?: TutorScheduleItem[] }) {
+function ScheduleTableSkeleton() {
+  return (
+    <div className="divide-y divide-[#eceef2]">
+      {Array.from({ length: 7 }).map((_, rowIndex) => (
+        <div
+          key={`schedule-skeleton-row-${rowIndex}`}
+          className="grid grid-cols-[1.65fr_0.8fr_1fr_0.8fr_0.9fr_0.8fr_0.7fr_0.9fr_0.8fr] gap-4 px-4 py-4 animate-pulse"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 shrink-0 rounded-full bg-[#eef1f4]" />
+            <div className="h-4 w-44 rounded bg-[#eef1f4]" />
+          </div>
+          <div className="h-4 w-16 rounded bg-[#eef1f4]" />
+          <div className="h-4 w-24 rounded bg-[#eef1f4]" />
+          <div className="h-4 w-20 rounded bg-[#eef1f4]" />
+          <div className="h-4 w-16 rounded bg-[#eef1f4]" />
+          <div className="h-6 w-20 rounded-full bg-[#eef1f4]" />
+          <div className="h-4 w-14 rounded bg-[#eef1f4]" />
+          <div className="h-6 w-20 rounded-full bg-[#eef1f4]" />
+          <div className="h-8 w-16 rounded-full bg-[#eef1f4]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function TutorSchedulePage() {
   const [activeTab, setActiveTab] = useState<TutorScheduleStatus>("Upcoming");
+  const [sessions, setSessions] = useState<TutorScheduleItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { isNotApproved: isPending } = useTutorApplicationStatus();
-  const sessions = initialSessions ?? tutorScheduleItems;
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSchedule() {
+      try {
+        setLoadError(null);
+        const liveSessions = await fetchTutorScheduleItemsClient();
+        if (mounted) {
+          setSessions(liveSessions);
+        }
+      } catch (error) {
+        if (mounted) {
+          setSessions([]);
+          setLoadError(error instanceof Error ? error.message : "Unable to load schedule.");
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadSchedule();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredSessions = useMemo(
     () =>
@@ -65,6 +119,8 @@ export function TutorSchedulePage({ initialSessions }: { initialSessions?: Tutor
           ),
     [isPending, sessions],
   );
+
+  const isTableLoading = loading || isPending;
 
   return (
     <TutorShell>
@@ -124,53 +180,59 @@ export function TutorSchedulePage({ initialSessions }: { initialSessions?: Tutor
                 <span>Actions</span>
               </div>
 
-              <div className="divide-y divide-[#eceef2]">
-                {filteredSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="grid grid-cols-[1.65fr_0.8fr_1fr_0.8fr_0.9fr_0.8fr_0.7fr_0.9fr_0.8fr] gap-4 px-4 py-4 text-[14px] text-[#4b5563]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
-                        {session.studentInitials}
-                      </span>
-                      <span className="font-medium text-[#4b5563]">{session.studentName}</span>
-                    </div>
+              {isTableLoading ? (
+                <ScheduleTableSkeleton />
+              ) : (
+                <div className="divide-y divide-[#eceef2]">
+                  {filteredSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className="grid grid-cols-[1.65fr_0.8fr_1fr_0.8fr_0.9fr_0.8fr_0.7fr_0.9fr_0.8fr] gap-4 px-4 py-4 text-[14px] text-[#4b5563]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
+                          {session.studentInitials}
+                        </span>
+                        <span className="font-medium text-[#4b5563]">{session.studentName}</span>
+                      </div>
 
-                    <div>{session.grade}</div>
-                    <div>{session.date}</div>
-                    <div>{session.time}</div>
-                    <div>{session.duration}</div>
-                    <div>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${typeClass(session.type)}`}>
-                        {session.type}
-                      </span>
+                      <div>{session.grade}</div>
+                      <div>{session.date}</div>
+                      <div>{session.time}</div>
+                      <div>{session.duration}</div>
+                      <div>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${typeClass(session.type)}`}>
+                          {session.type}
+                        </span>
+                      </div>
+                      <div className="font-semibold text-[#374151]">{session.rate}</div>
+                      <div>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${statusClass(session.status)}`}>
+                          {session.status}
+                        </span>
+                      </div>
+                      <div>
+                        <Link
+                          href={`${TUTOR_SCHEDULE_ROUTE}/${session.id}`}
+                          className="inline-flex rounded-full border border-[#d61c3f] px-4 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </div>
-                    <div className="font-semibold text-[#374151]">{session.rate}</div>
-                    <div>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${statusClass(session.status)}`}>
-                        {session.status}
-                      </span>
-                    </div>
-                    <div>
-                      <Link
-                        href={`${TUTOR_SCHEDULE_ROUTE}/${session.id}`}
-                        className="inline-flex rounded-full border border-[#d61c3f] px-4 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
-                      >
-                        View
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+                  ))}
 
-                {filteredSessions.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
-                    {isPending
-                      ? "No sessions yet. Complete your tutor application first."
-                      : "No sessions in this section right now."}
-                  </div>
-                ) : null}
-              </div>
+                  {filteredSessions.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
+                      {loadError
+                        ? loadError
+                        : isPending
+                          ? "No sessions yet. Complete your tutor application first."
+                          : "No sessions in this section right now."}
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
           </div>
         </div>

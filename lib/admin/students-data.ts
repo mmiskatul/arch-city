@@ -40,6 +40,7 @@ export type AdminStudentDetail = {
   email: string;
   grade: string;
   status: AdminStudentStatus;
+  isSuspended: boolean;
   totalSessions: number;
   totalSessionsDelta: string;
   currentPlanName: string;
@@ -224,6 +225,7 @@ function defaultStudentDetail(student: AdminStudentRow): AdminStudentDetail {
     email: student.email,
     grade: student.grade,
     status: student.status,
+    isSuspended: false,
     totalSessions: student.sessions,
     totalSessionsDelta: "+3 this month",
     currentPlanName: "Growth",

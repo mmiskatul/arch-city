@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FiBookOpen, FiBriefcase, FiCheck, FiChevronLeft, FiStar, FiX } from "react-icons/fi";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { AdminTutorDetail } from "@/lib/admin/tutors-data";
 import { ADMIN_TUTORS_ROUTE } from "@/lib/routes";
+
+type TutorAction = "suspend" | "unsuspend";
 
 function tutorStatusClassName(status: "Approved" | "Pending" | "Suspended") {
   if (status === "Approved") return "bg-[#ebf7ef] text-[#239157]";
@@ -20,8 +24,47 @@ function sessionStatusClassName(status: "Completed" | "No-Show") {
 }
 
 export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
+  const router = useRouter();
   const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
   const [isSuspended, setIsSuspended] = useState(tutor.status === "Suspended");
+  const [actionState, setActionState] = useState<TutorAction | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [suspendUntilDate, setSuspendUntilDate] = useState("");
+
+  const handleTutorAction = async () => {
+    if (!actionState || isUpdating) return;
+
+    setIsUpdating(true);
+    setActionError(null);
+
+    try {
+      await browserApiRequest({
+        url: `/api/admin/tutors/${tutor.id}`,
+        method: "PATCH",
+        data:
+          actionState === "unsuspend"
+            ? { action: "unsuspend" }
+            : {
+                action: "suspend",
+                reason: "",
+                until: suspendUntilDate ? new Date(`${suspendUntilDate}T23:59:59.000Z`).toISOString() : null,
+              },
+      });
+
+      setIsSuspended(actionState === "suspend");
+      setActionState(null);
+      setShowSuspendConfirm(false);
+      if (actionState === "suspend") {
+        setSuspendUntilDate("");
+      }
+      router.refresh();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to update tutor status.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <AdminShell>
@@ -45,12 +88,12 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
               <div>
                 <h1 className="text-[42px] font-bold leading-none text-[#20242b]">{tutor.name}</h1>
                 <p className="mt-1 text-[13px] text-[#6b7280]">
-                  {tutor.email} ·{" "}
+                  {tutor.email} -{" "}
                   <span className="inline-flex items-center gap-1 font-semibold text-[#8f6b10]">
                     <FiStar className="h-3.5 w-3.5 fill-[#c58b1a] text-[#c58b1a]" />
                     {tutor.rating}
                   </span>{" "}
-                  ·{" "}
+                  -{" "}
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${tutorStatusClassName(
                       isSuspended ? "Suspended" : tutor.status,
@@ -64,19 +107,22 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
 
             <button
               type="button"
-              onClick={() => setShowSuspendConfirm(true)}
-              disabled={isSuspended}
-              className="inline-flex h-9 items-center rounded-lg border border-[#f2c3cc] bg-[#ffecef] px-4 text-[13px] font-semibold text-[#d94a62] disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => {
+                setActionState(isSuspended ? "unsuspend" : "suspend");
+                setShowSuspendConfirm(true);
+              }}
+              disabled={isUpdating}
+              className={`inline-flex h-9 items-center rounded-lg px-4 text-[13px] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                isSuspended ? "bg-[#239157] hover:bg-[#1d7b49]" : "bg-[#d94a62] hover:bg-[#bf3d53]"
+              }`}
             >
-              {isSuspended ? "Suspended" : "Suspend"}
+              {isSuspended ? "Unsuspend" : "Suspend"}
             </button>
           </div>
 
           <div className="mt-4 grid gap-3 lg:grid-cols-4">
             <article className="rounded-xl border border-[#eceef2] bg-[#fafafb] p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">
-                Total Sessions
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">Total Sessions</p>
               <p className="mt-2 text-[44px] font-bold leading-none text-[#20242b]">{tutor.totalSessions}</p>
               <p className="mt-1 text-[12px] text-[#239157]">{tutor.totalSessionsDelta}</p>
             </article>
@@ -90,9 +136,7 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
             </article>
 
             <article className="rounded-xl border border-[#eceef2] bg-[#fafafb] p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">
-                Earned (MTD)
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">Earned (MTD)</p>
               <p className="mt-2 text-[44px] font-bold leading-none text-[#239157]">{tutor.earnedMtd}</p>
               <p className="mt-1 text-[12px] text-[#6b7280]">{tutor.standardRate} rate</p>
             </article>
@@ -170,9 +214,7 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
               <div className="mt-3 space-y-3">
                 {tutor.workExperience.map((item) => (
                   <div key={`${item.role}-${item.organization}`} className="flex items-start gap-2.5">
-                    <span
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg ${item.iconClassName}`}
-                    >
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${item.iconClassName}`}>
                       <FiBriefcase className="h-4 w-4" />
                     </span>
                     <div className="text-[13px] text-[#4b5563]">
@@ -236,9 +278,7 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
               </article>
 
               <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">
-                  Locations
-                </h2>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">Locations</h2>
                 <div className="mt-3 space-y-2 text-[13px]">
                   {tutor.locations.map((item) => (
                     <p key={item} className="flex items-center gap-2 text-[#4b5563]">
@@ -264,33 +304,36 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
                 <p className="text-[11px] text-[#6b7280]">{tutor.activeStudents} active</p>
               </div>
               <div className="mt-3 space-y-2">
-                {tutor.currentStudents.map((item) => (
-                  <div
-                    key={item.name}
-                    className="flex items-center justify-between rounded-xl border border-[#eceef2] bg-[#fafafb] px-3 py-2.5"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ${item.initialsClassName}`}
-                      >
-                        {item.initials}
-                      </span>
-                      <div>
-                        <p className="text-[13px] font-semibold text-[#20242b]">{item.name}</p>
-                        <p className="text-[12px] text-[#6b7280]">
-                          {item.subject} · {item.schedule}
-                        </p>
+                {tutor.currentStudents.length > 0 ? (
+                  tutor.currentStudents.map((item) => (
+                    <div
+                      key={item.name}
+                      className="flex items-center justify-between rounded-xl border border-[#eceef2] bg-[#fafafb] px-3 py-2.5"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ${item.initialsClassName}`}
+                        >
+                          {item.initials}
+                        </span>
+                        <div>
+                          <p className="text-[13px] font-semibold text-[#20242b]">{item.name}</p>
+                          <p className="text-[12px] text-[#6b7280]">
+                            {item.subject} - {item.schedule}
+                          </p>
+                        </div>
                       </div>
+                      <Link href="#" className="text-[12px] font-semibold text-[#d61c3f]">
+                        View
+                      </Link>
                     </div>
-                    <Link href="#" className="text-[12px] font-semibold text-[#d61c3f]">
-                      View →
-                    </Link>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[#eceef2] bg-[#fafafb] px-3 py-4 text-center text-[13px] text-[#6b7280]">
+                    No current students yet.
                   </div>
-                ))}
+                )}
               </div>
-              <button type="button" className="mt-3 text-[13px] font-semibold text-[#d94a62]">
-                + 3 more students
-              </button>
             </article>
 
             <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -310,32 +353,35 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
                   <span>Status</span>
                 </div>
                 <div className="divide-y divide-[#eceef2] bg-white">
-                  {tutor.recentSessions.map((item, index) => (
-                    <div
-                      key={`${item.date}-${index}`}
-                      className="grid grid-cols-[0.9fr_0.9fr_0.85fr_0.7fr_0.65fr_0.85fr] gap-2 px-3 py-2 text-[12px] text-[#4b5563]"
-                    >
-                      <span>{item.date}</span>
-                      <span>{item.student}</span>
-                      <span className="font-semibold text-[#374151]">{item.subject}</span>
-                      <span>{item.duration}</span>
-                      <span className="font-semibold text-[#239157]">{item.earned}</span>
-                      <span>
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${sessionStatusClassName(
-                            item.status,
-                          )}`}
-                        >
-                          {item.status}
+                  {tutor.recentSessions.length > 0 ? (
+                    tutor.recentSessions.map((item, index) => (
+                      <div
+                        key={`${item.date}-${index}`}
+                        className="grid grid-cols-[0.9fr_0.9fr_0.85fr_0.7fr_0.65fr_0.85fr] gap-2 px-3 py-2 text-[12px] text-[#4b5563]"
+                      >
+                        <span>{item.date}</span>
+                        <span>{item.student}</span>
+                        <span className="font-semibold text-[#374151]">{item.subject}</span>
+                        <span>{item.duration}</span>
+                        <span className="font-semibold text-[#239157]">{item.earned}</span>
+                        <span>
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${sessionStatusClassName(
+                              item.status,
+                            )}`}
+                          >
+                            {item.status}
+                          </span>
                         </span>
-                      </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-[13px] text-[#6b7280]">
+                      No recent sessions yet.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
-              <button type="button" className="mt-3 text-[13px] font-semibold text-[#d94a62]">
-                Load more sessions
-              </button>
             </article>
           </div>
         </section>
@@ -344,28 +390,68 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
       {showSuspendConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/40 px-4">
           <div className="w-full max-w-md rounded-[14px] border border-[#e7e7eb] bg-white p-5 shadow-xl">
-            <h3 className="text-[18px] font-bold text-[#20242b]">Suspend This Tutor?</h3>
+            <h3 className="text-[18px] font-bold text-[#20242b]">
+              {actionState === "unsuspend" ? "Unsuspend This Tutor?" : "Suspend This Tutor?"}
+            </h3>
             <p className="mt-2 text-[14px] leading-6 text-[#6b7280]">
-              This will suspend the tutor account and stop new session bookings until reactivated.
+              {actionState === "unsuspend"
+                ? "This will restore the tutor account and allow new session bookings again."
+                : "This will pause the tutor account and stop new session bookings until you unsuspend it."}
             </p>
+
+            {actionState === "suspend" ? (
+              <div className="mt-4 rounded-xl border border-[#eceef2] bg-[#fafafb] p-3">
+                <label className="block text-[12px] font-semibold text-[#374151]" htmlFor="suspendUntilDate">
+                  Optional end date
+                </label>
+                <input
+                  id="suspendUntilDate"
+                  type="date"
+                  value={suspendUntilDate}
+                  onChange={(event) => setSuspendUntilDate(event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-[13px] text-[#20242b]"
+                />
+                <p className="mt-2 text-[12px] text-[#6b7280]">
+                  Leave this blank to keep the tutor suspended until you manually unsuspend them.
+                </p>
+              </div>
+            ) : null}
+
+            {actionError ? (
+              <p className="mt-3 rounded-md border border-[#ffecef] bg-[#fff5f7] px-3 py-2 text-[12px] text-[#d61c3f]">
+                {actionError}
+              </p>
+            ) : null}
 
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowSuspendConfirm(false)}
+                onClick={() => {
+                  setShowSuspendConfirm(false);
+                  setActionState(null);
+                  setActionError(null);
+                  setSuspendUntilDate("");
+                }}
+                disabled={isUpdating}
                 className="inline-flex h-9 items-center rounded-full border border-[#d1d5db] bg-white px-4 text-[13px] font-semibold text-[#374151] transition hover:bg-[#f9fafb]"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setIsSuspended(true);
-                  setShowSuspendConfirm(false);
-                }}
-                className="inline-flex h-9 items-center rounded-full bg-[#d94a62] px-4 text-[13px] font-semibold text-white transition hover:bg-[#bf3d53]"
+                onClick={handleTutorAction}
+                disabled={isUpdating}
+                className={`inline-flex h-9 items-center rounded-full px-4 text-[13px] font-semibold text-white transition disabled:opacity-60 ${
+                  actionState === "unsuspend"
+                    ? "bg-[#239157] hover:bg-[#1d7b49]"
+                    : "bg-[#d94a62] hover:bg-[#bf3d53]"
+                }`}
               >
-                Confirm Suspend
+                {isUpdating
+                  ? "Updating..."
+                  : actionState === "unsuspend"
+                    ? "Yes, Unsuspend"
+                    : "Yes, Suspend"}
               </button>
             </div>
           </div>

@@ -1,9 +1,7 @@
 import { AdminTutorApplicationReviewPage } from "@/components/admin/admin-tutor-application-review-page";
+import { apiGet } from "@/lib/api/api-client";
 import type { ApplicationStatus, TutorApplication } from "@/lib/admin/tutor-applications-data";
-import {
-  fetchAdminTutorApplicationById,
-  type AdminTutorApplicationApiItem,
-} from "@/lib/api/admin-tutor-applications-api";
+import type { AdminTutorApplicationApiItem } from "@/lib/api/admin-tutor-applications-api";
 
 function toDisplayStatus(status: string): ApplicationStatus {
   if (status === "approved") return "Approved";
@@ -23,7 +21,7 @@ function formatDate(dateIso: string) {
 
 function toUiApplication(item: AdminTutorApplicationApiItem): TutorApplication {
   return {
-    id: item.application_id,
+    id: item.id || item.application_id || "",
     fullName: `${item.first_name} ${item.last_name}`.trim(),
     email: item.email,
     phone: item.mobile_phone || "Not provided",
@@ -54,7 +52,9 @@ export default async function AdminTutorApplicationReviewRoute({
 }) {
   const { id } = await params;
 
-  const response = await fetchAdminTutorApplicationById(id).catch(() => null);
+  const response = await apiGet<{ item: AdminTutorApplicationApiItem }>(`/admin-dashboard/tutor-applications/${encodeURIComponent(id)}`).catch(
+    () => null,
+  );
   const application = response ? toUiApplication(response.item) : null;
 
   return <AdminTutorApplicationReviewPage applicationId={id} application={application} />;

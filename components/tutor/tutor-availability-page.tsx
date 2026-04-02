@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { io, type Socket } from "socket.io-client";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
+import { readBrowserCookie, resolveBrowserApiBaseUrl } from "@/lib/api/browser-api-client";
 import {
   addTutorAvailabilitySlot,
   clearTutorAvailabilitySlots,
@@ -233,6 +235,76 @@ function slotFormFromSlot(slot: TutorAvailabilityApiSlot): SlotFormState {
   };
 }
 
+function AvailabilityCalendarSkeleton() {
+  return (
+    <div className="overflow-hidden">
+      <div className="min-w-[960px] animate-pulse">
+        <div className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-[#fafafb]">
+          <div className="border-r border-[#eceef2] px-3 py-4" />
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div key={`availability-skeleton-head-${index}`} className="border-r border-[#eceef2] px-3 py-4 last:border-r-0">
+              <div className="mx-auto h-3 w-12 rounded bg-[#eef1f4]" />
+              <div className="mx-auto mt-2 h-8 w-8 rounded bg-[#eef1f4]" />
+            </div>
+          ))}
+        </div>
+
+        {Array.from({ length: 8 }).map((_, rowIndex) => (
+          <div key={`availability-skeleton-row-${rowIndex}`} className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] last:border-b-0">
+            <div className="sticky left-0 z-20 flex items-start justify-end border-r border-[#eceef2] bg-white px-3 py-4">
+              <div className="h-3.5 w-12 rounded bg-[#eef1f4]" />
+            </div>
+            {Array.from({ length: 7 }).map((_, colIndex) => (
+              <div
+                key={`availability-skeleton-cell-${rowIndex}-${colIndex}`}
+                className="min-h-[64px] border-r border-[#eceef2] bg-white px-2 py-2 last:border-r-0"
+              >
+                <div className="h-full min-h-[48px] rounded-[10px] border border-[#edf0f4] bg-[#f7f8fa]" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AvailabilitySidebarSkeleton() {
+  return (
+    <div className="animate-pulse rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="flex items-center justify-between gap-3">
+        <div className="h-5 w-40 rounded bg-[#eef1f4]" />
+        <div className="h-9 w-24 rounded-full bg-[#eef1f4]" />
+      </div>
+      <div className="mt-2 h-3 w-56 rounded bg-[#eef1f4]" />
+
+      <div className="mt-5 space-y-6">
+        <div className="space-y-2">
+          <div className="h-4 w-36 rounded bg-[#eef1f4]" />
+          <div className="h-10 w-full rounded-xl bg-[#eef1f4]" />
+          <div className="h-3 w-48 rounded bg-[#eef1f4]" />
+        </div>
+
+        <div className="space-y-2">
+          <div className="h-4 w-28 rounded bg-[#eef1f4]" />
+          <div className="h-10 w-full rounded-xl bg-[#eef1f4]" />
+        </div>
+
+        <div className="space-y-3 border-t border-[#eceef2] pt-5">
+          <div className="h-5 w-48 rounded bg-[#eef1f4]" />
+          <div className="h-3 w-56 rounded bg-[#eef1f4]" />
+          <div className="h-11 w-full rounded-full bg-[#eef1f4]" />
+        </div>
+
+        <div className="border-t border-[#eceef2] pt-5">
+          <div className="h-11 w-full rounded-full bg-[#eef1f4]" />
+          <div className="mt-2 h-3 w-52 rounded bg-[#eef1f4]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TutorAvailabilityPage() {
   const [slots, setSlots] = useState<TutorAvailabilityApiSlot[]>(fallbackAvailability.slots);
   const [maxSessionsPerDay, setMaxSessionsPerDay] = useState(String(fallbackAvailability.max_sessions_per_day));
@@ -253,36 +325,96 @@ export function TutorAvailabilityPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [visibleWeekStart, setVisibleWeekStart] = useState(() => startOfWeek(new Date()));
+  const socketRef = useRef<Socket | null>(null);
+
+  const loadAvailability = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = Boolean(options?.silent);
+    try {
+      const data = await fetchTutorAvailability();
+
+      setSlots(data.slots.map(normalizeSlot));
+      setMaxSessionsPerDay(String(data.max_sessions_per_day || fallbackAvailability.max_sessions_per_day));
+      setNoticeRequired(data.notice_required ?? fallbackAvailability.notice_required);
+      if (!silent) {
+        setError(null);
+      }
+    } catch (loadError) {
+      setSlots(fallbackAvailability.slots);
+      setMaxSessionsPerDay(String(fallbackAvailability.max_sessions_per_day));
+      setNoticeRequired(fallbackAvailability.notice_required);
+      if (!silent) {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load availability.");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
 
-    async function loadAvailability() {
-      try {
-        const data = await fetchTutorAvailability();
-        if (!active) return;
-
-        setSlots(data.slots.map(normalizeSlot));
-        setMaxSessionsPerDay(String(data.max_sessions_per_day || fallbackAvailability.max_sessions_per_day));
-        setNoticeRequired(data.notice_required ?? fallbackAvailability.notice_required);
-        setError(null);
-      } catch (loadError) {
-        if (!active) return;
-
-        setSlots(fallbackAvailability.slots);
-        setMaxSessionsPerDay(String(fallbackAvailability.max_sessions_per_day));
-        setNoticeRequired(fallbackAvailability.notice_required);
-        setError(loadError instanceof Error ? loadError.message : "Failed to load availability.");
-      } finally {
-        if (active) setLoading(false);
+    async function initialLoad() {
+      await loadAvailability({ silent: true });
+      if (active) {
+        setLoading(false);
       }
     }
 
-    loadAvailability();
+    initialLoad();
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadAvailability]);
+
+  useEffect(() => {
+    const token = readBrowserCookie("arch_access_token");
+    const apiBaseUrl = resolveBrowserApiBaseUrl();
+    const socketBaseUrl = apiBaseUrl ? apiBaseUrl.replace(/\/api\/v1\/?$/, "") : null;
+
+    if (!token || !socketBaseUrl) {
+      return;
+    }
+
+    const socket = io(socketBaseUrl, {
+      path: "/socket.io",
+      transports: ["websocket"],
+      autoConnect: true,
+      withCredentials: false,
+      auth: {
+        token,
+      },
+    });
+
+    socketRef.current = socket;
+
+    socket.on("tutor_availability_updated", () => {
+      void loadAvailability({ silent: true });
+    });
+
+    return () => {
+      socket.removeAllListeners();
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [loadAvailability]);
+
+  useEffect(() => {
+    const refreshIfIdle = () => {
+      if (mutatingSlots || savingSettings) {
+        return;
+      }
+
+      void loadAvailability({ silent: true });
+    };
+
+    const intervalId = window.setInterval(refreshIfIdle, 10000);
+    window.addEventListener("focus", refreshIfIdle);
+    document.addEventListener("visibilitychange", refreshIfIdle);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshIfIdle);
+      document.removeEventListener("visibilitychange", refreshIfIdle);
+    };
+  }, [loadAvailability, mutatingSlots, savingSettings]);
 
   const visibleWeekDays = useMemo(() => {
     return WEEKDAY_KEYS.map((dayKey, index) => {
@@ -631,261 +763,271 @@ export function TutorAvailabilityPage() {
               </div>
             </div>
 
-            <div className="overflow-auto" style={{ maxHeight: "760px" }}>
-              <div className="min-w-[960px]">
-                <div className="sticky top-0 z-30 grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-[#fafafb] shadow-[0_1px_0_rgba(15,23,42,0.04)]">
-                  <div className="sticky left-0 z-40 border-r border-[#eceef2] bg-[#fafafb]" />
-                  {visibleDaySlots.map((day) => (
+            {loading ? (
+              <AvailabilityCalendarSkeleton />
+            ) : (
+              <div className="overflow-auto" style={{ maxHeight: "760px" }}>
+                <div className="min-w-[960px]">
+                  <div className="sticky top-0 z-30 grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] bg-[#fafafb] shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+                    <div className="sticky left-0 z-40 border-r border-[#eceef2] bg-[#fafafb]" />
+                    {visibleDaySlots.map((day) => (
+                      <div
+                        key={day.key}
+                        className="border-r border-[#eceef2] px-3 py-2 text-center last:border-r-0"
+                      >
+                        <p className="text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
+                          {day.label}
+                        </p>
+                        <p className="text-[30px] font-bold leading-none text-[#20242b]">{day.date}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {calendarHours.map((time) => (
                     <div
-                      key={day.key}
-                      className="border-r border-[#eceef2] px-3 py-2 text-center last:border-r-0"
+                      key={time}
+                      className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] last:border-b-0"
                     >
-                      <p className="text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
-                        {day.label}
-                      </p>
-                      <p className="text-[30px] font-bold leading-none text-[#20242b]">{day.date}</p>
+                      <div className="sticky left-0 z-20 flex items-start justify-end border-r border-[#eceef2] bg-white px-3 py-4 text-[12px] font-semibold text-[#6b7280]">
+                        {time}
+                      </div>
+                      {visibleDaySlots.map((day) => {
+                        const matchingSlot = day.slots.find((slot) => {
+                          const slotWindow = resolveSlotWindow(slot);
+                          const slotStartHour = formatHourCellLabel(slotWindow.start);
+                          return slotStartHour === time;
+                        });
+
+                        return (
+                          <div
+                            key={`${day.key}-${time}`}
+                            className="min-h-[64px] border-r border-[#eceef2] bg-white px-2 py-2 last:border-r-0"
+                          >
+                            {matchingSlot ? (
+                              <div
+                                className={`group relative rounded-[10px] border px-3 py-2 text-[12px] font-semibold leading-4 shadow-sm transition hover:-translate-y-[1px] ${getSlotClass(matchingSlot.status)}`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <div className="text-[12px] font-bold">
+                                      {matchingSlot.status === "booked" ? "Booked" : "Available"}
+                                    </div>
+                                    <div className="mt-1 whitespace-pre-line text-[12px] font-semibold">
+                                      {matchingSlot.label}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 rounded-[10px] bg-black/0 opacity-0 transition group-hover:pointer-events-auto group-hover:bg-black/10 group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => requestEditSlot(matchingSlot)}
+                                    className="inline-flex h-8 items-center rounded-full bg-white px-3 text-[11px] font-bold text-[#20242b] shadow-md transition hover:bg-[#f5f5f5]"
+                                  >
+                                    Edit
+                                  </button>
+                                  {matchingSlot.status === "available" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeSlot(matchingSlot.id)}
+                                      className="inline-flex h-8 items-center rounded-full bg-[#d61c3f] px-3 text-[11px] font-bold text-white shadow-md transition hover:bg-[#be1837]"
+                                    >
+                                      Delete
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
                   ))}
                 </div>
-
-                {calendarHours.map((time) => (
-                  <div
-                    key={time}
-                    className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#eceef2] last:border-b-0"
-                  >
-                    <div className="sticky left-0 z-20 flex items-start justify-end border-r border-[#eceef2] bg-white px-3 py-4 text-[12px] font-semibold text-[#6b7280]">
-                      {time}
-                    </div>
-                    {visibleDaySlots.map((day) => {
-                      const matchingSlot = day.slots.find((slot) => {
-                        const slotWindow = resolveSlotWindow(slot);
-                        const slotStartHour = formatHourCellLabel(slotWindow.start);
-                        return slotStartHour === time;
-                      });
-
-                      return (
-                        <div
-                          key={`${day.key}-${time}`}
-                          className="min-h-[64px] border-r border-[#eceef2] bg-white px-2 py-2 last:border-r-0"
-                        >
-                          {matchingSlot ? (
-                            <div
-                              className={`group relative rounded-[10px] border px-3 py-2 text-[12px] font-semibold leading-4 shadow-sm transition hover:-translate-y-[1px] ${getSlotClass(matchingSlot.status)}`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <div className="text-[12px] font-bold">
-                                    {matchingSlot.status === "booked" ? "Booked" : "Available"}
-                                  </div>
-                                  <div className="mt-1 whitespace-pre-line text-[12px] font-semibold">
-                                    {matchingSlot.label}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 rounded-[10px] bg-black/0 opacity-0 transition group-hover:pointer-events-auto group-hover:bg-black/10 group-hover:opacity-100">
-                                <button
-                                  type="button"
-                                  onClick={() => requestEditSlot(matchingSlot)}
-                                  className="inline-flex h-8 items-center rounded-full bg-white px-3 text-[11px] font-bold text-[#20242b] shadow-md transition hover:bg-[#f5f5f5]"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeSlot(matchingSlot.id)}
-                                  className="inline-flex h-8 items-center rounded-full bg-[#d61c3f] px-3 text-[11px] font-bold text-white shadow-md transition hover:bg-[#be1837]"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
               </div>
-            </div>
+            )}
           </section>
 
-          <aside className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[18px] font-bold text-[#20242b]">Availability Settings</h2>
-              <button
-                type="button"
-                onClick={handleSaveSettings}
-                disabled={isBusy}
-                className="inline-flex h-9 items-center rounded-full bg-[#20242b] px-4 text-[13px] font-semibold text-white transition hover:bg-[#121418] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Save Settings
-              </button>
-            </div>
-            <p className="mt-2 text-[12px] text-[#9ca3af]">
-              Saves your calendar rules like maximum sessions per day and required notice before booking.
-            </p>
-
-            <div className="mt-5 space-y-6">
-              <div>
-                <label className="text-[14px] font-semibold text-[#374151]">Max Sessions Per Day</label>
-                <input
-                  type="text"
-                  value={maxSessionsPerDay}
-                  onChange={(event) => setMaxSessionsPerDay(event.target.value)}
-                  className="mt-2 h-10 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] outline-none"
-                />
-                <p className="mt-2 text-[12px] text-[#9ca3af]">
-                  Students cannot book beyond this limit per day.
-                </p>
+          {loading ? (
+            <AvailabilitySidebarSkeleton />
+          ) : (
+            <aside className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[18px] font-bold text-[#20242b]">Availability Settings</h2>
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  disabled={isBusy}
+                  className="inline-flex h-9 items-center rounded-full bg-[#20242b] px-4 text-[13px] font-semibold text-white transition hover:bg-[#121418] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Save Settings
+                </button>
               </div>
+              <p className="mt-2 text-[12px] text-[#9ca3af]">
+                Saves your calendar rules like maximum sessions per day and required notice before booking.
+              </p>
 
-              <div>
-                <label className="text-[14px] font-semibold text-[#374151]">Notice Required</label>
-                <input
-                  type="text"
-                  value={noticeRequired}
-                  onChange={(event) => setNoticeRequired(event.target.value)}
-                  className="mt-2 h-10 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] outline-none"
-                />
-              </div>
+              <div className="mt-5 space-y-6">
+                <div>
+                  <label className="text-[14px] font-semibold text-[#374151]">Max Sessions Per Day</label>
+                  <input
+                    type="text"
+                    value={maxSessionsPerDay}
+                    onChange={(event) => setMaxSessionsPerDay(event.target.value)}
+                    className="mt-2 h-10 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] outline-none"
+                  />
+                  <p className="mt-2 text-[12px] text-[#9ca3af]">
+                    Students cannot book beyond this limit per day.
+                  </p>
+                </div>
 
-              <div id="availability-slot-form" className="border-t border-[#eceef2] pt-5">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-[16px] font-bold text-[#20242b]">
-                    {editingSlot ? "Update Availability Slot" : "Add Availability Slot"}
-                  </h3>
-                  {editingSlot ? (
+                <div>
+                  <label className="text-[14px] font-semibold text-[#374151]">Notice Required</label>
+                  <input
+                    type="text"
+                    value={noticeRequired}
+                    onChange={(event) => setNoticeRequired(event.target.value)}
+                    className="mt-2 h-10 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] outline-none"
+                  />
+                </div>
+
+                <div id="availability-slot-form" className="border-t border-[#eceef2] pt-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-[16px] font-bold text-[#20242b]">
+                      {editingSlot ? "Update Availability Slot" : "Add Availability Slot"}
+                    </h3>
+                    {editingSlot ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditingSlotId(null)}
+                        className="inline-flex h-8 items-center rounded-full border border-[#e5e7eb] px-3 text-[12px] font-semibold text-[#374151] transition hover:bg-[#f9fafb]"
+                      >
+                        Cancel Edit
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-[12px] text-[#9ca3af]">
+                    Choose exact start and end times with 1-minute precision.
+                  </p>
+
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="text-[13px] font-semibold text-[#6b7280]">Date</label>
+                      <input
+                        type="date"
+                        value={slotDate}
+                        onChange={(event) => setSlotDate(event.target.value)}
+                        className="mt-2 h-10 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-[#eceef2] bg-[#fafafa] p-3">
+                        <label className="text-[13px] font-semibold text-[#6b7280]">Start</label>
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          <select
+                            value={slotStartHour}
+                            onChange={(event) => setSlotStartHour(event.target.value)}
+                            className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
+                          >
+                            {TIME_HOURS.map((hour) => (
+                              <option key={`start-hour-${hour}`} value={hour}>
+                                {hour}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={slotStartMinute}
+                            onChange={(event) => setSlotStartMinute(event.target.value)}
+                            className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
+                          >
+                            {TIME_MINUTES.map((minute) => (
+                              <option key={`start-minute-${minute}`} value={minute}>
+                                {minute}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={slotStartPeriod}
+                            onChange={(event) => setSlotStartPeriod(event.target.value as "AM" | "PM")}
+                            className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
+                          >
+                            {TIME_PERIODS.map((period) => (
+                              <option key={`start-period-${period}`} value={period}>
+                                {period}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-[#eceef2] bg-[#fafafa] p-3">
+                        <label className="text-[13px] font-semibold text-[#6b7280]">End</label>
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          <select
+                            value={slotEndHour}
+                            onChange={(event) => setSlotEndHour(event.target.value)}
+                            className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
+                          >
+                            {TIME_HOURS.map((hour) => (
+                              <option key={`end-hour-${hour}`} value={hour}>
+                                {hour}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={slotEndMinute}
+                            onChange={(event) => setSlotEndMinute(event.target.value)}
+                            className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
+                          >
+                            {TIME_MINUTES.map((minute) => (
+                              <option key={`end-minute-${minute}`} value={minute}>
+                                {minute}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={slotEndPeriod}
+                            onChange={(event) => setSlotEndPeriod(event.target.value as "AM" | "PM")}
+                            className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
+                          >
+                            {TIME_PERIODS.map((period) => (
+                              <option key={`end-period-${period}`} value={period}>
+                                {period}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={() => setEditingSlotId(null)}
-                      className="inline-flex h-8 items-center rounded-full border border-[#e5e7eb] px-3 text-[12px] font-semibold text-[#374151] transition hover:bg-[#f9fafb]"
+                      onClick={editingSlot ? confirmEditSlot : requestAddSlot}
+                      disabled={isBusy}
+                      className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Cancel Edit
+                      {editingSlot ? "Update Slot" : "Add Slot"}
                     </button>
-                  ) : null}
+                  </div>
                 </div>
-                <p className="mt-1 text-[12px] text-[#9ca3af]">
-                  Choose exact start and end times with 1-minute precision.
-                </p>
 
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <label className="text-[13px] font-semibold text-[#6b7280]">Date</label>
-                    <input
-                      type="date"
-                      value={slotDate}
-                      onChange={(event) => setSlotDate(event.target.value)}
-                      className="mt-2 h-10 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 text-[14px] outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-[#eceef2] bg-[#fafafa] p-3">
-                      <label className="text-[13px] font-semibold text-[#6b7280]">Start</label>
-                      <div className="mt-2 grid grid-cols-3 gap-2">
-                        <select
-                          value={slotStartHour}
-                          onChange={(event) => setSlotStartHour(event.target.value)}
-                          className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
-                        >
-                          {TIME_HOURS.map((hour) => (
-                            <option key={`start-hour-${hour}`} value={hour}>
-                              {hour}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={slotStartMinute}
-                          onChange={(event) => setSlotStartMinute(event.target.value)}
-                          className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
-                        >
-                          {TIME_MINUTES.map((minute) => (
-                            <option key={`start-minute-${minute}`} value={minute}>
-                              {minute}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={slotStartPeriod}
-                          onChange={(event) => setSlotStartPeriod(event.target.value as "AM" | "PM")}
-                          className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
-                        >
-                          {TIME_PERIODS.map((period) => (
-                            <option key={`start-period-${period}`} value={period}>
-                              {period}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-[#eceef2] bg-[#fafafa] p-3">
-                      <label className="text-[13px] font-semibold text-[#6b7280]">End</label>
-                      <div className="mt-2 grid grid-cols-3 gap-2">
-                        <select
-                          value={slotEndHour}
-                          onChange={(event) => setSlotEndHour(event.target.value)}
-                          className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
-                        >
-                          {TIME_HOURS.map((hour) => (
-                            <option key={`end-hour-${hour}`} value={hour}>
-                              {hour}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={slotEndMinute}
-                          onChange={(event) => setSlotEndMinute(event.target.value)}
-                          className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
-                        >
-                          {TIME_MINUTES.map((minute) => (
-                            <option key={`end-minute-${minute}`} value={minute}>
-                              {minute}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={slotEndPeriod}
-                          onChange={(event) => setSlotEndPeriod(event.target.value as "AM" | "PM")}
-                          className="h-10 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[14px] outline-none"
-                        >
-                          {TIME_PERIODS.map((period) => (
-                            <option key={`end-period-${period}`} value={period}>
-                              {period}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
+                <div className="border-t border-[#eceef2] pt-5">
                   <button
                     type="button"
-                    onClick={editingSlot ? confirmEditSlot : requestAddSlot}
+                    onClick={requestRemoveAllAvailability}
                     disabled={isBusy}
                     className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {editingSlot ? "Update Slot" : "Add Slot"}
+                    Remove All Availability
                   </button>
+                  <p className="mt-2 text-[12px] text-[#9ca3af]">
+                    This removes only open slots. Booked sessions stay on the calendar.
+                  </p>
                 </div>
               </div>
-
-              <div className="border-t border-[#eceef2] pt-5">
-                <button
-                  type="button"
-                  onClick={requestRemoveAllAvailability}
-                  disabled={isBusy}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Remove All Availability
-                </button>
-                <p className="mt-2 text-[12px] text-[#9ca3af]">
-                  This removes only open slots. Booked sessions stay on the calendar.
-                </p>
-              </div>
-            </div>
-          </aside>
+            </aside>
+          )}
         </div>
 
         {pendingAddSlot ? (

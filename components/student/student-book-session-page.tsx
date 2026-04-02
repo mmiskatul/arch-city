@@ -46,9 +46,6 @@ function StepItem({
         <span className={`block text-[14px] ${isCurrent ? "font-semibold text-[#d61c3f]" : isRead ? "font-semibold text-[#6b7280]" : "text-[#6b7280]"}`}>
           {label}
         </span>
-        <span className={`block text-[10px] uppercase tracking-[0.08em] ${isCurrent ? "text-[#d61c3f]" : isRead ? "text-[#9ca3af]" : "text-[#9ca3af]"}`}>
-          {isRead ? "Read" : isCurrent ? "Current" : "Next"}
-        </span>
       </div>
     </Link>
   );
@@ -127,10 +124,15 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const availabilityGroups = useMemo(() => groupAvailabilityByDate(tutor.availability), [tutor.availability]);
+  const subjectOptions = useMemo(
+    () => (tutor.subjects.length > 0 ? tutor.subjects : ["General Tutoring"]),
+    [tutor.subjects],
+  );
 
   const defaultSessionType: SessionType = tutor.inPersonAvailable && tutor.mode === "In-Person" ? "In-Person" : "Virtual";
   const defaultDate = availabilityGroups[0]?.value ?? "Unavailable";
   const defaultTime = availabilityGroups[0]?.slots[0]?.time ?? "Unavailable";
+  const initialSubject = searchParams.get("subject") ?? subjectOptions[0] ?? "General Tutoring";
   const initialDateParam = searchParams.get("date");
   const normalizedInitialDate =
     availabilityGroups.find((group) => group.value === initialDateParam)?.value ??
@@ -139,6 +141,9 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
 
   const [selectedDate, setSelectedDate] = useState(normalizedInitialDate);
   const [selectedTime, setSelectedTime] = useState(searchParams.get("time") || defaultTime);
+  const [selectedSubject, setSelectedSubject] = useState(
+    subjectOptions.includes(initialSubject) ? initialSubject : subjectOptions[0] || "General Tutoring",
+  );
   const [sessionType, setSessionType] = useState<SessionType>(
     (searchParams.get("type") as SessionType | null) ?? defaultSessionType,
   );
@@ -153,13 +158,16 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
   const [cardCvc, setCardCvc] = useState("");
   const [cardCountry, setCardCountry] = useState("Bangladesh");
   const [savePaymentInfo, setSavePaymentInfo] = useState(false);
+  const [meetingLocation, setMeetingLocation] = useState(tutor.inPersonAvailable ? tutor.location : "");
+  const [sessionNotes, setSessionNotes] = useState("");
   const [checkoutStatus, setCheckoutStatus] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
   const stepParam = searchParams.get("step") || "date-time";
-  const activeStep: BookingStep = stepParam === "confirm" ? 4 : stepParam === "duration" ? 3 : stepParam === "session" ? 2 : 1;
+  const activeStep: BookingStep =
+    stepParam === "confirm" ? 4 : stepParam === "duration" ? 4 : stepParam === "session" ? 3 : stepParam === "subject" ? 2 : 1;
 
   const selectedGroup = availabilityGroups.find((group) => group.value === selectedDate) ?? availabilityGroups[0];
   const availableTimes = selectedGroup?.slots ?? [];
@@ -169,10 +177,11 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
   const sessionRate = useMemo(() => (duration === 45 ? tutor.price45 : tutor.price60), [duration, tutor.price45, tutor.price60]);
 
   const stepRoutes = {
-    dateTime: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "date-time", date: selectedDate, time: selectedTime, type: sessionType, duration })}`,
-    sessionType: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "session", date: selectedDate, time: selectedTime, type: sessionType, duration })}`,
-    duration: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "duration", date: selectedDate, time: selectedTime, type: sessionType, duration })}`,
-    confirm: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "confirm", date: selectedDate, time: selectedTime, type: sessionType, duration })}`,
+    dateTime: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "date-time", date: selectedDate, time: selectedTime, subject: selectedSubject, type: sessionType, duration })}`,
+    subject: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "subject", date: selectedDate, time: selectedTime, subject: selectedSubject, type: sessionType, duration })}`,
+    sessionType: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "session", date: selectedDate, time: selectedTime, subject: selectedSubject, type: sessionType, duration })}`,
+    duration: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "duration", date: selectedDate, time: selectedTime, subject: selectedSubject, type: sessionType, duration })}`,
+    confirm: `${STUDENT_FIND_TUTORS_ROUTE}/${tutor.id}/book-session${buildQueryString({ step: "confirm", date: selectedDate, time: selectedTime, subject: selectedSubject, type: sessionType, duration })}`,
   };
 
   const stepStatus = (step: BookingStep): StepStatus => {
@@ -218,7 +227,8 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
         saveInformation: savePaymentInfo,
         tutorId: tutor.id,
         tutorName: tutor.name,
-      sessionDate: selectedDate,
+        subject: selectedSubject,
+        sessionDate: selectedDate,
         sessionTime: selectedTime,
         sessionType,
         durationMinutes: duration,
@@ -226,6 +236,8 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
         schedulingFee: String(chargedToday),
         totalAmount: String(sessionRate + chargedToday),
         currency: "USD",
+        meetingLocation: sessionType === "In-Person" ? meetingLocation.trim() || tutor.location : "",
+        sessionNotes: sessionNotes.trim(),
       });
 
       setCheckoutStatus(result.message);
@@ -258,9 +270,11 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
             <div className="flex flex-wrap items-center gap-4 rounded-[12px] border border-[#eceef2] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <StepItem step={1} label="Date & Time" status={stepStatus(1)} href={stepRoutes.dateTime} />
               <div className="h-px w-8 bg-[#e5e7eb]" />
-              <StepItem step={2} label="Session Type" status={stepStatus(2)} href={stepRoutes.sessionType} />
+              <StepItem step={2} label="Subject" status={stepStatus(2)} href={stepRoutes.subject} />
               <div className="h-px w-8 bg-[#e5e7eb]" />
-              <StepItem step={3} label="Duration" status={stepStatus(3)} href={stepRoutes.duration} />
+              <StepItem step={3} label="Session Type" status={stepStatus(3)} href={stepRoutes.sessionType} />
+              <div className="h-px w-8 bg-[#e5e7eb]" />
+              <StepItem step={4} label="Duration" status={stepStatus(4)} href={stepRoutes.duration} />
             </div>
 
             {activeStep >= 1 ? (
@@ -326,7 +340,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                         Back
                       </Link>
                       <Link
-                        href={stepRoutes.sessionType}
+                        href={stepRoutes.subject}
                         className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white"
                       >
                         Next
@@ -351,6 +365,76 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
 
             {activeStep >= 2 ? (
               activeStep === 2 ? (
+                <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                  <h2 className="text-[16px] font-bold text-[#20242b]">Subject</h2>
+                  <p className="mt-1 text-[13px] text-[#6b7280]">
+                    Choose the subject that best matches what you want help with.
+                  </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {subjectOptions.map((subject) => {
+                      const active = selectedSubject === subject;
+
+                      return (
+                        <button
+                          key={subject}
+                          type="button"
+                          onClick={() => setSelectedSubject(subject)}
+                          className={`rounded-[12px] border px-4 py-4 text-left transition ${
+                            active ? "border-[#ef6078] bg-[#fff1f4]" : "border-[#e5e7eb] bg-white hover:border-[#d7dbe0]"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className={`text-[14px] font-semibold ${active ? "text-[#d61c3f]" : "text-[#20242b]"}`}>
+                                {subject}
+                              </p>
+                              <p className="mt-1 text-[12px] text-[#6b7280]">Available with this tutor</p>
+                            </div>
+                            <span
+                              className={`mt-0.5 h-5 w-5 rounded-full border ${
+                                active ? "border-[#d61c3f] bg-[#d61c3f]" : "border-[#d1d5db] bg-white"
+                              }`}
+                            />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <div className="flex gap-3">
+                      <Link
+                        href={stepRoutes.dateTime}
+                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
+                      >
+                        Back
+                      </Link>
+                      <Link
+                        href={stepRoutes.sessionType}
+                        className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white"
+                      >
+                        Next
+                      </Link>
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                <SummaryCard title="Subject">
+                  <div className="flex items-center justify-between rounded-[12px] bg-[#fafafb] px-4 py-3">
+                    <div>
+                      <p className="text-[12px] font-semibold text-[#20242b]">{selectedSubject}</p>
+                      <p className="text-[11px] text-[#6b7280]">Tutor subject selection</p>
+                    </div>
+                    <span className="rounded-full bg-[#eef1f4] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">
+                      Read
+                    </span>
+                  </div>
+                </SummaryCard>
+              )
+            ) : null}
+
+            {activeStep >= 3 ? (
+              activeStep === 3 ? (
                 <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   <h2 className="text-[16px] font-bold text-[#20242b]">Session Type</h2>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -391,7 +475,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                   <div className="mt-4 flex justify-end">
                     <div className="flex gap-3">
                       <Link
-                        href={stepRoutes.dateTime}
+                        href={stepRoutes.subject}
                         className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f]"
                       >
                         Back
@@ -420,8 +504,8 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
               )
             ) : null}
 
-            {activeStep >= 3 ? (
-              activeStep === 3 ? (
+            {activeStep >= 4 ? (
+              activeStep === 4 ? (
                 <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   <h2 className="text-[16px] font-bold text-[#20242b]">Session Duration</h2>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -501,7 +585,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                 </div>
                 <div>
                   <p className="text-[14px] font-semibold text-[#20242b]">{tutor.name}</p>
-                  <p className="text-[13px] text-[#6b7280]">{tutor.subjects[1] ?? tutor.subjects[0]}</p>
+                  <p className="text-[13px] text-[#6b7280]">{selectedSubject}</p>
                 </div>
               </div>
 
@@ -555,26 +639,26 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
 
       {isReviewOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-2 py-2 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-3 py-3 backdrop-blur-[2px]"
           onClick={closeReviewModal}
           role="presentation"
         >
           <div
-            className="relative w-full max-w-[800px] overflow-hidden rounded-[20px] bg-white shadow-[0_20px_70px_rgba(15,23,42,0.3)]"
+            className="relative w-full max-w-[620px] overflow-hidden rounded-[18px] bg-white shadow-[0_20px_70px_rgba(15,23,42,0.3)]"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
-            <div className="grid lg:grid-cols-[0.88fr_1.12fr]">
-              <div className="relative overflow-hidden bg-[linear-gradient(180deg,#2f3647_0%,#3c455a_100%)] px-3.5 py-3.5 text-white lg:px-4 lg:py-4">
+            <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="relative overflow-hidden bg-[linear-gradient(180deg,#2f3647_0%,#3c455a_100%)] px-3 py-3 text-white lg:px-4 lg:py-4">
                 <div className="absolute -left-20 top-8 h-44 w-44 rounded-full bg-white/8 blur-3xl" />
                 <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-[#d61c3f]/18 blur-3xl" />
 
-                <div className="relative flex items-start justify-between gap-4">
+                <div className="relative flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">Secure checkout</p>
-                    <h3 className="mt-2 text-[22px] font-bold leading-tight">Pay in USD</h3>
-                    <p className="mt-2 max-w-[320px] text-[12px] leading-5 text-white/72">
+                    <h3 className="mt-2 text-[19px] font-bold leading-tight">Pay in USD</h3>
+                    <p className="mt-2 max-w-[260px] text-[11px] leading-5 text-white/72">
                       Complete this booking with Visa, Mastercard, debit, or credit card.
                     </p>
                   </div>
@@ -587,28 +671,34 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                   </button>
                 </div>
 
-                <div className="relative mt-5 rounded-[18px] border border-white/12 bg-white/8 p-3.5 backdrop-blur-sm">
+                <div className="relative mt-4 rounded-[16px] border border-white/12 bg-white/8 p-3 backdrop-blur-sm">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/58">Total due today</p>
                     <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/75">
                       USD
                     </span>
                   </div>
-                  <p className="mt-3 text-[30px] font-bold leading-none tracking-[-0.03em]">${sessionRate + chargedToday}</p>
-                  <p className="mt-2 text-[11px] leading-5 text-white/70">Session rate plus scheduling fee for the booking today.</p>
+                  <p className="mt-3 text-[24px] font-bold leading-none tracking-[-0.03em]">${sessionRate + chargedToday}</p>
+                  <p className="mt-2 text-[10px] leading-5 text-white/70">Session rate plus scheduling fee for the booking today.</p>
                 </div>
 
-                  <div className="relative mt-3 space-y-1.5">
+                <div className="relative mt-3 space-y-1.5">
                   <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Tutor</span>
                       <span className="text-right text-[12px] font-semibold">{tutor.name}</span>
                     </div>
                   </div>
-                    <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Date & time</span>
-                        <span className="text-right text-[12px] font-semibold">
+                  <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Subject</span>
+                      <span className="text-right text-[12px] font-semibold">{selectedSubject}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Date & time</span>
+                      <span className="text-right text-[12px] font-semibold">
                         {selectedDateLabel}
                           <br />
                           <span className="text-white/72">{selectedTime}</span>
@@ -621,6 +711,16 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                       <span className="text-right text-[12px] font-semibold">{sessionType}</span>
                     </div>
                   </div>
+                  {sessionType === "In-Person" ? (
+                    <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Meeting location</span>
+                        <span className="max-w-[180px] text-right text-[12px] font-semibold">
+                          {meetingLocation.trim() || tutor.location || "Not provided"}
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="rounded-[15px] border border-white/12 bg-white/8 px-3.5 py-2">
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-[11px] uppercase tracking-[0.12em] text-white/55">Duration</span>
@@ -629,29 +729,23 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                   </div>
                 </div>
 
-                <div className="relative mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/82">Visa</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/82">Mastercard</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/82">Debit</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/82">Credit</span>
-                </div>
               </div>
 
-              <div className="bg-[#fbfbfc] px-3.5 py-3.5 lg:px-4 lg:py-4">
+              <div className="bg-[#fbfbfc] px-3 py-3 lg:px-4 lg:py-4">
                 <button
                   type="button"
-                  className="inline-flex h-10 w-full items-center justify-center rounded-[4px] bg-[#00d66b] px-4 text-[13px] font-semibold text-[#13211d] shadow-[0_2px_0_rgba(0,0,0,0.06)]"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-[4px] bg-[#00d66b] px-4 text-[12px] font-semibold text-[#13211d] shadow-[0_2px_0_rgba(0,0,0,0.06)]"
                 >
                   Pay with <span className="ml-1 font-bold">link</span>
                 </button>
 
-                <div className="mt-4 flex items-center gap-3">
+                <div className="mt-3 flex items-center gap-3">
                   <div className="h-px flex-1 bg-[#e5e7eb]" />
                   <span className="text-[11px] uppercase tracking-[0.12em] text-[#a1a1aa]">OR</span>
                   <div className="h-px flex-1 bg-[#e5e7eb]" />
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-3">
                   <h5 className="text-[13px] font-semibold text-[#333333]">Contact information</h5>
                   <div className="mt-3">
                     <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
@@ -667,7 +761,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                   </div>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-3">
                   <h5 className="text-[13px] font-semibold text-[#333333]">Payment method</h5>
                   <div className="mt-3 rounded-[8px] border border-[#e5e7eb] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                     <div className="flex items-center gap-3 pb-2">
@@ -749,17 +843,15 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                       className="mt-0.5 h-4 w-4 rounded border-[#d1d5db] text-[#d61c3f] focus:ring-[#d61c3f]"
                     />
                     <div className="space-y-1">
-                        <p className="text-[11px] font-semibold text-[#333333]">Save my information for faster checkout</p>
-                        <p className="text-[10px] leading-4 text-[#6b7280]">
-                        Pay securely at Arch City Tutors and everywhere Link is accepted.
-                      </p>
+                      <p className="text-[11px] font-semibold text-[#333333]">Save my information</p>
+                      <p className="text-[10px] leading-4 text-[#6b7280]">Faster checkout next time.</p>
                     </div>
                   </label>
                 </div>
 
-                  <div className="mt-3 text-[10px] text-[#6b7280]">
-                <p className="font-medium">Purchase Session</p>
-              </div>
+                <div className="mt-3 text-[10px] text-[#6b7280]">
+                  <p className="font-medium">Purchase Session</p>
+                </div>
 
                 <button
                   type="button"

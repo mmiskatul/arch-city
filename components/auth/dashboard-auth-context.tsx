@@ -27,7 +27,7 @@ function readSessionFromCookies(dashboard: DashboardKind): DashboardAuthState {
     dashboard,
     role,
     tokenPresent,
-    isAuthenticated: tokenPresent && (role ? role === dashboard : true),
+    isAuthenticated: tokenPresent && role === dashboard,
   };
 }
 
@@ -46,7 +46,7 @@ export function DashboardAuthProvider({
     dashboard,
     role: initialRole,
     tokenPresent: initialTokenPresent,
-    isAuthenticated: initialTokenPresent && (initialRole ? initialRole === dashboard : true),
+    isAuthenticated: initialTokenPresent && initialRole === dashboard,
   }));
 
   const refreshSession = useCallback(() => {
@@ -58,12 +58,21 @@ export function DashboardAuthProvider({
       refreshSession();
     }
 
+    const intervalId = window.setInterval(onSessionChanged, 2000);
+
     window.addEventListener("arch-session-updated", onSessionChanged);
     window.addEventListener("focus", onSessionChanged);
+    window.addEventListener("pageshow", onSessionChanged);
+    window.addEventListener("storage", onSessionChanged);
+    document.addEventListener("visibilitychange", onSessionChanged);
 
     return () => {
+      window.clearInterval(intervalId);
       window.removeEventListener("arch-session-updated", onSessionChanged);
       window.removeEventListener("focus", onSessionChanged);
+      window.removeEventListener("pageshow", onSessionChanged);
+      window.removeEventListener("storage", onSessionChanged);
+      document.removeEventListener("visibilitychange", onSessionChanged);
     };
   }, [refreshSession]);
 

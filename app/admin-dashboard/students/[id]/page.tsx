@@ -14,6 +14,7 @@ type LegacyStudentDetailApiItem = {
   last_session: string;
   subjects: string[];
   status: "active" | "inactive";
+  is_suspended?: boolean;
 };
 
 type RichStudentDetailApiItem = {
@@ -23,6 +24,7 @@ type RichStudentDetailApiItem = {
   grade: string;
   guardian: string;
   status: "active" | "inactive";
+  is_suspended?: boolean;
   total_sessions: number;
   total_sessions_delta: string;
   current_plan_name: string;
@@ -126,6 +128,7 @@ function isRichItem(item: StudentDetailApiItem): item is RichStudentDetailApiIte
 function toDetailModel(item: StudentDetailApiItem): AdminStudentDetail {
   const uiStatus = toUiStatus(item.status);
   const initials = initialsFromName(item.name);
+  const isSuspended = Boolean(item.is_suspended ?? false);
 
   if (!isRichItem(item)) {
     return {
@@ -136,6 +139,7 @@ function toDetailModel(item: StudentDetailApiItem): AdminStudentDetail {
       email: item.email,
       grade: item.grade,
       status: uiStatus,
+      isSuspended,
       totalSessions: item.sessions,
       totalSessionsDelta: "+0 this month",
       currentPlanName: "Student Plan",
@@ -187,6 +191,7 @@ function toDetailModel(item: StudentDetailApiItem): AdminStudentDetail {
     email: item.email,
     grade: item.grade,
     status: uiStatus,
+    isSuspended,
     totalSessions: item.total_sessions,
     totalSessionsDelta: item.total_sessions_delta,
     currentPlanName: item.current_plan_name,

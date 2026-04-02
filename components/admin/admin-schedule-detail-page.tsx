@@ -60,6 +60,11 @@ export function AdminScheduleDetailPage({ session }: { session: AdminScheduleDet
                 {session.timeRange.replace("-", " - ")}
               </p>
               <p>
+                <span className="text-[#6b7280]">Meeting Location</span>
+                <br />
+                {session.meetingLocation || "Not provided"}
+              </p>
+              <p>
                 <span className="text-[#6b7280]">Duration</span>
                 <br />
                 {session.overview.duration}
@@ -229,9 +234,11 @@ export function AdminScheduleDetailPage({ session }: { session: AdminScheduleDet
             <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">Session Notes</h2>
               <p className="mt-3 rounded-xl bg-[#fafafb] px-3 py-2.5 text-[13px] leading-7 text-[#4b5563]">
-                {session.notes}
+                {session.sessionNotes || session.notes || "No additional notes provided."}
               </p>
-              <p className="mt-2 text-[11px] text-[#9ca3af]">{session.notesMeta}</p>
+              <p className="mt-2 text-[11px] text-[#9ca3af]">
+                {session.meetingLocation ? `Meeting location: ${session.meetingLocation}` : session.notesMeta}
+              </p>
             </article>
           </div>
 

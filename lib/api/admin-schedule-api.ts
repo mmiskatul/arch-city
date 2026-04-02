@@ -1,4 +1,4 @@
-import { apiGet } from "@/lib/api/api-client";
+import { proxyApiGet } from "@/lib/api/local-proxy-api";
 import type {
   AdminScheduleDetail,
   AdminScheduleRow,
@@ -11,14 +11,70 @@ export type AdminScheduleApiRow = {
   subject: string;
   session_date: string;
   session_time: string;
+  meeting_location?: string;
+  meetingLocation?: string;
   duration_minutes: number;
   session_type: string;
   status: string;
   amount: string;
   student_email: string;
+  student_initials?: string;
+  student_initials_class_name?: string;
 };
 
-export type AdminScheduleApiDetail = AdminScheduleDetail;
+export type AdminScheduleApiDetail = {
+  session_id: string;
+  status: "Upcoming" | "Completed" | "Cancelled";
+  subject: string;
+  date_label: string;
+  time_range: string;
+  session_type: "In-Person" | "Virtual";
+  meeting_location?: string;
+  overview: {
+    date: string;
+    duration: string;
+    platform: string;
+  };
+  payment: {
+    session_rate: string;
+    duration_hours: string;
+    subtotal: string;
+    platform_fee: string;
+    total_charged: string;
+    tutor_payout: string;
+    method: string;
+    paid_at: string;
+  };
+  student: {
+    initials: string;
+    initials_class_name: string;
+    name: string;
+    grade_school: string;
+    parent_phone: string;
+    email: string;
+    plan: string;
+    sessions_used: string;
+    total_sessions: string;
+  };
+  tutor: {
+    initials: string;
+    initials_class_name: string;
+    name: string;
+    title: string;
+    rating_and_sessions: string;
+    email: string;
+    phone: string;
+    rate_applied: string;
+    status: string;
+  };
+  session_notes?: string;
+  notes_meta?: string;
+  notes: string;
+  timeline: {
+    title: string;
+    meta: string;
+  }[];
+};
 
 export type AdminSchedulesListResponse = {
   total: number;
@@ -72,51 +128,53 @@ function formatCurrency(value: string) {
 
 function mapAdminScheduleDetail(detail: AdminScheduleApiDetail): AdminScheduleDetail {
   return {
-    sessionId: detail.sessionId,
+    sessionId: detail.session_id || "",
     status: detail.status,
     subject: detail.subject,
-    dateLabel: formatDateLabel(detail.dateLabel),
-    timeRange: formatTimeRange(detail.timeRange),
-    sessionType: detail.sessionType,
+    dateLabel: formatDateLabel(detail.date_label || ""),
+    timeRange: formatTimeRange(detail.time_range || ""),
+    sessionType: detail.session_type || "Virtual",
+    meetingLocation: detail.meeting_location || "",
     overview: {
       date: formatFullDateLabel(detail.overview.date),
       duration: detail.overview.duration ? `${detail.overview.duration} min` : "",
-      platform: detail.overview.platform || detail.sessionType,
+      platform: detail.overview.platform || detail.session_type,
     },
     payment: {
-      sessionRate: formatCurrency(detail.payment.sessionRate),
-      durationHours: detail.payment.durationHours ? `${detail.payment.durationHours} hrs` : "",
+      sessionRate: formatCurrency(detail.payment.session_rate),
+      durationHours: detail.payment.duration_hours ? `${detail.payment.duration_hours} hrs` : "",
       subtotal: formatCurrency(detail.payment.subtotal),
-      platformFee: formatCurrency(detail.payment.platformFee),
-      totalCharged: formatCurrency(detail.payment.totalCharged),
-      tutorPayout: formatCurrency(detail.payment.tutorPayout),
+      platformFee: formatCurrency(detail.payment.platform_fee),
+      totalCharged: formatCurrency(detail.payment.total_charged),
+      tutorPayout: formatCurrency(detail.payment.tutor_payout),
       method: detail.payment.method || "Card",
-      paidAt: detail.payment.paidAt,
+      paidAt: detail.payment.paid_at,
     },
     student: {
       initials: detail.student.initials || "ST",
-      initialsClassName: detail.student.initialsClassName || "bg-[#f1f1f1] text-[#6b7280]",
+      initialsClassName: detail.student.initials_class_name || "bg-[#f1f1f1] text-[#6b7280]",
       name: detail.student.name || "Student",
-      gradeSchool: detail.student.gradeSchool || "Not provided",
-      parentPhone: detail.student.parentPhone || "",
+      gradeSchool: detail.student.grade_school || "Not provided",
+      parentPhone: detail.student.parent_phone || "",
       email: detail.student.email || "",
       plan: detail.student.plan || "",
-      sessionsUsed: detail.student.sessionsUsed || "",
-      totalSessions: detail.student.totalSessions || "",
+      sessionsUsed: detail.student.sessions_used || "",
+      totalSessions: detail.student.total_sessions || "",
     },
     tutor: {
       initials: detail.tutor.initials || "TU",
-      initialsClassName: detail.tutor.initialsClassName || "bg-[#ebf7ef] text-[#239157]",
+      initialsClassName: detail.tutor.initials_class_name || "bg-[#ebf7ef] text-[#239157]",
       name: detail.tutor.name || "Tutor",
       title: detail.tutor.title || "Tutor",
-      ratingAndSessions: detail.tutor.ratingAndSessions || "",
+      ratingAndSessions: detail.tutor.rating_and_sessions || "",
       email: detail.tutor.email || "",
       phone: detail.tutor.phone || "",
-      rateApplied: formatCurrency(detail.tutor.rateApplied),
+      rateApplied: formatCurrency(detail.tutor.rate_applied),
       status: detail.tutor.status || "Approved",
     },
+    sessionNotes: detail.session_notes || "",
     notes: detail.notes || "",
-    notesMeta: detail.notesMeta || "",
+    notesMeta: detail.notes_meta || "",
     timeline: (detail.timeline || []).map((item) => ({
       title: item.title,
       meta: item.meta,
@@ -125,19 +183,22 @@ function mapAdminScheduleDetail(detail: AdminScheduleApiDetail): AdminScheduleDe
 }
 
 async function request<T>(path: string): Promise<T> {
-  return apiGet<T>(path);
+  return proxyApiGet<T>(path);
 }
 
 export async function fetchAdminScheduleRows(): Promise<AdminScheduleRow[]> {
-  const data = await request<AdminSchedulesListResponse>("/admin-dashboard/schedules");
+  const data = await request<AdminSchedulesListResponse>("/api/admin/schedules");
   return (data.items || []).map((row) => ({
     sessionId: row.booking_id,
-    studentInitials: row.studentInitials || "",
-    studentInitialsClassName: row.studentInitialsClassName || "bg-[#f1f1f1] text-[#6b7280]",
+    studentInitials: row.student_initials || "",
+    studentInitialsClassName: row.student_initials_class_name || "bg-[#f1f1f1] text-[#6b7280]",
     student: row.student_name,
     tutor: row.tutor_name,
     subject: row.subject,
-    dateTime: `${row.session_date} ${row.session_time}`.trim(),
+    sessionDate: row.session_date || "",
+    sessionTime: row.session_time || "",
+    dateTime: [row.session_date, row.session_time].filter(Boolean).join(" "),
+    meetingLocation: row.meeting_location || row.meetingLocation || "",
     duration: row.duration_minutes ? `${row.duration_minutes} min` : "",
     type: row.session_type === "In-Person" ? "In-Person" : "Virtual",
     status:
@@ -151,6 +212,6 @@ export async function fetchAdminScheduleRows(): Promise<AdminScheduleRow[]> {
 }
 
 export async function fetchAdminScheduleDetailById(sessionId: string): Promise<AdminScheduleDetail | null> {
-  const data = await request<AdminScheduleDetailResponse>(`/admin-dashboard/schedules/${sessionId}`);
+  const data = await request<AdminScheduleDetailResponse>(`/api/admin/schedules/${sessionId}`);
   return data.item ? mapAdminScheduleDetail(data.item) : null;
 }

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { FiBell } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
+import { cancelStudentScheduleItemById } from "@/lib/api/student-schedule-cancel-api";
 import { STUDENT_FIND_TUTORS_ROUTE, STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
 import { studentScheduleItems, type StudentScheduleItem } from "@/lib/student/schedule-data";
 
@@ -36,7 +37,10 @@ function statusClass(status: StudentScheduleItem["status"]) {
 
 export function StudentSchedulePage({ initialSessions }: { initialSessions?: StudentScheduleItem[] }) {
   const [activeTab, setActiveTab] = useState<ScheduleTab>("Upcoming");
-  const sessions = initialSessions ?? studentScheduleItems;
+  const [sessions, setSessions] = useState<StudentScheduleItem[]>(initialSessions ?? studentScheduleItems);
+  const [cancellingId, setCancellingId] = useState<string>("");
+  const [pendingCancelId, setPendingCancelId] = useState<string>("");
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const filteredSessions = useMemo(
     () => sessions.filter((item) => item.status === activeTab),
@@ -51,6 +55,21 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
     }),
     [sessions],
   );
+
+  async function handleCancelSession(sessionId: string) {
+    setCancellingId(sessionId);
+    setCancelError(null);
+
+    try {
+      const updated = await cancelStudentScheduleItemById(sessionId);
+      setSessions((prev) => prev.map((item) => (item.id === sessionId ? { ...item, ...updated } : item)));
+      setActiveTab("Cancelled");
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : "Failed to cancel the session.");
+    } finally {
+      setCancellingId("");
+    }
+  }
 
   return (
     <StudentShell>
@@ -118,6 +137,10 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
             </div>
           </div>
 
+          {cancelError ? (
+            <div className="px-4 text-[13px] text-[#d94a62]">{cancelError}</div>
+          ) : null}
+
           <div className="overflow-x-auto">
             <div className="min-w-[920px]">
               <div className="grid grid-cols-[1.15fr_1.65fr_1.15fr_0.8fr_0.9fr_0.9fr_1fr_1.2fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
@@ -169,9 +192,11 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
                       {session.status === "Upcoming" ? (
                         <button
                           type="button"
-                          className="inline-flex rounded-full border border-[#f09aaa] px-4 py-1.5 text-[12px] font-semibold text-[#d94a62] transition hover:bg-[#fff4f6]"
+                          onClick={() => setPendingCancelId(session.id)}
+                          disabled={cancellingId === session.id}
+                          className="inline-flex rounded-full border border-[#f09aaa] px-4 py-1.5 text-[12px] font-semibold text-[#d94a62] transition hover:bg-[#fff4f6] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Cancel
+                          {cancellingId === session.id ? "Cancelling..." : "Cancel"}
                         </button>
                       ) : null}
                     </div>
@@ -181,7 +206,48 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
             </div>
           </div>
         </div>
+
+        {pendingCancelId ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-4 backdrop-blur-[2px]"
+            role="presentation"
+            onClick={() => setPendingCancelId("")}
+          >
+            <div
+              className="w-full max-w-[440px] rounded-[20px] border border-[#e7e7eb] bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.22)]"
+              role="dialog"
+              aria-modal="true"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3 className="text-[18px] font-bold text-[#20242b]">Cancel session?</h3>
+              <p className="mt-2 text-[13px] leading-6 text-[#6b7280]">
+                This will mark the session as cancelled and release the tutor time slot. This action cannot be undone.
+              </p>
+
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPendingCancelId("")}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#e5e7eb] bg-white px-5 text-[13px] font-semibold text-[#4b5563]"
+                >
+                  Keep session
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const id = pendingCancelId;
+                    setPendingCancelId("");
+                    await handleCancelSession(id);
+                  }}
+                  className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white"
+                >
+                  Cancel session
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
-    </StudentShell>
-  );
-}
+      </StudentShell>
+    );
+  }

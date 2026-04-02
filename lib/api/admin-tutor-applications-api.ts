@@ -3,7 +3,8 @@ import { browserApiRequest } from "@/lib/api/browser-api-client";
 export type AdminTutorApplicationStatus = "pending" | "approved" | "rejected";
 
 export type AdminTutorApplicationApiItem = {
-  application_id: string;
+  id: string;
+  application_id?: string | null;
   status: AdminTutorApplicationStatus;
   submitted_at: string;
   updated_at: string;
@@ -66,14 +67,14 @@ export async function fetchAdminTutorApplications(view: "pending" | "all" = "pen
   });
 }
 
-export async function fetchAdminTutorApplicationById(applicationId: string) {
+export async function fetchAdminTutorApplicationById(id: string) {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
   return browserApiRequest<AdminTutorApplicationDetailResponse>({
-    url: `${baseUrl}/admin-dashboard/tutor-applications/${applicationId}`,
+    url: `${baseUrl}/admin-dashboard/tutor-applications/${id}`,
     method: "GET",
   });
 }

@@ -24,14 +24,21 @@ function MessageBubble({
   initials,
   message,
   timestamp,
+  attachmentName,
+  attachmentType,
+  attachmentSize,
 }: {
   sender: "tutor" | "student";
   avatarUrl?: string;
   initials: string;
   message: string;
   timestamp: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
 }) {
   const isStudent = sender === "student";
+  const hasAttachment = Boolean(attachmentName);
 
   return (
     <div className={`flex ${isStudent ? "justify-end" : "justify-start"}`}>
@@ -53,7 +60,20 @@ function MessageBubble({
               isStudent ? "bg-[#d61c3f] text-white" : "bg-white text-[#4b5563]"
             }`}
           >
-            {message}
+            <div className="whitespace-pre-wrap">{message}</div>
+            {hasAttachment ? (
+              <div
+                className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium ${
+                  isStudent ? "bg-white/15 text-white" : "bg-[#eef0f3] text-[#4b5563]"
+                }`}
+              >
+                <span>{attachmentType?.startsWith("image/") ? "Image" : "Attachment"}</span>
+                <span className="max-w-[180px] truncate">{attachmentName}</span>
+                {typeof attachmentSize === "number" && attachmentSize > 0 ? (
+                  <span>({Math.max(1, Math.round(attachmentSize / 1024))} KB)</span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <span className="mt-2 text-[12px] text-[#9ca3af]">{timestamp}</span>
         </div>
@@ -319,6 +339,9 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
                     initials={message.senderInitials || (message.sender === "student" ? studentInitials : tutorInitials)}
                     message={message.message}
                     timestamp={message.timestamp}
+                    attachmentName={message.attachmentName}
+                    attachmentType={message.attachmentType}
+                    attachmentSize={message.attachmentSize}
                   />
                 ))}
               </div>

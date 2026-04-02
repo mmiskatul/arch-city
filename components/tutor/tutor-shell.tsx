@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { IconType } from "react-icons";
@@ -80,8 +80,15 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
 }
 
 function clearAuthCookies() {
-  document.cookie = "arch_access_token=; Path=/; Max-Age=0; SameSite=Lax";
-  document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
+  const expired = "Thu, 01 Jan 1970 00:00:00 GMT";
+  document.cookie = `arch_access_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+  document.cookie = `arch_user_role=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+}
+
+function redirectToLogin() {
+  clearAuthCookies();
+  window.dispatchEvent(new Event("arch-session-updated"));
+  window.location.replace("/login");
 }
 
 type ShellUserProfile = {
@@ -98,8 +105,7 @@ export function TutorShell({
   messagesUnreadCountOverride?: number;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { tokenPresent } = useDashboardAuth();
+  const { tokenPresent, isAuthenticated } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -197,6 +203,11 @@ export function TutorShell({
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
 
+  useEffect(() => {
+    if (tokenPresent && isAuthenticated) return;
+    redirectToLogin();
+  }, [isAuthenticated, tokenPresent]);
+
   async function handleLogout() {
     if (isLoggingOut) return;
 
@@ -214,12 +225,9 @@ export function TutorShell({
       }
     }
 
-    clearAuthCookies();
-    window.dispatchEvent(new Event("arch-session-updated"));
     setUserMenuOpen(false);
     setTopUserMenuOpen(false);
-    router.replace("/login");
-    router.refresh();
+    redirectToLogin();
   }
 
   const useCompactHeader =

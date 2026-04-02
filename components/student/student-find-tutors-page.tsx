@@ -144,6 +144,50 @@ function TutorCardView({ tutor }: { tutor: StudentTutor }) {
   );
 }
 
+function TutorCardSkeleton() {
+  return (
+    <div className="block rounded-[14px] border border-[#eceef2] bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+      <div className="animate-pulse">
+        <div className="flex items-start gap-3">
+          <div className="h-12 w-12 rounded-full bg-[#eef1f4]" />
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-4 w-40 rounded bg-[#eef1f4]" />
+                <div className="h-3 w-28 rounded bg-[#eef1f4]" />
+              </div>
+              <div className="h-6 w-16 rounded-full bg-[#eef1f4]" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <div className="h-6 w-20 rounded-md bg-[#eef1f4]" />
+          <div className="h-6 w-24 rounded-md bg-[#eef1f4]" />
+          <div className="h-6 w-16 rounded-md bg-[#eef1f4]" />
+        </div>
+
+        <div className="mt-3 h-4 w-3/4 rounded bg-[#eef1f4]" />
+
+        <div className="mt-3 rounded-[12px] border border-[#eceef2] bg-[#fafbfc] px-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="h-4 w-24 rounded bg-[#eef1f4]" />
+            <div className="h-5 w-16 rounded-full bg-[#eef1f4]" />
+          </div>
+          <div className="mt-2 h-3 w-32 rounded bg-[#eef1f4]" />
+        </div>
+
+        <div className="mt-3 border-t border-[#eceef2] pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="h-3.5 w-24 rounded bg-[#eef1f4]" />
+            <div className="h-3.5 w-16 rounded bg-[#eef1f4]" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function StudentFindTutorsPage() {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedGradeLevel, setSelectedGradeLevel] = useState<string | null>(null);
@@ -292,17 +336,27 @@ export function StudentFindTutorsPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-              {filteredTutors.map((tutor) => (
-                <TutorCardView key={tutor.id} tutor={tutor} />
-              ))}
-            </div>
-
-            {!isLoading && filteredTutors.length === 0 ? (
-              <div className="mt-8 rounded-[14px] border border-[#eceef2] bg-white px-5 py-8 text-center text-[14px] text-[#6b7280]">
-                No tutors match the selected filters.
+            {isLoading ? (
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <TutorCardSkeleton key={`tutor-skeleton-${index}`} />
+                ))}
               </div>
-            ) : null}
+            ) : (
+              <>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                  {filteredTutors.map((tutor) => (
+                    <TutorCardView key={tutor.id} tutor={tutor} />
+                  ))}
+                </div>
+
+                {filteredTutors.length === 0 ? (
+                  <div className="mt-8 rounded-[14px] border border-[#eceef2] bg-white px-5 py-8 text-center text-[14px] text-[#6b7280]">
+                    No tutors match the selected filters.
+                  </div>
+                ) : null}
+              </>
+            )}
           </section>
         </div>
       </div>

@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { FiBell, FiChevronLeft } from "react-icons/fi";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { AdminStudentDetail } from "@/lib/admin/students-data";
 import { ADMIN_STUDENTS_ROUTE } from "@/lib/routes";
 
-function studentStatusClassName(status: "Active" | "Inactive") {
+type StudentAction = "suspend" | "unsuspend";
+
+function studentStatusClassName(status: "Active" | "Inactive" | "Suspended") {
   if (status === "Active") return "bg-[#ebf7ef] text-[#239157]";
+  if (status === "Suspended") return "bg-[#ffecef] text-[#d61c3f]";
   return "bg-[#fff6de] text-[#9c7a1e]";
 }
 
@@ -19,12 +24,47 @@ function historyStatusClassName(status: "Completed" | "No-Show") {
 }
 
 export function AdminStudentDetailPage({ student }: { student: AdminStudentDetail }) {
+  const router = useRouter();
   const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
-  const [isSuspended, setIsSuspended] = useState(false);
+  const [actionState, setActionState] = useState<StudentAction | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [suspendUntilDate, setSuspendUntilDate] = useState("");
+  const [isSuspended, setIsSuspended] = useState(student.isSuspended);
+  const statusLabel = isSuspended ? "Suspended" : student.status;
 
-  const handleSuspendConfirm = () => {
-    setIsSuspended(true);
-    setShowSuspendConfirm(false);
+  const handleStudentAction = async () => {
+    if (!actionState || isUpdating) return;
+
+    setIsUpdating(true);
+    setActionError(null);
+
+    try {
+      await browserApiRequest({
+        url: `/api/admin/students/${student.id}`,
+        method: "PATCH",
+        data:
+          actionState === "unsuspend"
+            ? { action: "unsuspend" }
+            : {
+                action: "suspend",
+                reason: "",
+                until: suspendUntilDate ? new Date(`${suspendUntilDate}T23:59:59.000Z`).toISOString() : null,
+              },
+      });
+
+      setIsSuspended(actionState === "suspend");
+      setActionState(null);
+      setShowSuspendConfirm(false);
+      if (actionState === "suspend") {
+        setSuspendUntilDate("");
+      }
+      router.refresh();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to update student status.");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -49,11 +89,11 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
               <div>
                 <h1 className="text-[30px] font-bold leading-none text-[#20242b]">{student.name}</h1>
                 <p className="mt-1 text-[13px] text-[#6b7280]">
-                  {student.email} · {student.grade} ·{" "}
+                  {student.email} - {student.grade} -{" "}
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${studentStatusClassName(student.status)}`}
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${studentStatusClassName(statusLabel)}`}
                   >
-                    {student.status}
+                    {statusLabel}
                   </span>
                 </p>
               </div>
@@ -61,11 +101,16 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
 
             <button
               type="button"
-              onClick={() => setShowSuspendConfirm(true)}
-              disabled={isSuspended}
-              className="inline-flex h-8 items-center rounded-lg border border-[#f2c3cc] bg-[#ffecef] px-3 text-[12px] font-semibold text-[#d94a62] disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => {
+                setActionState(isSuspended ? "unsuspend" : "suspend");
+                setShowSuspendConfirm(true);
+              }}
+              disabled={isUpdating}
+              className={`inline-flex h-8 items-center rounded-lg px-3 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 ${
+                isSuspended ? "bg-[#239157] hover:bg-[#1d7b49]" : "bg-[#d94a62] hover:bg-[#bf3d53]"
+              }`}
             >
-              {isSuspended ? "Suspended" : "Suspend"}
+              {isSuspended ? "Unsuspend" : "Suspend"}
             </button>
           </div>
 
@@ -79,19 +124,15 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
             </article>
 
             <article className="rounded-xl border border-[#eceef2] bg-[#fafafb] p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">
-                Current Plan
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">Current Plan</p>
               <p className="mt-2 text-[22px] font-bold leading-none text-[#20242b]">{student.currentPlanName}</p>
               <p className="mt-1 text-[11px] text-[#6b7280]">
-                {student.currentPlanMeta} · {student.currentPlanPrice}
+                {student.currentPlanMeta} - {student.currentPlanPrice}
               </p>
             </article>
 
             <article className="rounded-xl border border-[#eceef2] bg-[#fafafb] p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">
-                Member Since
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">Member Since</p>
               <p className="mt-2 text-[22px] font-bold leading-none text-[#20242b]">{student.memberSince}</p>
               <p className="mt-1 text-[11px] text-[#6b7280]">{student.memberSinceDelta}</p>
             </article>
@@ -202,11 +243,11 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
 
                 <div className="mt-2 flex items-center justify-between text-[12px] text-[#6b7280]">
                   <p>
-                    Tutor <span className="font-semibold text-[#20242b]">{student.activeLesson.tutor}</span> · ★{" "}
+                    Tutor <span className="font-semibold text-[#20242b]">{student.activeLesson.tutor}</span> - ★{" "}
                     {student.activeLesson.tutorRating}
                   </p>
                   <Link href="#" className="font-semibold text-[#d61c3f]">
-                    View Profile →
+                    View Profile
                   </Link>
                 </div>
 
@@ -247,7 +288,7 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
                   Upcoming Schedule
                 </h2>
                 <Link href="#" className="text-[11px] font-semibold text-[#d61c3f]">
-                  View All →
+                  View All
                 </Link>
               </div>
 
@@ -262,7 +303,7 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
                       <div>
                         <p className="text-[13px] font-semibold text-[#20242b]">{item.subject}</p>
                         <p className="text-[11px] text-[#6b7280]">
-                          {item.tutor} · {item.time} · {item.mode}
+                          {item.tutor} - {item.time} - {item.mode}
                         </p>
                       </div>
                     </div>
@@ -325,25 +366,68 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
       {showSuspendConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/40 px-4">
           <div className="w-full max-w-md rounded-[14px] border border-[#e7e7eb] bg-white p-5 shadow-xl">
-            <h3 className="text-[18px] font-bold text-[#20242b]">Suspend This Student?</h3>
+            <h3 className="text-[18px] font-bold text-[#20242b]">
+              {actionState === "unsuspend" ? "Unsuspend This Student?" : "Suspend This Student?"}
+            </h3>
             <p className="mt-2 text-[14px] leading-6 text-[#6b7280]">
-              This action will suspend the student account from active scheduling until manually reactivated.
+              {actionState === "unsuspend"
+                ? "This will restore the student account and allow scheduling again."
+                : "This will pause the student account and stop active scheduling until you unsuspend it."}
             </p>
+
+            {actionState === "suspend" ? (
+              <div className="mt-4 rounded-xl border border-[#eceef2] bg-[#fafafb] p-3">
+                <label className="block text-[12px] font-semibold text-[#374151]" htmlFor="studentSuspendUntilDate">
+                  Optional end date
+                </label>
+                <input
+                  id="studentSuspendUntilDate"
+                  type="date"
+                  value={suspendUntilDate}
+                  onChange={(event) => setSuspendUntilDate(event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-[13px] text-[#20242b]"
+                />
+                <p className="mt-2 text-[12px] text-[#6b7280]">
+                  Leave this blank to keep the student suspended until you manually unsuspend them.
+                </p>
+              </div>
+            ) : null}
+
+            {actionError ? (
+              <p className="mt-3 rounded-md border border-[#ffecef] bg-[#fff5f7] px-3 py-2 text-[12px] text-[#d61c3f]">
+                {actionError}
+              </p>
+            ) : null}
 
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowSuspendConfirm(false)}
-                className="inline-flex h-9 items-center rounded-full border border-[#d1d5db] bg-white px-4 text-[13px] font-semibold text-[#374151] transition hover:bg-[#f9fafb]"
+                onClick={() => {
+                  setShowSuspendConfirm(false);
+                  setActionState(null);
+                  setActionError(null);
+                  setSuspendUntilDate("");
+                }}
+                disabled={isUpdating}
+                className="inline-flex h-9 items-center rounded-full border border-[#d1d5db] bg-white px-4 text-[13px] font-semibold text-[#374151] transition hover:bg-[#f9fafb] disabled:opacity-60"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleSuspendConfirm}
-                className="inline-flex h-9 items-center rounded-full bg-[#d94a62] px-4 text-[13px] font-semibold text-white transition hover:bg-[#bf3d53]"
+                onClick={handleStudentAction}
+                disabled={isUpdating}
+                className={`inline-flex h-9 items-center rounded-full px-4 text-[13px] font-semibold text-white transition disabled:opacity-60 ${
+                  actionState === "unsuspend"
+                    ? "bg-[#239157] hover:bg-[#1d7b49]"
+                    : "bg-[#d94a62] hover:bg-[#bf3d53]"
+                }`}
               >
-                Confirm Suspend
+                {isUpdating
+                  ? "Updating..."
+                  : actionState === "unsuspend"
+                    ? "Yes, Unsuspend"
+                    : "Yes, Suspend"}
               </button>
             </div>
           </div>

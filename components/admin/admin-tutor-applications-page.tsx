@@ -11,7 +11,8 @@ import { ADMIN_TUTOR_APPLICATIONS_ROUTE } from "@/lib/routes";
 type ApiStatus = "pending" | "approved" | "rejected";
 
 type ApiItem = {
-  application_id: string;
+  id: string;
+  application_id?: string | null;
   status: ApiStatus;
   submitted_at: string;
   first_name: string;
@@ -70,7 +71,7 @@ function formatDate(dateIso: string) {
 
 function toUiApplication(item: ApiItem): TutorApplication {
   return {
-    id: item.application_id,
+    id: item.id || item.application_id || "",
     fullName: `${item.first_name} ${item.last_name}`.trim(),
     email: item.email,
     phone: item.mobile_phone || "Not provided",
@@ -116,7 +117,7 @@ function LoadingRows() {
 export function AdminTutorApplicationsPage({
   activeView,
 }: {
-  activeView: "pending" | "all";
+  activeView: "pending" | "all" | "rejected";
 }) {
   const [applications, setApplications] = useState<TutorApplication[]>([]);
   const [stats, setStats] = useState<StatsResponse | null>(null);
@@ -165,7 +166,9 @@ export function AdminTutorApplicationsPage({
 
   const total = useMemo(() => {
     if (!stats) return 0;
-    return activeView === "all" ? stats.total : stats.pending;
+    if (activeView === "all") return stats.total;
+    if (activeView === "rejected") return stats.rejected;
+    return stats.pending;
   }, [activeView, stats]);
 
   return (
@@ -199,6 +202,16 @@ export function AdminTutorApplicationsPage({
             }`}
           >
             All
+          </Link>
+          <Link
+            href={`${ADMIN_TUTOR_APPLICATIONS_ROUTE}?view=rejected`}
+            className={`inline-flex h-8 items-center rounded-full border px-4 text-[12px] font-semibold transition ${
+              activeView === "rejected"
+                ? "border-[#d61c3f] bg-[#d61c3f] text-white"
+                : "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f9fafb]"
+            }`}
+          >
+            Rejected
           </Link>
         </div>
 

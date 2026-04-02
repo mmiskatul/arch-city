@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { browserApiRequest, browserApiRequestWithFallback } from "@/lib/api/browser-api-client";
@@ -18,8 +17,9 @@ type ChangePasswordPanelProps = {
 
 function clearAuthCookies() {
   if (typeof document === "undefined") return;
-  document.cookie = "arch_access_token=; Path=/; Max-Age=0; SameSite=Lax";
-  document.cookie = "arch_user_role=; Path=/; Max-Age=0; SameSite=Lax";
+  const expired = "Thu, 01 Jan 1970 00:00:00 GMT";
+  document.cookie = `arch_access_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+  document.cookie = `arch_user_role=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
 }
 
 function wait(ms: number) {
@@ -62,7 +62,6 @@ export function ChangePasswordPanel({
   confirmPlaceholder = "Re-enter new password",
   scope = "student",
 }: ChangePasswordPanelProps) {
-  const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -91,8 +90,8 @@ export function ChangePasswordPanel({
     }
 
     clearAuthCookies();
-    router.replace("/login");
-    router.refresh();
+    window.dispatchEvent(new Event("arch-session-updated"));
+    window.location.replace("/login");
   }
 
   async function handleUpdatePassword() {

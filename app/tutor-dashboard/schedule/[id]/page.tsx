@@ -1,19 +1,16 @@
 import { notFound } from "next/navigation";
 
-import { TutorSessionDetailPage } from "@/components/tutor/tutor-session-detail-page";
-import { fetchTutorScheduleItemById } from "@/lib/api/tutor-schedule-api";
+import { TutorSessionDetailRoute } from "@/components/tutor/tutor-session-detail-route";
 
-export default async function TutorSessionDetailRoute({
+export default async function TutorSessionDetailPageRoute({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await fetchTutorScheduleItemById(id);
-
-  if (!session) {
+  if (!id) {
     notFound();
   }
 
-  return <TutorSessionDetailPage session={session} />;
+  return <TutorSessionDetailRoute id={id} />;
 }

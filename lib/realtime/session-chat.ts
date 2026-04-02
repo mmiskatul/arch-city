@@ -11,6 +11,9 @@ export type SessionChatMessage = {
   avatarUrl?: string;
   senderInitials?: string;
   clientMessageId?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
   pending?: boolean;
 };
 
@@ -21,6 +24,9 @@ type SessionChatMessageInput = SessionChatMessage & {
   image_url?: string;
   photo_url?: string;
   sender_initials?: string;
+  attachment_name?: string;
+  attachment_type?: string;
+  attachment_size?: number | string;
 };
 
 type SessionHistoryPayload = {
@@ -67,6 +73,10 @@ function normalizeMessage(message: SessionChatMessageInput): SessionChatMessage 
         message.photo_url ||
         "",
     ).trim() || undefined;
+  const attachmentName = String(message.attachmentName || message.attachment_name || "").trim() || undefined;
+  const attachmentType = String(message.attachmentType || message.attachment_type || "").trim() || undefined;
+  const attachmentSizeRaw = message.attachmentSize || message.attachment_size || 0;
+  const attachmentSize = Number(attachmentSizeRaw) > 0 ? Number(attachmentSizeRaw) : undefined;
   return {
     id,
     sender: message.sender === "student" ? "student" : "tutor",
@@ -75,6 +85,9 @@ function normalizeMessage(message: SessionChatMessageInput): SessionChatMessage 
     avatarUrl,
     senderInitials,
     clientMessageId: clientMessageId || id,
+    attachmentName,
+    attachmentType,
+    attachmentSize,
     pending: Boolean(message.pending),
   };
 }
@@ -125,6 +138,26 @@ export function useSessionChat({
   });
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    setMessages(
+      initialMessages.map((item) =>
+        normalizeMessage({
+          ...item,
+          senderInitials: item.sender === senderRole ? senderInitials : counterpartInitials,
+          avatarUrl: item.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl,
+        }),
+      ),
+    );
+  }, [
+    bookingId,
+    counterpartAvatarUrl,
+    counterpartInitials,
+    initialMessages,
+    senderAvatarUrl,
+    senderInitials,
+    senderRole,
+  ]);
 
   useEffect(() => {
     setMessages((current) =>
@@ -190,6 +223,9 @@ export function useSessionChat({
                   item.photo_url ||
                   (item.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl),
                 clientMessageId: item.clientMessageId || item.client_message_id,
+                attachmentName: item.attachmentName || item.attachment_name,
+                attachmentType: item.attachmentType || item.attachment_type,
+                attachmentSize: item.attachmentSize || item.attachment_size,
               }),
             )
         : [];
@@ -215,6 +251,9 @@ export function useSessionChat({
               payload.photo_url ||
               (payload.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl),
             clientMessageId: payload.clientMessageId || payload.client_message_id,
+            attachmentName: payload.attachmentName || payload.attachment_name,
+            attachmentType: payload.attachmentType || payload.attachment_type,
+            attachmentSize: payload.attachmentSize || payload.attachment_size,
           }),
         ]),
       );
@@ -231,13 +270,14 @@ export function useSessionChat({
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [bookingId]);
+  }, [bookingId, counterpartAvatarUrl, counterpartInitials, senderAvatarUrl, senderInitials, senderRole]);
 
   const sendMessage = useCallback(
-    (message: string) => {
+    (message: string, attachment?: { name: string; type?: string; size?: number }) => {
       const socket = socketRef.current;
       const text = message.trim();
-      if (!socket || !socket.connected || !text) {
+      const attachmentName = String(attachment?.name || "").trim();
+      if (!socket || !socket.connected || (!text && !attachmentName)) {
         return false;
       }
 
@@ -250,6 +290,9 @@ export function useSessionChat({
         timestamp: new Date().toISOString(),
         avatarUrl: senderAvatarUrl,
         senderInitials,
+        attachmentName: attachmentName || undefined,
+        attachmentType: String(attachment?.type || "").trim() || undefined,
+        attachmentSize: Number(attachment?.size || 0) > 0 ? Number(attachment?.size || 0) : undefined,
         pending: true,
       });
 
@@ -258,6 +301,9 @@ export function useSessionChat({
         booking_id: bookingId,
         message: text,
         client_message_id: messageId,
+        attachment_name: attachmentName || undefined,
+        attachment_type: String(attachment?.type || "").trim() || undefined,
+        attachment_size: Number(attachment?.size || 0) > 0 ? Number(attachment?.size || 0) : undefined,
       });
       window.dispatchEvent(new Event("arch-messages-updated"));
       return true;

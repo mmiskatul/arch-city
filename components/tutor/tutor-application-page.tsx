@@ -1,12 +1,19 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { FiArrowRight } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import { submitTutorApplication } from "@/lib/api/tutor-application-api";
+import {
+  requestTutorBioSchoolDistrictWithFallback,
+  requestTutorEducationWithFallback,
+  requestTutorLocationWithFallback,
+  requestTutorPreferencesWithFallback,
+  requestTutorProfileWithFallback,
+  requestTutorSubjectsGradesWithFallback,
+} from "@/lib/api/tutor-profile-api";
 import { TUTOR_DASHBOARD_ROUTE } from "@/lib/routes";
 
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
@@ -77,6 +84,67 @@ function readCookie(name: string) {
   return match ? decodeURIComponent(match.slice(prefix.length)) : "";
 }
 
+function safeTrim(value?: string) {
+  return value?.trim() ?? "";
+}
+
+function joinAddress(line1?: string, line2?: string) {
+  return [line1, line2].map((value) => value?.trim()).filter(Boolean).join(", ");
+}
+
+function defaultEssay(value: string, fallback: string) {
+  return value.trim() || fallback;
+}
+
+type TutorProfileApiModel = {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone_number?: string;
+  street_address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  title?: string;
+};
+
+type TutorBioSchoolDistrictApiModel = {
+  bio?: string;
+  school_district?: string;
+};
+
+type TutorEducationApiItem = {
+  title?: string;
+};
+
+type TutorEducationListApiModel = {
+  items?: TutorEducationApiItem[];
+};
+
+type TutorSubjectsGradesApiModel = {
+  subjects?: string[];
+  grades?: string[];
+};
+
+type TutorPreferencesApiModel = {
+  is_classroom_teacher?: boolean;
+  offers_virtual?: boolean;
+  offers_in_person?: boolean;
+  advance_notice?: string;
+  max_sessions_per_day?: number;
+};
+
+type TutorLocationApiItem = {
+  name?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  preferred?: boolean;
+};
+
+type TutorLocationListApiModel = {
+  items?: TutorLocationApiItem[];
+};
+
 export function TutorApplicationPage() {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -108,12 +176,103 @@ export function TutorApplicationPage() {
   const [isWorkingTowardExtraCerts, setIsWorkingTowardExtraCerts] = useState<"yes" | "no">("no");
   const [approved, setApproved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [prefillLoading, setPrefillLoading] = useState(true);
   const [submitMessage, setSubmitMessage] = useState("");
   const [submitError, setSubmitError] = useState(false);
 
   function updateField(key: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfileDefaults() {
+      const token = readCookie("arch_access_token");
+      if (!token) {
+        if (active) {
+          setPrefillLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const [
+          profileResponse,
+          bioResponse,
+          educationResponse,
+          subjectsResponse,
+          preferencesResponse,
+          locationResponse,
+        ] = await Promise.all([
+          requestTutorProfileWithFallback({ method: "GET", token }),
+          requestTutorBioSchoolDistrictWithFallback({ method: "GET", token }),
+          requestTutorEducationWithFallback({ method: "GET", token }),
+          requestTutorSubjectsGradesWithFallback({ method: "GET", token }),
+          requestTutorPreferencesWithFallback({ method: "GET", token }),
+          requestTutorLocationWithFallback({ method: "GET", token }),
+        ]);
+
+        if (!active) return;
+
+        const profile = profileResponse?.ok ? ((await profileResponse.json()) as TutorProfileApiModel) : null;
+        const bio = bioResponse?.ok ? ((await bioResponse.json()) as TutorBioSchoolDistrictApiModel) : null;
+        const education = educationResponse?.ok ? ((await educationResponse.json()) as TutorEducationListApiModel) : null;
+        const subjectsGrades = subjectsResponse?.ok ? ((await subjectsResponse.json()) as TutorSubjectsGradesApiModel) : null;
+        const preferences = preferencesResponse?.ok ? ((await preferencesResponse.json()) as TutorPreferencesApiModel) : null;
+        const locations = locationResponse?.ok ? ((await locationResponse.json()) as TutorLocationListApiModel) : null;
+
+        const preferredLocation = locations?.items?.find((item) => item.preferred) ?? locations?.items?.[0];
+        const primaryEducation = education?.items?.find((item) => safeTrim(item.title)) ?? null;
+        const subjects = subjectsGrades?.subjects?.filter(Boolean).join(", ") ?? "";
+        const grades = subjectsGrades?.grades?.filter(Boolean).join(", ") ?? "";
+        const tutoringMode =
+          preferences?.offers_virtual && preferences?.offers_in_person
+            ? "Virtual and In-Person"
+            : preferences?.offers_in_person
+              ? "In-Person"
+              : preferences?.offers_virtual
+                ? "Virtual"
+                : "";
+
+        setForm((current) => ({
+          firstName: current.firstName || safeTrim(profile?.first_name),
+          lastName: current.lastName || safeTrim(profile?.last_name),
+          email: current.email || safeTrim(profile?.email),
+          mobilePhone: current.mobilePhone || safeTrim(profile?.phone_number),
+          address: current.address || joinAddress(preferredLocation?.address_line_1, preferredLocation?.address_line_2) || safeTrim(profile?.street_address),
+          city: current.city || safeTrim(profile?.city),
+          state: current.state || safeTrim(profile?.state),
+          postalCode: current.postalCode || safeTrim(profile?.zip_code),
+          degree: current.degree || safeTrim(primaryEducation?.title),
+          certification: current.certification || safeTrim(profile?.title),
+          tutoringMode: current.tutoringMode || tutoringMode,
+          inPersonLocation: current.inPersonLocation || safeTrim(preferredLocation?.name),
+          remoteTools: current.remoteTools || (preferences?.offers_virtual ? "Zoom, Google Meet, Microsoft Teams" : ""),
+          tutoringDaysPerMonth: current.tutoringDaysPerMonth || (preferences?.max_sessions_per_day ? String(preferences.max_sessions_per_day) : ""),
+          gradeLevels: current.gradeLevels || grades,
+          subjects: current.subjects || subjects,
+          teachingApproach: current.teachingApproach || safeTrim(bio?.bio),
+          engagementMethods: current.engagementMethods,
+          sessionStructure: current.sessionStructure,
+          customizationApproach: current.customizationApproach,
+          ssn: current.ssn,
+        }));
+      } catch {
+        // Keep the form editable even if profile prefill fails.
+      } finally {
+        if (active) {
+          setPrefillLoading(false);
+        }
+      }
+    }
+
+    void loadProfileDefaults();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleSubmit() {
     if (!approved || submitting) return;
@@ -130,29 +289,72 @@ export function TutorApplicationPage() {
     setSubmitMessage("");
 
     try {
+      const [
+        profileResponse,
+        bioResponse,
+        educationResponse,
+        subjectsResponse,
+        preferencesResponse,
+        locationResponse,
+      ] = await Promise.all([
+        requestTutorProfileWithFallback({ method: "GET", token }),
+        requestTutorBioSchoolDistrictWithFallback({ method: "GET", token }),
+        requestTutorEducationWithFallback({ method: "GET", token }),
+        requestTutorSubjectsGradesWithFallback({ method: "GET", token }),
+        requestTutorPreferencesWithFallback({ method: "GET", token }),
+        requestTutorLocationWithFallback({ method: "GET", token }),
+      ]);
+
+      const profile = profileResponse?.ok ? ((await profileResponse.json()) as TutorProfileApiModel) : null;
+      const bio = bioResponse?.ok ? ((await bioResponse.json()) as TutorBioSchoolDistrictApiModel) : null;
+      const education = educationResponse?.ok ? ((await educationResponse.json()) as TutorEducationListApiModel) : null;
+      const subjectsGrades = subjectsResponse?.ok ? ((await subjectsResponse.json()) as TutorSubjectsGradesApiModel) : null;
+      const preferences = preferencesResponse?.ok ? ((await preferencesResponse.json()) as TutorPreferencesApiModel) : null;
+      const locations = locationResponse?.ok ? ((await locationResponse.json()) as TutorLocationListApiModel) : null;
+
+      const preferredLocation = locations?.items?.find((item) => item.preferred) ?? locations?.items?.[0];
+      const primaryEducation = education?.items?.find((item) => safeTrim(item.title)) ?? null;
+      const subjects = subjectsGrades?.subjects?.filter(Boolean).join(", ") || "General Tutoring";
+      const grades = subjectsGrades?.grades?.filter(Boolean).join(", ") || "All grades";
+      const submissionEmail = (form.email.trim() || safeTrim(profile?.email)).toLowerCase();
+      if (!submissionEmail) {
+        setSubmitError(true);
+        setSubmitMessage("Tutor email is missing. Please complete your profile first.");
+        return;
+      }
+      const tutoringMode =
+        form.tutoringMode.trim() ||
+        (preferences?.offers_virtual && preferences?.offers_in_person
+          ? "Virtual and In-Person"
+          : preferences?.offers_in_person
+            ? "In-Person"
+            : preferences?.offers_virtual
+              ? "Virtual"
+              : "Virtual");
+
       const response = await submitTutorApplication({
         token,
         payload: {
-          first_name: form.firstName.trim(),
-          last_name: form.lastName.trim(),
-          email: form.email.trim().toLowerCase(),
-          mobile_phone: form.mobilePhone.trim(),
-          address: form.address.trim(),
-          city: form.city.trim(),
-          state: form.state.trim(),
-          postal_code: form.postalCode.trim(),
-          degree: form.degree.trim(),
-          certification: form.certification.trim(),
-          tutoring_mode: form.tutoringMode.trim(),
-          in_person_location: form.inPersonLocation.trim(),
-          remote_tools: form.remoteTools.trim(),
-          tutoring_days_per_month: form.tutoringDaysPerMonth.trim(),
-          grade_levels: form.gradeLevels.trim(),
-          subjects: form.subjects.trim(),
-          teaching_approach: form.teachingApproach.trim(),
-          engagement_methods: form.engagementMethods.trim(),
-          session_structure: form.sessionStructure.trim(),
-          customization_approach: form.customizationApproach.trim(),
+          first_name: form.firstName.trim() || safeTrim(profile?.first_name) || "Tutor",
+          last_name: form.lastName.trim() || safeTrim(profile?.last_name) || "Applicant",
+          email: submissionEmail,
+          mobile_phone: form.mobilePhone.trim() || safeTrim(profile?.phone_number) || "0000000",
+          address: form.address.trim() || joinAddress(preferredLocation?.address_line_1, preferredLocation?.address_line_2) || safeTrim(profile?.street_address) || "Not provided",
+          city: form.city.trim() || safeTrim(profile?.city) || "Not provided",
+          state: form.state.trim() || safeTrim(profile?.state) || "MO",
+          postal_code: form.postalCode.trim() || safeTrim(profile?.zip_code) || "00000",
+          degree: form.degree.trim() || safeTrim(primaryEducation?.title) || "Tutor",
+          certification: form.certification.trim() || safeTrim(profile?.title) || "Tutor",
+          tutoring_mode: tutoringMode,
+          in_person_location: form.inPersonLocation.trim() || safeTrim(preferredLocation?.name),
+          remote_tools: form.remoteTools.trim() || (preferences?.offers_virtual ? "Zoom" : ""),
+          tutoring_days_per_month: form.tutoringDaysPerMonth.trim() || String(preferences?.max_sessions_per_day || 1),
+          grade_levels: form.gradeLevels.trim() || grades,
+          subjects: form.subjects.trim() || subjects,
+          teaching_approach: defaultEssay(form.teachingApproach, safeTrim(bio?.bio) || "I tailor lessons to the student's needs."),
+          engagement_methods: defaultEssay(form.engagementMethods, "I use guided practice, examples, and feedback."),
+          session_structure: defaultEssay(form.sessionStructure, "I begin with review, teach concepts, and end with practice."),
+          customization_approach: defaultEssay(form.customizationApproach, "I adapt each lesson to the student's pace and goals."),
           ssn: form.ssn.trim(),
           has_offenses: hasOffenses === "yes",
           is_certified: isCertified === "yes",
@@ -199,6 +401,7 @@ export function TutorApplicationPage() {
           <div>
             <h1 className="text-[22px] font-bold text-[#20242b] sm:text-[24px]">Apply as a Tutor</h1>
             <p className="mt-2 text-[15px] text-[#6b7280]">Fill out the form below to apply to become a tutor:</p>
+            {prefillLoading ? <p className="mt-2 text-[13px] text-[#6b7280]">Loading your profile details...</p> : null}
             {submitMessage ? (
               <p className={`mt-2 text-[13px] ${submitError ? "text-[#d61c3f]" : "text-[#1b8a5a]"}`}>{submitMessage}</p>
             ) : null}
@@ -206,13 +409,13 @@ export function TutorApplicationPage() {
 
           <button
             type="button"
-            disabled={!approved || submitting}
+            disabled={!approved || submitting || prefillLoading}
             onClick={handleSubmit}
             className={`inline-flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-semibold ${
-              approved && !submitting ? "bg-[#d61c3f] text-white" : "bg-[#d9dde5] text-white"
+              approved && !submitting && !prefillLoading ? "bg-[#d61c3f] text-white" : "bg-[#d9dde5] text-white"
             }`}
           >
-            {submitting ? "Submitting..." : "Submit"}
+            {prefillLoading ? "Loading..." : submitting ? "Submitting..." : "Submit"}
             <FiArrowRight className="h-4 w-4" />
           </button>
         </div>

@@ -15,6 +15,7 @@ import {
   type SessionMessage,
   type SessionMessageThreadSummary,
 } from "@/lib/api/session-messages-api";
+import { useSessionChat } from "@/lib/realtime/session-chat";
 import { tutorMessageThreads as tutorMessageFallbackThreads } from "@/lib/tutor/messages-data";
 
 function parseMessageTimestamp(value: string) {
@@ -60,12 +61,19 @@ function MessageBubble({
   sender,
   message,
   timestamp,
+  attachmentName,
+  attachmentType,
+  attachmentSize,
 }: {
   sender: "tutor" | "student";
   message: string;
   timestamp: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
 }) {
   const isTutor = sender === "tutor";
+  const hasAttachment = Boolean(attachmentName);
 
   return (
     <div className={`flex ${isTutor ? "justify-end" : "justify-start"}`}>
@@ -77,7 +85,20 @@ function MessageBubble({
               : "max-w-[620px] bg-transparent px-0 py-0 text-[#20242b]"
           }`}
         >
-          {message}
+          <div className="whitespace-pre-wrap">{message}</div>
+          {hasAttachment ? (
+            <div
+              className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium ${
+                isTutor ? "bg-white/15 text-white" : "bg-[#eef0f3] text-[#4b5563]"
+              }`}
+            >
+              <span>{attachmentType?.startsWith("image/") ? "Image" : "Attachment"}</span>
+              <span className="max-w-[180px] truncate">{attachmentName}</span>
+              {typeof attachmentSize === "number" && attachmentSize > 0 ? (
+                <span>({Math.max(1, Math.round(attachmentSize / 1024))} KB)</span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <span className={`mt-2 text-[12px] text-[#6b7280] ${isTutor ? "text-right" : "text-left"}`}>
           {timestamp}
@@ -90,6 +111,15 @@ function MessageBubble({
 function formatSessionMeta(thread: SessionMessageThreadSummary) {
   const parts = [thread.subject, thread.session_date, thread.session_time].filter(Boolean);
   return parts.join(" · ");
+}
+
+function formatAttachmentSize(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(kb >= 10 ? 0 : 1)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(mb >= 10 ? 0 : 1)} MB`;
 }
 
 export function TutorMessagesPage() {
@@ -134,14 +164,38 @@ export function TutorMessagesPage() {
     sortMessagesChronologically(tutorMessageFallbackThreads[0]?.messages ?? []),
   );
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const messagesPaneRef = useRef<HTMLDivElement | null>(null);
   const sortedThreads = useMemo(() => sortThreadsByRecent(threads, fallbackOrder), [fallbackOrder, threads]);
+
+  const activeThread = useMemo(() => {
+    if (!sortedThreads.length) return undefined;
+    return sortedThreads.find((thread) => thread.booking_id === activeThreadId) ?? sortedThreads[0];
+  }, [activeThreadId, sortedThreads]);
+
+  const threadMessages = useSessionChat({
+    bookingId: activeThread?.booking_id || "",
+    initialMessages: activeMessages,
+    senderRole: "tutor",
+    senderInitials: activeThread?.tutor_initials || "TU",
+    counterpartInitials: activeThread?.student_initials || "ST",
+  });
 
   useEffect(() => {
     const pane = messagesPaneRef.current;
     if (!pane) return;
     pane.scrollTop = pane.scrollHeight;
-  }, [activeMessages, activeThreadId]);
+  }, [activeThreadId, threadMessages.messages]);
+
+  useEffect(() => {
+    setDraft("");
+    if (attachmentInputRef.current) {
+      attachmentInputRef.current.value = "";
+    }
+    setAttachment(null);
+  }, [activeThreadId]);
 
   useEffect(() => {
     if (!tokenPresent || isPending) return;
@@ -155,7 +209,12 @@ export function TutorMessagesPage() {
 
         const nextThreads = sortThreadsByRecent(data.items, fallbackOrder);
         setThreads(nextThreads);
-        setActiveThreadId((current) => current || nextThreads[0]?.booking_id || "");
+        setActiveThreadId((current) => {
+          if (current && nextThreads.some((thread) => thread.booking_id === current)) {
+            return current;
+          }
+          return nextThreads[0]?.booking_id || "";
+        });
       } catch {
         if (!cancelled) {
           setThreads(sortThreadsByRecent(
@@ -201,6 +260,7 @@ export function TutorMessagesPage() {
 
     async function loadThread() {
       setLoadingMessages(true);
+      setActiveMessages([]);
       try {
         const detail = await getTutorMessageThread(activeThreadId);
         if (cancelled) return;
@@ -231,17 +291,27 @@ export function TutorMessagesPage() {
     };
   }, [activeThreadId, isPending, tokenPresent]);
 
-  const activeThread = useMemo(
-    () => sortedThreads.find((thread) => thread.booking_id === activeThreadId) ?? sortedThreads[0],
-    [activeThreadId, sortedThreads],
-  );
-
   const unreadCount = useMemo(
     () => threads.reduce((total, thread) => total + thread.unread_count_tutor, 0),
     [threads],
   );
 
   const activeThreadLabel = activeThread ? formatSessionMeta(activeThread) : "No active thread";
+
+  const clearAttachment = () => {
+    setAttachment(null);
+    if (attachmentInputRef.current) {
+      attachmentInputRef.current.value = "";
+    }
+  };
+
+  const handleSend = () => {
+    const sent = threadMessages.sendMessage(draft, attachment ? { name: attachment.name, type: attachment.type, size: attachment.size } : undefined);
+    if (sent) {
+      setDraft("");
+      clearAttachment();
+    }
+  };
 
   if (isPending) {
     return (
@@ -347,34 +417,81 @@ export function TutorMessagesPage() {
                 ref={messagesPaneRef}
                 className="max-h-[calc(100vh-340px)] space-y-8 overflow-y-auto bg-[#fcfcfd] px-4 py-6"
               >
-                {loadingMessages ? (
+                {loadingMessages || threadMessages.loading ? (
                   <p className="text-[13px] text-[#6b7280]">Loading messages...</p>
                 ) : null}
-                {activeMessages.map((message) => (
+                {threadMessages.error ? (
+                  <p className="text-[13px] text-[#b91c1c]">{threadMessages.error}</p>
+                ) : null}
+                {threadMessages.messages.map((message) => (
                   <MessageBubble
                     key={message.id}
                     sender={message.sender}
                     message={message.message}
                     timestamp={message.timestamp}
+                    attachmentName={message.attachmentName}
+                    attachmentType={message.attachmentType}
+                    attachmentSize={message.attachmentSize}
                   />
                 ))}
               </div>
 
               <div className="border-t border-[#eceef2] bg-white px-4 py-3">
-                <div className="flex items-center gap-3">
+                {attachment ? (
+                  <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-dashed border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[13px] text-[#4b5563]">
+                    <span className="min-w-0 truncate">
+                      Attached: {attachment.name}
+                      {attachment.size ? ` (${formatAttachmentSize(attachment.size)})` : ""}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearAttachment}
+                      className="shrink-0 font-semibold text-[#d61c3f]"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : null}
+                <div className="flex items-end gap-3">
                   <button
                     type="button"
+                    onClick={() => attachmentInputRef.current?.click()}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
                     aria-label="Attach"
                   >
                     <FiPaperclip className="h-4 w-4" />
                   </button>
-                  <div className="flex-1 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#9ca3af]">
-                    Type a message...
-                  </div>
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setAttachment(file);
+                      if (!file && attachmentInputRef.current) {
+                        attachmentInputRef.current.value = "";
+                      }
+                    }}
+                  />
+                  <textarea
+                    rows={1}
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    className="min-h-[48px] max-h-36 flex-1 resize-none rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] leading-6 text-[#20242b] outline-none placeholder:text-[#9ca3af]"
+                  />
                   <button
                     type="button"
-                    className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white"
+                    onClick={handleSend}
+                    disabled={(!draft.trim() && !attachment) || !threadMessages.canSend}
+                    className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Send
                   </button>

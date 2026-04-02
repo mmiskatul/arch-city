@@ -9,7 +9,10 @@ function resolveApiBaseUrl() {
   return url ? normalizeBaseUrl(url) : null;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
     return NextResponse.json({ detail: "NEXT_PUBLIC_API_BASE_URL is not configured." }, { status: 500 });
@@ -20,16 +23,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
   }
 
-  const rawView = request.nextUrl.searchParams.get("view");
-  const view = rawView === "all" || rawView === "rejected" ? rawView : "pending";
-  const backendPath =
-    view === "all"
-      ? "/admin-dashboard/tutor-applications/all"
-      : view === "rejected"
-        ? "/admin-dashboard/tutor-applications/rejected"
-      : "/admin-dashboard/tutor-applications/pending";
-
-  const response = await fetch(`${baseUrl}${backendPath}`, {
+  const { id } = await params;
+  const response = await fetch(`${baseUrl}/admin-dashboard/schedules/${encodeURIComponent(id)}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,

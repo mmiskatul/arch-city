@@ -9,6 +9,7 @@ type StudentSessionCheckoutPayload = {
   saveInformation: boolean;
   tutorId: string;
   tutorName: string;
+  subject: string;
   sessionDate: string;
   sessionTime: string;
   sessionType: string;
@@ -17,6 +18,8 @@ type StudentSessionCheckoutPayload = {
   schedulingFee: string;
   totalAmount: string;
   currency: string;
+  meetingLocation?: string;
+  sessionNotes?: string;
 };
 
 type StudentMembershipCheckoutPayload = {
@@ -70,6 +73,7 @@ export async function createStudentSessionCheckout(
     save_information: payload.saveInformation,
     tutor_id: payload.tutorId,
     tutor_name: payload.tutorName,
+    subject: payload.subject,
     session_date: payload.sessionDate,
     session_time: payload.sessionTime,
     session_type: payload.sessionType,
@@ -78,6 +82,8 @@ export async function createStudentSessionCheckout(
     scheduling_fee: payload.schedulingFee,
     total_amount: payload.totalAmount,
     currency: payload.currency,
+    meeting_location: payload.meetingLocation ?? "",
+    session_notes: payload.sessionNotes ?? "",
   });
 }
 

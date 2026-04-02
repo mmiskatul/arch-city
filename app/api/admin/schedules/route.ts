@@ -20,16 +20,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
   }
 
-  const rawView = request.nextUrl.searchParams.get("view");
-  const view = rawView === "all" || rawView === "rejected" ? rawView : "pending";
-  const backendPath =
-    view === "all"
-      ? "/admin-dashboard/tutor-applications/all"
-      : view === "rejected"
-        ? "/admin-dashboard/tutor-applications/rejected"
-      : "/admin-dashboard/tutor-applications/pending";
-
-  const response = await fetch(`${baseUrl}${backendPath}`, {
+  const response = await fetch(`${baseUrl}/admin-dashboard/schedules`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,

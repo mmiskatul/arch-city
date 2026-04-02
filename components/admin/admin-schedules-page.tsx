@@ -6,13 +6,13 @@ import Link from "next/link";
 
 import { AdminShell } from "@/components/admin/admin-shell";
 import {
-  adminScheduleRows,
+  type AdminScheduleRow,
   type AdminScheduleStatus,
   type AdminScheduleType,
 } from "@/lib/admin/schedules-data";
 import { ADMIN_SCHEDULES_ROUTE } from "@/lib/routes";
 
-type RangeFilter = "Today" | "Week" | "Month";
+type RangeFilter = "All" | "Today" | "Week" | "Month";
 type StatusFilter = "All" | AdminScheduleStatus;
 
 const pageSize = 6;
@@ -91,23 +91,107 @@ function statusClassName(status: AdminScheduleStatus) {
   return "bg-[#ffecef] text-[#d94a62]";
 }
 
-export function AdminSchedulesPage({ initialRows }: { initialRows?: typeof adminScheduleRows }) {
-  const [rangeFilter, setRangeFilter] = useState<RangeFilter>("Today");
+function rangeSummaryCopy(rangeFilter: RangeFilter) {
+  if (rangeFilter === "Today") {
+    return { title: "Sessions Today", subtitle: "Sessions booked today" };
+  }
+  if (rangeFilter === "Week") {
+    return { title: "Sessions This Week", subtitle: "Sessions booked this week" };
+  }
+  if (rangeFilter === "Month") {
+    return { title: "Sessions This Month", subtitle: "Sessions booked this month" };
+  }
+  return { title: "Sessions", subtitle: "All booking records" };
+}
+
+function formatDateTimeLabel(row: AdminScheduleRow) {
+  const dateLabel = row.sessionDate || row.dateTime.split(" ")[0] || "";
+  const timeLabel = row.sessionTime || row.dateTime.split(" ").slice(1).join(" ") || "";
+  const normalizedTime = timeLabel.replace(/\s+([AP]M)\b/gi, " $1").trim();
+  return [dateLabel, normalizedTime].filter(Boolean).join(" · ");
+}
+
+function parseDateLike(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function startOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function startOfWeek(date: Date) {
+  const next = startOfDay(date);
+  const day = next.getDay();
+  const daysSinceMonday = (day + 6) % 7;
+  next.setDate(next.getDate() - daysSinceMonday);
+  return next;
+}
+
+function startOfMonth(date: Date) {
+  const next = startOfDay(date);
+  next.setDate(1);
+  return next;
+}
+
+function matchesRangeFilter(row: AdminScheduleRow, filter: RangeFilter) {
+  if (filter === "All") {
+    return true;
+  }
+
+  const rawDate = row.sessionDate || row.dateTime.split(" ")[0] || "";
+  const parsed = parseDateLike(rawDate);
+  if (!parsed) {
+    return true;
+  }
+
+  const now = new Date();
+  if (filter === "Today") {
+    const today = startOfDay(now);
+    return parsed >= today && parsed < new Date(today.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  if (filter === "Week") {
+    const weekStart = startOfWeek(now);
+    const nextWeekStart = new Date(weekStart);
+    nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+    return parsed >= weekStart && parsed < nextWeekStart;
+  }
+
+  const monthStart = startOfMonth(now);
+  const nextMonthStart = new Date(monthStart);
+  nextMonthStart.setMonth(nextMonthStart.getMonth() + 1);
+  return parsed >= monthStart && parsed < nextMonthStart;
+}
+
+export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminScheduleRow[] }) {
+  const [rangeFilter, setRangeFilter] = useState<RangeFilter>("All");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [tutorFilter, setTutorFilter] = useState<string>("All Tutors");
   const [typeFilter, setTypeFilter] = useState<(typeof typeFilters)[number]>("All Types");
   const [currentPage, setCurrentPage] = useState(1);
-  const rows = initialRows ?? adminScheduleRows;
+  const rows = initialRows ?? [];
   const tutorFilters = ["All Tutors", ...Array.from(new Set(rows.map((item) => item.tutor)))];
+  const rangeRows = useMemo(
+    () => rows.filter((item) => matchesRangeFilter(item, rangeFilter)),
+    [rangeFilter, rows],
+  );
+  const rangeSummary = rangeSummaryCopy(rangeFilter);
+  const sessionsToday = rangeRows.length;
+  const upcomingCount = rangeRows.filter((item) => item.status === "Upcoming").length;
+  const completedCount = rangeRows.filter((item) => item.status === "Completed").length;
+  const cancelledCount = rangeRows.filter((item) => item.status === "Cancelled").length;
 
   const filteredRows = useMemo(() => {
-    return rows.filter((item) => {
+    return rangeRows.filter((item) => {
       const statusMatch = statusFilter === "All" ? true : item.status === statusFilter;
       const tutorMatch = tutorFilter === "All Tutors" ? true : item.tutor === tutorFilter;
       const typeMatch = typeFilter === "All Types" ? true : item.type === typeFilter;
       return statusMatch && tutorMatch && typeMatch;
     });
-  }, [rows, statusFilter, tutorFilter, typeFilter]);
+  }, [rangeRows, statusFilter, tutorFilter, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -127,15 +211,16 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: typeof admin
           <h1 className="text-[38px] font-bold leading-none text-[#20242b]">Schedules</h1>
 
           <div className="inline-flex rounded-xl border border-[#e5e7eb] bg-white p-0.5">
-            {(["Today", "Week", "Month"] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setRangeFilter(item)}
-                className={`h-9 rounded-lg px-4 text-[13px] font-semibold transition ${
-                  rangeFilter === item
-                    ? "bg-[#ffecef] text-[#d61c3f]"
-                    : "text-[#6b7280] hover:bg-[#f7f7f8]"
+                {(["All", "Today", "Week", "Month"] as const).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={rangeFilter === item}
+                    onClick={() => setRangeFilter(item)}
+                    className={`h-9 rounded-lg px-4 text-[13px] font-semibold transition ${
+                      rangeFilter === item
+                        ? "bg-[#ffecef] text-[#d61c3f]"
+                        : "text-[#6b7280] hover:bg-[#f7f7f8]"
                 }`}
               >
                 {item}
@@ -146,19 +231,20 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: typeof admin
 
         <section className="mt-4 grid gap-3 lg:grid-cols-4">
           <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
-            <p className="text-[44px] font-bold leading-none text-[#20242b]">31</p>
-            <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">Sessions Today</p>
+            <p className="text-[44px] font-bold leading-none text-[#20242b]">{sessionsToday}</p>
+            <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">{rangeSummary.title}</p>
+            <p className="mt-1 text-[13px] text-[#9ca3af]">{rangeSummary.subtitle}</p>
           </article>
           <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
-            <p className="text-[44px] font-bold leading-none text-[#239157]">24</p>
+            <p className="text-[44px] font-bold leading-none text-[#239157]">{upcomingCount}</p>
             <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">Upcoming</p>
           </article>
           <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
-            <p className="text-[44px] font-bold leading-none text-[#20242b]">5</p>
+            <p className="text-[44px] font-bold leading-none text-[#20242b]">{completedCount}</p>
             <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">Completed</p>
           </article>
           <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
-            <p className="text-[44px] font-bold leading-none text-[#d94a62]">2</p>
+            <p className="text-[44px] font-bold leading-none text-[#d94a62]">{cancelledCount}</p>
             <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">Cancelled</p>
           </article>
         </section>
@@ -216,14 +302,14 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: typeof admin
                 <span>Duration</span>
                 <span>Type</span>
                 <span>Status</span>
-                <span>Fee</span>
+                <span>FEE</span>
                 <span> </span>
               </div>
 
               <div className="divide-y divide-[#eceef2]">
-                {pagedRows.map((row) => (
+                {pagedRows.map((row, index) => (
                   <div
-                    key={row.sessionId}
+                    key={`${row.sessionId || "session"}-${safePage}-${index}`}
                     className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563]"
                   >
                     <span className="font-semibold text-[#9ca3af]">#{row.sessionId}</span>
@@ -239,7 +325,12 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: typeof admin
 
                     <span>{row.tutor}</span>
                     <span>{row.subject}</span>
-                    <span>{row.dateTime}</span>
+                    <div>
+                      <span>{formatDateTimeLabel(row)}</span>
+                      {row.meetingLocation ? (
+                        <p className="mt-0.5 text-[11px] text-[#9ca3af]">{row.meetingLocation}</p>
+                      ) : null}
+                    </div>
                     <span>{row.duration}</span>
                     <div>
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeClassName(row.type)}`}>
@@ -265,7 +356,7 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: typeof admin
 
                 {pagedRows.length === 0 ? (
                   <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
-                    No sessions found for the selected filters.
+                    No schedule records found in the database for the selected filters.
                   </div>
                 ) : null}
               </div>
@@ -276,7 +367,7 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: typeof admin
         <div className="mt-3 flex flex-col gap-3 text-[13px] text-[#6b7280] sm:flex-row sm:items-center sm:justify-between">
           <p>
             Showing {startIndex}-{endIndex} of {filteredRows.length} sessions{" "}
-            {rangeFilter === "Today" ? "today" : rangeFilter.toLowerCase()}
+            {rangeFilter === "All" ? "across all time" : rangeFilter.toLowerCase()}
           </p>
 
           <div className="flex items-center gap-2">

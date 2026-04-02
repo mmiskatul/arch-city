@@ -6,7 +6,8 @@ export default async function AdminTutorApplicationsRoute({
   searchParams?: Promise<{ view?: string }>;
 }) {
   const params = (await searchParams) ?? {};
-  const activeView: "pending" | "all" = params.view === "all" ? "all" : "pending";
+  const activeView: "pending" | "all" | "rejected" =
+    params.view === "all" || params.view === "rejected" ? params.view : "pending";
 
   return <AdminTutorApplicationsPage activeView={activeView} />;
 }

@@ -48,7 +48,8 @@ export function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get("arch_access_token")?.value ?? "";
-  if (!token) {
+  const cookieRole = (request.cookies.get("arch_user_role")?.value ?? "").toLowerCase();
+  if (!token || !cookieRole) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = LOGIN_ROUTE;
     loginUrl.searchParams.set("redirect", pathname);
@@ -56,21 +57,18 @@ export function middleware(request: NextRequest) {
   }
 
   const tokenRole = roleFromAccessToken(token);
-  const cookieRole = (request.cookies.get("arch_user_role")?.value ?? "").toLowerCase();
-  const effectiveRole = tokenRole || cookieRole;
-
-  if (!effectiveRole) {
+  if (!tokenRole || tokenRole !== cookieRole) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = LOGIN_ROUTE;
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (effectiveRole === requestedRole) {
+  if (cookieRole === requestedRole) {
     return NextResponse.next();
   }
 
-  const redirectPath = dashboardByRole[effectiveRole as UserRole];
+  const redirectPath = dashboardByRole[cookieRole as UserRole];
   if (redirectPath) {
     const destination = request.nextUrl.clone();
     destination.pathname = redirectPath;
