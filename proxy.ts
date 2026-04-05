@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const LOGIN_ROUTE = "/login";
@@ -44,7 +44,10 @@ function resolveApiBaseUrl() {
   return url ? (url.endsWith("/") ? url.slice(0, -1) : url) : null;
 }
 
-function setSessionCookies(response: NextResponse, data: { access_token?: string; refresh_token?: string; role?: string }) {
+function setSessionCookies(
+  response: NextResponse,
+  data: { access_token?: string; refresh_token?: string; role?: string },
+) {
   const accessToken = String(data.access_token || "").trim();
   const refreshToken = String(data.refresh_token || "").trim();
   const role = String(data.role || "").trim().toLowerCase();
@@ -90,7 +93,7 @@ async function refreshSession(request: NextRequest) {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestedRole = requestedDashboardRole(pathname);
 
