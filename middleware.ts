@@ -39,7 +39,58 @@ function requestedDashboardRole(pathname: string): UserRole | null {
   return null;
 }
 
-export function middleware(request: NextRequest) {
+function resolveApiBaseUrl() {
+  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  return url ? (url.endsWith("/") ? url.slice(0, -1) : url) : null;
+}
+
+function setSessionCookies(response: NextResponse, data: { access_token?: string; refresh_token?: string; role?: string }) {
+  const accessToken = String(data.access_token || "").trim();
+  const refreshToken = String(data.refresh_token || "").trim();
+  const role = String(data.role || "").trim().toLowerCase();
+  const accessAge = 60 * 60 * 24 * 7;
+  const refreshAge = 60 * 60 * 24 * 30;
+
+  if (accessToken) {
+    response.cookies.set("arch_access_token", accessToken, { path: "/", sameSite: "lax", maxAge: accessAge });
+  }
+  if (refreshToken) {
+    response.cookies.set("arch_refresh_token", refreshToken, { path: "/", sameSite: "lax", maxAge: refreshAge });
+  }
+  if (role) {
+    response.cookies.set("arch_user_role", role, { path: "/", sameSite: "lax", maxAge: refreshAge });
+  }
+}
+
+async function refreshSession(request: NextRequest) {
+  const baseUrl = resolveApiBaseUrl();
+  const refreshToken = request.cookies.get("arch_refresh_token")?.value ?? "";
+  if (!baseUrl || !refreshToken) return null;
+
+  try {
+    const response = await fetch(`${baseUrl}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json().catch(() => ({}))) as {
+      access_token?: string;
+      refresh_token?: string;
+      role?: string;
+    };
+
+    if (!data.access_token || !data.refresh_token || !data.role) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestedRole = requestedDashboardRole(pathname);
 
@@ -49,19 +100,27 @@ export function middleware(request: NextRequest) {
 
   const token = request.cookies.get("arch_access_token")?.value ?? "";
   const cookieRole = (request.cookies.get("arch_user_role")?.value ?? "").toLowerCase();
-  if (!token || !cookieRole) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = LOGIN_ROUTE;
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
+  const tokenRole = token ? roleFromAccessToken(token) : "";
+  const tokenValid = Boolean(token && cookieRole && tokenRole && tokenRole === cookieRole);
 
-  const tokenRole = roleFromAccessToken(token);
-  if (!tokenRole || tokenRole !== cookieRole) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = LOGIN_ROUTE;
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (!tokenValid) {
+    const refreshed = await refreshSession(request);
+    if (!refreshed) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = LOGIN_ROUTE;
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const refreshedRole = String(refreshed.role || "").toLowerCase() as UserRole;
+    const destinationPath =
+      refreshedRole === requestedRole ? pathname : dashboardByRole[refreshedRole] || LOGIN_ROUTE;
+    const destination = request.nextUrl.clone();
+    destination.pathname = destinationPath;
+    destination.search = "";
+    const response = NextResponse.redirect(destination);
+    setSessionCookies(response, refreshed);
+    return response;
   }
 
   if (cookieRole === requestedRole) {

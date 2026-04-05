@@ -60,7 +60,7 @@ function mapStudentScheduleItem(item: StudentScheduleApiItem): StudentScheduleIt
     tutorId: item.tutor_id,
     tutorInitials: initials(item.tutor_name),
     tutorName: item.tutor_name,
-    subject: item.details?.subject ?? item.details?.session_type ?? "Tutoring",
+    subject: item.subject ?? item.details?.subject ?? item.details?.session_type ?? "Tutoring",
     date: dateLabel(item.session_date),
     time: item.session_time,
     duration: `${item.duration_minutes} min`,

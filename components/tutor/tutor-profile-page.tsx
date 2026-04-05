@@ -994,7 +994,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       title: entry.title,
       organization: entry.organization,
       period: entry.period,
-      description: entry.description,
+      description: entry.description ?? "",
       from_date: entry.from_date || "",
       to_date: entry.to_date || "",
     })),

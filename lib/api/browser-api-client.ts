@@ -25,6 +25,66 @@ function getStatusFromError(error: unknown) {
   return 500;
 }
 
+function setBrowserCookie(name: string, value: string, maxAgeSeconds: number) {
+  const secureSuffix =
+    typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secureSuffix}`;
+}
+
+function clearBrowserCookie(name: string) {
+  const expired = "Thu, 01 Jan 1970 00:00:00 GMT";
+  document.cookie = `${name}=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+}
+
+function persistSessionCookies(data: unknown) {
+  if (typeof window === "undefined" || !data || typeof data !== "object") return false;
+
+  const record = data as Record<string, unknown>;
+  const accessToken = typeof record.access_token === "string" ? record.access_token : "";
+  const refreshToken = typeof record.refresh_token === "string" ? record.refresh_token : "";
+  const role = typeof record.role === "string" ? record.role.trim().toLowerCase() : "";
+
+  if (!accessToken || !refreshToken || !role) {
+    return false;
+  }
+
+  const accessAge = 60 * 60 * 24 * 7;
+  const refreshAge = 60 * 60 * 24 * 30;
+  setBrowserCookie("arch_access_token", accessToken, accessAge);
+  setBrowserCookie("arch_refresh_token", refreshToken, refreshAge);
+  setBrowserCookie("arch_user_role", role, refreshAge);
+  window.dispatchEvent(new Event("arch-session-updated"));
+  return true;
+}
+
+async function refreshBrowserSession(): Promise<boolean> {
+  const baseUrl = resolveBrowserApiBaseUrl();
+  if (!baseUrl || typeof window === "undefined") return false;
+
+  const refreshToken = readBrowserCookie("arch_refresh_token");
+  if (!refreshToken) return false;
+
+  try {
+    const response = await axios.request<unknown>({
+      url: `${baseUrl}/auth/refresh`,
+      method: "POST",
+      data: { refresh_token: refreshToken },
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout: 15000,
+    });
+
+    return persistSessionCookies(response.data);
+  } catch {
+    clearBrowserCookie("arch_access_token");
+    clearBrowserCookie("arch_refresh_token");
+    clearBrowserCookie("arch_user_role");
+    window.dispatchEvent(new Event("arch-session-updated"));
+    return false;
+  }
+}
+
 type BrowserRequestOptions<TData = unknown> = {
   url: string;
   method?: Method;
@@ -72,6 +132,22 @@ export async function browserApiRequest<TResponse = unknown, TData = unknown>({
     return response.data;
   } catch (error) {
     const status = getStatusFromError(error);
+    if (status === 401 && includeAuth && typeof window !== "undefined") {
+      const refreshed = await refreshBrowserSession();
+      if (refreshed) {
+        requestHeaders.Authorization = `Bearer ${readBrowserCookie("arch_access_token")}`;
+        const retryResponse = await axios.request<TResponse>({
+          url,
+          method,
+          data,
+          headers: requestHeaders,
+          withCredentials,
+          timeout,
+        });
+
+        return retryResponse.data;
+      }
+    }
     throw new Error(`API failed (${status}).`);
   }
 }
@@ -160,6 +236,38 @@ export async function browserApiRequestRaw<TResponse = unknown, TData = unknown>
     timeout,
     validateStatus: () => true,
   });
+
+  if (response.status === 401 && includeAuth && typeof window !== "undefined") {
+    const refreshed = await refreshBrowserSession();
+    if (refreshed) {
+      requestHeaders.Authorization = `Bearer ${readBrowserCookie("arch_access_token")}`;
+      const retry = await axios.request<TResponse>({
+        url,
+        method,
+        data,
+        headers: requestHeaders,
+        withCredentials,
+        timeout,
+        validateStatus: () => true,
+      });
+      return {
+        ok: retry.status >= 200 && retry.status < 300,
+        status: retry.status,
+        json: async () => retry.data,
+        text: async () => {
+          if (typeof retry.data === "string") {
+            return retry.data;
+          }
+
+          try {
+            return JSON.stringify(retry.data);
+          } catch {
+            return "";
+          }
+        },
+      };
+    }
+  }
 
   return {
     ok: response.status >= 200 && response.status < 300,

@@ -46,7 +46,17 @@ export const tutorEducationEntries = [
   },
 ];
 
-export const tutorWorkExperienceEntries = [];
+export type TutorWorkExperienceEntry = {
+  id: string;
+  title: string;
+  organization: string;
+  period: string;
+  description?: string;
+  from_date?: string;
+  to_date?: string;
+};
+
+export const tutorWorkExperienceEntries: TutorWorkExperienceEntry[] = [];
 
 
 export const tutorLocationEntries = [

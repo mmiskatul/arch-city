@@ -1,3 +1,5 @@
+import { type Method } from "axios";
+
 import { browserApiRequestRaw } from "@/lib/api/browser-api-client";
 
 type TutorProfileMethod = "GET" | "PUT";
@@ -202,7 +204,7 @@ async function requestWithFallback({
   extraInit,
 }: {
   urls: string[];
-  method: string;
+  method: Method;
   token?: string;
   body?: string;
   extraInit?: RequestInit;
@@ -263,7 +265,7 @@ export async function requestTutorPreferencesWithFallback({ method, token, body,
 export async function requestTutorLocationWithFallback({ method, token, locationId, body, extraInit }: { method: TutorLocationMethod; token?: string; locationId?: string; body?: string; extraInit?: RequestInit; }) {
   return requestWithFallback({
     urls: buildTutorLocationUrls(method, locationId),
-    method: method === "PREFER" ? "PUT" : method,
+    method: (method === "PREFER" ? "PUT" : method) as Method,
     token,
     body,
     extraInit,

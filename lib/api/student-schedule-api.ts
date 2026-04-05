@@ -7,6 +7,7 @@ export type StudentScheduleApiItem = {
   student_email: string;
   tutor_id: string;
   tutor_name: string;
+  subject?: string;
   session_date: string;
   session_time: string;
   session_type: string;
@@ -83,7 +84,7 @@ function mapStudentScheduleItem(item: StudentScheduleApiItem): StudentScheduleIt
     tutorId: item.tutor_id,
     tutorInitials: initials(item.tutor_name),
     tutorName: item.tutor_name,
-    subject: item.details?.subject ?? item.details?.session_type ?? "Tutoring",
+    subject: item.subject ?? item.details?.subject ?? item.details?.session_type ?? "Tutoring",
     date: dateLabel(item.session_date),
     time: item.session_time,
     duration: `${item.duration_minutes} min`,

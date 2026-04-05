@@ -51,6 +51,28 @@ type PublicTutorsResponse = {
   items: PublicTutorItem[];
 };
 
+function normalizeGradeGroup(value?: string, grades?: string): StudentTutor["gradeGroup"] {
+  const source = `${value ?? ""} ${grades ?? ""}`.toLowerCase();
+
+  if (source.includes("kindergarten") || source.includes("grade k") || source.includes("k-5")) {
+    return "Kindergarten";
+  }
+  if (source.includes("1-5") || source.includes("grades 1-5")) {
+    return "Grades 1-5";
+  }
+  if (source.includes("6-8") || source.includes("grades 6-8")) {
+    return "Grades 6-8";
+  }
+  if (source.includes("9-12") || source.includes("grades 9-12")) {
+    return "Grades 9-12";
+  }
+  if (source.includes("college") || source.includes("adult")) {
+    return "College-Aged";
+  }
+
+  return "College-Aged";
+}
+
 function formatAvailabilityTime(slot: PublicTutorAvailabilityItem) {
   const raw = slot.label || slot.time || "";
   if (raw) {
@@ -106,7 +128,7 @@ function mapTutor(item: PublicTutorItem): StudentTutor {
     district: item.district || "Not provided",
     location: item.location || "",
     grades: item.grades || item.grade_group || "Grades not provided",
-    gradeGroup: item.grade_group || item.grades || "Grades not provided",
+    gradeGroup: normalizeGradeGroup(item.grade_group, item.grades),
     subjects,
     subjectTags: item.subject_tags.length > 0 ? item.subject_tags : subjects,
     about: item.about || "Tutor profile is being updated.",

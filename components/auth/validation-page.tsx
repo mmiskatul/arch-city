@@ -50,19 +50,28 @@ function readAccessToken(data: unknown) {
   return typeof accessToken === "string" ? accessToken : "";
 }
 
+function readRefreshToken(data: unknown) {
+  if (!isRecord(data)) return "";
+  const refreshToken = data.refresh_token ?? data.refreshToken;
+  return typeof refreshToken === "string" ? refreshToken : "";
+}
+
 function persistSessionCookies(data: unknown) {
   const token = readAccessToken(data);
+  const refreshToken = readRefreshToken(data);
   const role = isRecord(data) ? readString(data.role) : "";
 
-  if (!token || !role) return;
+  if (!token || !refreshToken || !role) return;
 
   const oneWeekInSeconds = 60 * 60 * 24 * 7;
+  const refreshTokenSeconds = 60 * 60 * 24 * 30;
   const secureSuffix =
     typeof window !== "undefined" && window.location.protocol === "https:"
       ? "; Secure"
       : "";
 
   document.cookie = `arch_access_token=${encodeURIComponent(token)}; Path=/; Max-Age=${oneWeekInSeconds}; SameSite=Lax${secureSuffix}`;
+  document.cookie = `arch_refresh_token=${encodeURIComponent(refreshToken)}; Path=/; Max-Age=${refreshTokenSeconds}; SameSite=Lax${secureSuffix}`;
   document.cookie = `arch_user_role=${encodeURIComponent(role)}; Path=/; Max-Age=${oneWeekInSeconds}; SameSite=Lax${secureSuffix}`;
   window.dispatchEvent(new Event("arch-session-updated"));
 }

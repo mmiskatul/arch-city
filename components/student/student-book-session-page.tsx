@@ -313,7 +313,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                   <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {availableTimes.map((slot) => (
                       <button
-                        key={`${slot.day}-${slot.time}-${slot.start_time}`}
+                        key={`${slot.day}-${slot.time}`}
                         type="button"
                         onClick={() => setSelectedTime(slot.time)}
                         className={`flex items-center justify-between rounded-[12px] border px-4 py-3 text-left transition ${

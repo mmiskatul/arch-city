@@ -19,6 +19,7 @@ function clearAuthCookies() {
   if (typeof document === "undefined") return;
   const expired = "Thu, 01 Jan 1970 00:00:00 GMT";
   document.cookie = `arch_access_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+  document.cookie = `arch_refresh_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_user_role=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
 }
 

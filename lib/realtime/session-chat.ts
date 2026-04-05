@@ -75,7 +75,7 @@ function normalizeMessage(message: SessionChatMessageInput): SessionChatMessage 
     ).trim() || undefined;
   const attachmentName = String(message.attachmentName || message.attachment_name || "").trim() || undefined;
   const attachmentType = String(message.attachmentType || message.attachment_type || "").trim() || undefined;
-  const attachmentSizeRaw = message.attachmentSize || message.attachment_size || 0;
+  const attachmentSizeRaw = message.attachmentSize ?? message.attachment_size ?? 0;
   const attachmentSize = Number(attachmentSizeRaw) > 0 ? Number(attachmentSizeRaw) : undefined;
   return {
     id,
@@ -225,7 +225,10 @@ export function useSessionChat({
                 clientMessageId: item.clientMessageId || item.client_message_id,
                 attachmentName: item.attachmentName || item.attachment_name,
                 attachmentType: item.attachmentType || item.attachment_type,
-                attachmentSize: item.attachmentSize || item.attachment_size,
+                attachmentSize:
+                  Number(item.attachmentSize ?? item.attachment_size ?? 0) > 0
+                    ? Number(item.attachmentSize ?? item.attachment_size ?? 0)
+                    : undefined,
               }),
             )
         : [];
@@ -253,7 +256,10 @@ export function useSessionChat({
             clientMessageId: payload.clientMessageId || payload.client_message_id,
             attachmentName: payload.attachmentName || payload.attachment_name,
             attachmentType: payload.attachmentType || payload.attachment_type,
-            attachmentSize: payload.attachmentSize || payload.attachment_size,
+            attachmentSize:
+              Number(payload.attachmentSize ?? payload.attachment_size ?? 0) > 0
+                ? Number(payload.attachmentSize ?? payload.attachment_size ?? 0)
+                : undefined,
           }),
         ]),
       );
