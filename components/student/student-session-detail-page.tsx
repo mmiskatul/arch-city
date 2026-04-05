@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   FiAlertTriangle,
   FiCalendar,
+  FiCheckCircle,
   FiClock,
   FiDollarSign,
   FiMessageSquare,
@@ -128,6 +129,7 @@ function resolveProfileAvatarUrl(profile: {
 }
 
 export function StudentSessionDetailPage({ session }: { session: StudentScheduleItem }) {
+  const [currentSession, setCurrentSession] = useState(session);
   const [studentInitials, setStudentInitials] = useState("ST");
   const [studentAvatarUrl, setStudentAvatarUrl] = useState("");
   const {
@@ -140,17 +142,23 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
     error,
     clearError,
   } = useSessionChat({
-    bookingId: session.id,
-    initialMessages: session.chat,
+    bookingId: currentSession.id,
+    initialMessages: currentSession.chat,
     senderRole: "student",
     senderInitials: studentInitials,
     senderAvatarUrl: studentAvatarUrl || undefined,
-    counterpartInitials: session.tutorInitials || initialsFromName(session.tutorName, "TU"),
+    counterpartInitials: currentSession.tutorInitials || initialsFromName(currentSession.tutorName, "TU"),
     counterpartAvatarUrl: undefined,
   });
   const [isSending, setIsSending] = useState(false);
+  const [isUpdatingCompletion, setIsUpdatingCompletion] = useState(false);
+  const [completionActionError, setCompletionActionError] = useState("");
   const messagesPaneRef = useRef<HTMLDivElement | null>(null);
-  const tutorInitials = session.tutorInitials || initialsFromName(session.tutorName, "TU");
+  const tutorInitials = currentSession.tutorInitials || initialsFromName(currentSession.tutorName, "TU");
+
+  useEffect(() => {
+    setCurrentSession(session);
+  }, [session]);
 
   useEffect(() => {
     const pane = messagesPaneRef.current;
@@ -207,6 +215,36 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
     setIsSending(false);
   }
 
+  async function handleAcceptCompletion() {
+    if (currentSession.status !== "Completion Requested") {
+      return;
+    }
+
+    const baseUrl = resolveBrowserApiBaseUrl();
+    if (!baseUrl) {
+      setCompletionActionError("API base URL is not configured.");
+      return;
+    }
+
+    setCompletionActionError("");
+    setIsUpdatingCompletion(true);
+
+    try {
+      const updated = await browserApiRequest<StudentScheduleItem>({
+        url: `${baseUrl}/student/schedule/${encodeURIComponent(currentSession.id)}/complete`,
+        method: "PATCH",
+      });
+      setCurrentSession(updated);
+    } catch (err) {
+      setCompletionActionError(err instanceof Error ? err.message : "Failed to complete the session.");
+    } finally {
+      setIsUpdatingCompletion(false);
+    }
+  }
+
+  const completionRequested = currentSession.status === "Completion Requested";
+  const completed = currentSession.status === "Completed";
+
   return (
     <StudentShell>
       <div className="w-full">
@@ -221,13 +259,13 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
 
             <div className="mt-8 flex items-start gap-4 border-b border-[#eceef2] pb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ffe7eb] text-[16px] font-bold text-[#d61c3f]">
-                {session.tutorInitials}
+                {currentSession.tutorInitials}
               </div>
               <div>
-                <h1 className="text-[18px] font-bold text-[#20242b]">{session.tutorName}</h1>
-                <p className="text-[14px] text-[#6b7280]">{session.subject}</p>
+                <h1 className="text-[18px] font-bold text-[#20242b]">{currentSession.tutorName}</h1>
+                <p className="text-[14px] text-[#6b7280]">{currentSession.subject}</p>
                 <span className="mt-2 inline-flex rounded-full bg-[#fff6de] px-2.5 py-1 text-[11px] font-medium text-[#b58112]">
-                  {session.status}
+                  {currentSession.status}
                 </span>
               </div>
             </div>
@@ -237,7 +275,7 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
                 <FiCalendar className="mt-0.5 h-4 w-4 text-[#6b7280]" />
                 <div>
                   <p className="text-[12px] text-[#6b7280]">Date</p>
-                  <p className="font-semibold text-[#20242b]">{session.fullDate}</p>
+                  <p className="font-semibold text-[#20242b]">{currentSession.fullDate}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -245,7 +283,7 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
                 <div>
                   <p className="text-[12px] text-[#6b7280]">Time</p>
                   <p className="font-semibold text-[#20242b]">
-                    {session.time} - {session.duration === "60 min" ? "5:00 PM" : "4:45 PM"} ({session.duration})
+                    {currentSession.time} - {currentSession.duration === "60 min" ? "5:00 PM" : "4:45 PM"} ({currentSession.duration})
                   </p>
                 </div>
               </div>
@@ -253,35 +291,35 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
                 <FiVideo className="mt-0.5 h-4 w-4 text-[#6b7280]" />
                 <div>
                   <p className="text-[12px] text-[#6b7280]">Session Type</p>
-                  <p className="font-semibold text-[#20242b]">{session.type}</p>
+                  <p className="font-semibold text-[#20242b]">{currentSession.type}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <FiDollarSign className="mt-0.5 h-4 w-4 text-[#6b7280]" />
                 <div>
                   <p className="text-[12px] text-[#6b7280]">Session Rate</p>
-                  <p className="font-semibold text-[#20242b]">${session.sessionRate} (paid to tutor after session)</p>
+                  <p className="font-semibold text-[#20242b]">${currentSession.sessionRate} (paid to tutor after session)</p>
                 </div>
               </div>
             </div>
 
             <div className="rounded-[12px] bg-[#fafafb] p-4">
               <p className="text-[14px] font-semibold text-[#20242b]">Virtual Session Link</p>
-              <Link
-                href="#"
-                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white"
-              >
-                <FiVideo className="h-4 w-4" />
-                <span>Join Session</span>
-              </Link>
+              <div className="mt-3 rounded-full border border-[#e5e7eb] bg-white px-4 py-3 text-[13px] text-[#6b7280]">
+                Google Meet is not configured yet.
+              </div>
             </div>
 
             <button
               type="button"
-              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#d61c3f] px-4 text-[14px] font-semibold text-[#d61c3f]"
+              onClick={handleAcceptCompletion}
+              disabled={!completionRequested || isUpdatingCompletion || completed}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#d61c3f] px-4 text-[14px] font-semibold text-[#d61c3f] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <FiMessageSquare className="h-4 w-4" />
-              <span>Chat with Tutor</span>
+              <FiCheckCircle className="h-4 w-4" />
+              <span>
+                {completed ? "Session Completed" : completionRequested ? "Accept & Complete Session" : "Waiting for tutor request"}
+              </span>
             </button>
 
             <button
@@ -295,9 +333,13 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
             <button
               type="button"
               className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white"
+              disabled
             >
               Cancel Session
             </button>
+            {completionActionError ? (
+              <p className="mt-2 text-[12px] text-[#d61c3f]">{completionActionError}</p>
+            ) : null}
 
             <div className="mt-3 rounded-[12px] border border-[#f2ddb0] bg-[#fff9ed] px-4 py-3 text-[12px] text-[#6b7280]">
               <div className="flex items-start gap-3">
@@ -310,10 +352,10 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
           <section className="min-w-0">
             <div className="flex items-center gap-3 border-b border-[#eceef2] px-4 py-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d61c3f]">
-                {session.tutorInitials}
+                {currentSession.tutorInitials}
               </div>
               <div>
-                <p className="font-semibold text-[#20242b]">{session.tutorName}</p>
+                <p className="font-semibold text-[#20242b]">{currentSession.tutorName}</p>
                 <div className="flex items-center gap-1.5 text-[12px] text-[#1b8a5a]">
                   <span className="h-2 w-2 rounded-full bg-[#1b8a5a]" />
                   <span>{connected ? "Online" : "Connecting..."}</span>

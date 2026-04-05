@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FiCalendar,
+  FiCheckCircle,
   FiClock,
   FiCopy,
   FiDollarSign,
@@ -128,21 +129,28 @@ function resolveProfileAvatarUrl(profile: {
 }
 
 export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem }) {
+  const [currentSession, setCurrentSession] = useState(session);
   const [tutorInitials, setTutorInitials] = useState("TU");
   const [tutorAvatarUrl, setTutorAvatarUrl] = useState("");
-  const studentInitials = session.studentInitials || initialsFromName(session.studentName, "ST");
+  const [isSending, setIsSending] = useState(false);
+  const [isUpdatingCompletion, setIsUpdatingCompletion] = useState(false);
+  const [completionRequestError, setCompletionRequestError] = useState("");
+  const messagesPaneRef = useRef<HTMLDivElement | null>(null);
+  const studentInitials = currentSession.studentInitials || initialsFromName(currentSession.studentName, "ST");
   const { messages, draft, setDraft, sendMessage, connected, loading, error, clearError } =
     useSessionChat({
-      bookingId: session.id,
-      initialMessages: session.chat,
+      bookingId: currentSession.id,
+      initialMessages: currentSession.chat,
       senderRole: "tutor",
       senderInitials: tutorInitials,
       senderAvatarUrl: tutorAvatarUrl || undefined,
       counterpartInitials: studentInitials,
       counterpartAvatarUrl: undefined,
     });
-  const [isSending, setIsSending] = useState(false);
-  const messagesPaneRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setCurrentSession(session);
+  }, [session]);
 
   useEffect(() => {
     const pane = messagesPaneRef.current;
@@ -197,6 +205,37 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
     setIsSending(false);
   }
 
+  async function handleRequestCompletion() {
+    if (currentSession.status !== "Upcoming") {
+      return;
+    }
+
+    const baseUrl = resolveBrowserApiBaseUrl();
+    if (!baseUrl) {
+      setCompletionRequestError("API base URL is not configured.");
+      return;
+    }
+
+    setCompletionRequestError("");
+    setIsUpdatingCompletion(true);
+
+    try {
+      const updated = await browserApiRequest<TutorScheduleItem>({
+        url: `${baseUrl}/tutor/schedule/${encodeURIComponent(currentSession.id)}/completion-request`,
+        method: "PATCH",
+      });
+      setCurrentSession(updated);
+    } catch (err) {
+      setCompletionRequestError(err instanceof Error ? err.message : "Failed to request session completion.");
+    } finally {
+      setIsUpdatingCompletion(false);
+    }
+  }
+
+  const canRequestCompletion = currentSession.status === "Upcoming";
+  const completionRequested = currentSession.status === "Completion Requested";
+  const completed = currentSession.status === "Completed";
+
   return (
     <TutorShell>
       <div className="w-full">
@@ -211,15 +250,15 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
 
             <div className="mt-8 flex items-start gap-4 border-b border-[#eceef2] pb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ffe7eb] text-[16px] font-bold text-[#d61c3f]">
-                {session.studentInitials}
+                {currentSession.studentInitials}
               </div>
               <div>
-                <h1 className="text-[18px] font-bold text-[#20242b]">{session.studentName}</h1>
+                <h1 className="text-[18px] font-bold text-[#20242b]">{currentSession.studentName}</h1>
                 <p className="text-[14px] text-[#6b7280]">
-                  {session.grade} Grade · {session.subject}
+                  {currentSession.grade} Grade - {currentSession.subject}
                 </p>
                 <span className="mt-2 inline-flex rounded-full bg-[#fff6de] px-2.5 py-1 text-[11px] font-medium text-[#b58112]">
-                  {session.status}
+                  {currentSession.status}
                 </span>
               </div>
             </div>
@@ -229,7 +268,7 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
                 <FiCalendar className="mt-0.5 h-4 w-4 text-[#6b7280]" />
                 <div>
                   <p className="text-[12px] text-[#6b7280]">Date</p>
-                  <p className="font-semibold text-[#20242b]">{session.fullDate}</p>
+                  <p className="font-semibold text-[#20242b]">{currentSession.fullDate}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -237,7 +276,7 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
                 <div>
                   <p className="text-[12px] text-[#6b7280]">Time</p>
                   <p className="font-semibold text-[#20242b]">
-                    {session.time} - {session.endTime} ({session.duration})
+                    {currentSession.time} - {currentSession.endTime} ({currentSession.duration})
                   </p>
                 </div>
               </div>
@@ -245,14 +284,14 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
                 <FiVideo className="mt-0.5 h-4 w-4 text-[#6b7280]" />
                 <div>
                   <p className="text-[12px] text-[#6b7280]">Session Type</p>
-                  <p className="font-semibold text-[#20242b]">{session.type}</p>
+                  <p className="font-semibold text-[#20242b]">{currentSession.type}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <FiDollarSign className="mt-0.5 h-4 w-4 text-[#6b7280]" />
                 <div>
                   <p className="text-[12px] text-[#6b7280]">Rate</p>
-                  <p className="font-semibold text-[#20242b]">{session.rate} — paid by student after session</p>
+                  <p className="font-semibold text-[#20242b]">{currentSession.rate} - paid by student after session</p>
                 </div>
               </div>
             </div>
@@ -261,11 +300,12 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
               <p className="text-[14px] font-semibold text-[#20242b]">Virtual Session Link</p>
               <div className="mt-3 flex items-center gap-2">
                 <div className="flex-1 rounded-full border border-[#e5e7eb] bg-white px-4 py-2.5 text-[13px] text-[#6b7280]">
-                  {session.sessionLink || "Link will be shared after confirmation"}
+                  {currentSession.sessionLink || "Google Meet is not configured yet."}
                 </div>
                 <button
                   type="button"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-4 text-[13px] font-semibold text-[#d61c3f]"
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-4 text-[13px] font-semibold text-[#d61c3f] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!currentSession.sessionLink}
                 >
                   <FiCopy className="mr-2 h-4 w-4" />
                   Copy
@@ -275,7 +315,19 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
 
             <button
               type="button"
-              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#d61c3f] px-4 text-[14px] font-semibold text-[#d61c3f]"
+              onClick={handleRequestCompletion}
+              disabled={!canRequestCompletion || isUpdatingCompletion || completed}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#d61c3f] px-4 text-[14px] font-semibold text-[#d61c3f] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FiCheckCircle className="h-4 w-4" />
+              <span>
+                {completed ? "Session Completed" : completionRequested ? "Completion Requested" : "Request Session Completion"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#e5e7eb] px-4 text-[14px] font-semibold text-[#6b7280]"
             >
               <FiMessageSquare className="h-4 w-4" />
               <span>Chat with Student</span>
@@ -292,18 +344,22 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
             <button
               type="button"
               className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white"
+              disabled
             >
               Cancel Session
             </button>
+            {completionRequestError ? (
+              <p className="mt-2 text-[12px] text-[#d61c3f]">{completionRequestError}</p>
+            ) : null}
           </aside>
 
           <section className="min-w-0">
             <div className="flex items-center gap-3 border-b border-[#eceef2] px-4 py-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d61c3f]">
-                {session.studentInitials}
+                {currentSession.studentInitials}
               </div>
               <div>
-                <p className="font-semibold text-[#20242b]">{session.studentName}</p>
+                <p className="font-semibold text-[#20242b]">{currentSession.studentName}</p>
                 <div className="flex items-center gap-1.5 text-[12px] text-[#1b8a5a]">
                   <span className="h-2 w-2 rounded-full bg-[#1b8a5a]" />
                   <span>{connected ? "Online" : "Connecting..."}</span>
@@ -311,13 +367,10 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
               </div>
             </div>
 
-            <div
-              ref={messagesPaneRef}
-              className="max-h-[calc(100vh-340px)] overflow-y-auto bg-[#fcfcfd]"
-            >
+            <div ref={messagesPaneRef} className="max-h-[calc(100vh-340px)] overflow-y-auto bg-[#fcfcfd]">
               <div className="px-4 py-3 text-center">
                 <span className="inline-flex rounded-full bg-[#eef0f3] px-3 py-1 text-[12px] text-[#6b7280]">
-                  Session created - {session.fullDate}
+                  Session created - {currentSession.fullDate}
                 </span>
               </div>
 

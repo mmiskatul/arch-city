@@ -4,8 +4,9 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import type { AdminScheduleDetail } from "@/lib/admin/schedules-data";
 import { ADMIN_SCHEDULES_ROUTE, ADMIN_STUDENTS_ROUTE, ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
-function statusClassName(status: "Upcoming" | "Completed" | "Cancelled") {
+function statusClassName(status: "Upcoming" | "Completion Requested" | "Completed" | "Cancelled") {
   if (status === "Completed") return "bg-[#ebf7ef] text-[#239157]";
+  if (status === "Completion Requested") return "bg-[#eff6ff] text-[#2563eb]";
   if (status === "Upcoming") return "bg-[#fff6de] text-[#9c7a1e]";
   return "bg-[#ffecef] text-[#d94a62]";
 }

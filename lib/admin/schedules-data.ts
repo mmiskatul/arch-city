@@ -1,4 +1,4 @@
-export type AdminScheduleStatus = "Upcoming" | "Completed" | "Cancelled";
+export type AdminScheduleStatus = "Upcoming" | "Completion Requested" | "Completed" | "Cancelled";
 export type AdminScheduleType = "In-Person" | "Virtual";
 
 export type AdminScheduleRow = {

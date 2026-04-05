@@ -1,4 +1,4 @@
-export type AdminTutorStatus = "Approved" | "Pending" | "Suspended";
+export type AdminTutorStatus = "Approved" | "Unverified" | "Suspended";
 
 export type AdminTutorRow = {
   id: string;
@@ -154,7 +154,7 @@ export const adminTutors: AdminTutorRow[] = [
     rating: "New",
     hourlyRate: "$60/hr",
     earnedMtd: null,
-    status: "Pending",
+    status: "Unverified",
     applicationId: "TA-1024",
   },
   {
@@ -168,7 +168,7 @@ export const adminTutors: AdminTutorRow[] = [
     rating: "New",
     hourlyRate: "$45/hr",
     earnedMtd: null,
-    status: "Pending",
+    status: "Unverified",
     applicationId: "TA-1025",
   },
   {
@@ -208,7 +208,7 @@ export const adminTutors: AdminTutorRow[] = [
     rating: "New",
     hourlyRate: "$48/hr",
     earnedMtd: null,
-    status: "Pending",
+    status: "Unverified",
     applicationId: "TA-1027",
   },
   {

@@ -11,6 +11,7 @@ import { type TutorScheduleItem, type TutorScheduleStatus } from "@/lib/tutor/sc
 
 const tabs: Array<{ key: TutorScheduleStatus; label: string }> = [
   { key: "Upcoming", label: "Upcoming" },
+  { key: "Completion Requested", label: "Requested" },
   { key: "Completed", label: "Completed" },
   { key: "Cancelled", label: "Cancelled" },
 ];
@@ -22,6 +23,10 @@ function typeClass(type: TutorScheduleItem["type"]) {
 }
 
 function statusClass(status: TutorScheduleStatus) {
+  if (status === "Completion Requested") {
+    return "bg-[#fff6de] text-[#9c7a1e]";
+  }
+
   if (status === "Completed") {
     return "bg-[#ebf7ef] text-[#1b8a5a]";
   }
@@ -105,7 +110,7 @@ export function TutorSchedulePage() {
   const counts = useMemo(
     () =>
       isPending
-        ? { Upcoming: 0, Completed: 0, Cancelled: 0 }
+        ? { Upcoming: 0, "Completion Requested": 0, Completed: 0, Cancelled: 0 }
         : sessions.reduce<Record<TutorScheduleStatus, number>>(
             (acc, item) => {
               acc[item.status] += 1;
@@ -113,6 +118,7 @@ export function TutorSchedulePage() {
             },
             {
               Upcoming: 0,
+              "Completion Requested": 0,
               Completed: 0,
               Cancelled: 0,
             },
@@ -211,16 +217,16 @@ export function TutorSchedulePage() {
                           {session.status}
                         </span>
                       </div>
-                      <div>
-                        <Link
-                          href={`${TUTOR_SCHEDULE_ROUTE}/${session.id}`}
-                          className="inline-flex rounded-full border border-[#d61c3f] px-4 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
-                        >
-                          View
-                        </Link>
-                      </div>
+                    <div>
+                      <Link
+                        href={`${TUTOR_SCHEDULE_ROUTE}/${session.id}`}
+                        className="inline-flex rounded-full border border-[#d61c3f] px-4 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
+                      >
+                        View
+                      </Link>
                     </div>
-                  ))}
+                  </div>
+                ))}
 
                   {filteredSessions.length === 0 ? (
                     <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">

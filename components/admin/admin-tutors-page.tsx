@@ -9,9 +9,9 @@ import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { AdminTutorStatus, AdminTutorRow } from "@/lib/admin/tutors-data";
 import { ADMIN_TUTOR_APPLICATIONS_ROUTE, ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
-type TutorFilter = "All Tutors" | "Approved" | "Pending Review" | "Suspended";
+type TutorFilter = "All Tutors" | "Approved" | "Unverified" | "Suspended";
 
-type TutorApiStatus = "approved" | "pending" | "suspended";
+type TutorApiStatus = "approved" | "unverified" | "suspended";
 
 type TutorsApiItem = {
   tutor_id: string;
@@ -59,20 +59,20 @@ function initialsClassFromIndex(index: number) {
 
 function statusClassName(status: AdminTutorStatus) {
   if (status === "Approved") return "bg-[#ebf7ef] text-[#239157]";
-  if (status === "Pending") return "bg-[#fff6de] text-[#9c7a1e]";
+  if (status === "Unverified") return "bg-[#fff6de] text-[#9c7a1e]";
   return "bg-[#ffecef] text-[#d94a62]";
 }
 
 function toStatus(filter: TutorFilter): TutorApiStatus | null {
   if (filter === "Approved") return "approved";
-  if (filter === "Pending Review") return "pending";
+  if (filter === "Unverified") return "unverified";
   if (filter === "Suspended") return "suspended";
   return null;
 }
 
 function toUiStatus(status: TutorApiStatus): AdminTutorStatus {
   if (status === "approved") return "Approved";
-  if (status === "pending") return "Pending";
+  if (status === "unverified") return "Unverified";
   return "Suspended";
 }
 
@@ -175,7 +175,7 @@ export function AdminTutorsPage() {
           <div>
             <h1 className="text-[38px] font-bold leading-none text-[#20242b]">Tutors</h1>
             <p className="mt-2 text-[14px] text-[#6b7280]">
-              {stats.approved} approved - {stats.pending} pending review
+              {stats.approved} approved - {stats.pending} unverified
             </p>
           </div>
           <button
@@ -188,10 +188,10 @@ export function AdminTutorsPage() {
         </div>
 
         <div className="mt-4 flex items-center gap-4 border-b border-[#eceef2] bg-white px-2">
-          {(["All Tutors", "Approved", "Pending Review", "Suspended"] as const).map((item) => {
+          {(["All Tutors", "Approved", "Unverified", "Suspended"] as const).map((item) => {
             const active = filter === item;
             const showApprovedBadge = item === "Approved";
-            const showPendingBadge = item === "Pending Review";
+            const showPendingBadge = item === "Unverified";
 
             return (
               <button
@@ -248,7 +248,7 @@ export function AdminTutorsPage() {
                     <div
                       key={tutor.id}
                       className={`grid grid-cols-[1.7fr_1.45fr_0.75fr_0.7fr_0.9fr_0.95fr_0.85fr_0.95fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563] ${
-                        tutor.status === "Pending" ? "bg-[#fffdf3]" : "bg-white"
+                        tutor.status === "Unverified" ? "bg-[#fffdf3]" : "bg-white"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -290,7 +290,7 @@ export function AdminTutorsPage() {
                         </span>
                       </div>
                       <div>
-                        {tutor.status === "Pending" ? (
+                        {tutor.status === "Unverified" ? (
                           <Link
                             href={
                               tutor.applicationId

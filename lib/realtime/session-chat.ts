@@ -114,15 +114,16 @@ export function useSessionChat({
   counterpartAvatarUrl,
 }: {
   bookingId: string;
-  initialMessages: SessionChatMessage[];
+  initialMessages?: SessionChatMessage[] | null;
   senderRole: "student" | "tutor";
   senderInitials: string;
   counterpartInitials: string;
   senderAvatarUrl?: string;
   counterpartAvatarUrl?: string;
 }) {
+  const normalizedInitialMessages = Array.isArray(initialMessages) ? initialMessages : [];
   const [messages, setMessages] = useState<SessionChatMessage[]>(() =>
-    initialMessages.map((item) =>
+    normalizedInitialMessages.map((item) =>
       normalizeMessage({
         ...item,
         senderInitials: item.sender === senderRole ? senderInitials : counterpartInitials,
@@ -141,7 +142,7 @@ export function useSessionChat({
 
   useEffect(() => {
     setMessages(
-      initialMessages.map((item) =>
+      normalizedInitialMessages.map((item) =>
         normalizeMessage({
           ...item,
           senderInitials: item.sender === senderRole ? senderInitials : counterpartInitials,
@@ -157,6 +158,7 @@ export function useSessionChat({
     senderAvatarUrl,
     senderInitials,
     senderRole,
+    normalizedInitialMessages,
   ]);
 
   useEffect(() => {

@@ -89,6 +89,51 @@ const gradeOptions = [
   "3rd Grade",
 ];
 
+type RecommendationItem = {
+  value: string;
+  count: number;
+};
+
+function RecommendationChips({
+  title,
+  items,
+  selectedValues,
+  onToggle,
+}: {
+  title: string;
+  items: RecommendationItem[];
+  selectedValues: string[];
+  onToggle: (value: string) => void;
+}) {
+  if (!items.length) return null;
+
+  return (
+    <div className="mt-4 rounded-[14px] border border-dashed border-[#e8ecf2] bg-[#fcfcfd] p-4">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">{title}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {items.map((item) => {
+          const active = selectedValues.some((selected) => selected.toLowerCase() === item.value.toLowerCase());
+          return (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => onToggle(item.value)}
+              className={`rounded-full border px-3 py-2 text-[13px] font-semibold transition ${
+                active
+                  ? "border-[#f191a5] bg-[#fff1f4] text-[#d61c3f]"
+                  : "border-[#e5e7eb] bg-white text-[#6b7280]"
+              }`}
+            >
+              {item.value}
+              <span className="ml-2 text-[11px] font-medium text-[#9ca3af]">{item.count}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 type TutorProfileApiModel = {
   first_name: string;
@@ -140,6 +185,10 @@ type TutorWorkExperienceListApiModel = {
 type TutorSubjectsGradesApiModel = {
   subjects?: string[];
   grades?: string[];
+  recommendations?: {
+    subjects?: { value: string; count: number }[];
+    grades?: { value: string; count: number }[];
+  };
 };
 
 type TutorRatesApiModel = {
@@ -536,6 +585,24 @@ async function fetchTutorSubjectsGrades(token?: string): Promise<TutorSubjectsGr
   return {
     subjects: Array.isArray(data.subjects) ? data.subjects.map((item) => String(item).trim()).filter(Boolean) : [],
     grades: Array.isArray(data.grades) ? data.grades.map((item) => String(item).trim()).filter(Boolean) : [],
+    recommendations: {
+      subjects: Array.isArray(data.recommendations?.subjects)
+        ? data.recommendations.subjects
+            .map((item) => ({
+              value: String(item?.value ?? "").trim(),
+              count: Number(item?.count ?? 0) || 0,
+            }))
+            .filter((item) => item.value)
+        : [],
+      grades: Array.isArray(data.recommendations?.grades)
+        ? data.recommendations.grades
+            .map((item) => ({
+              value: String(item?.value ?? "").trim(),
+              count: Number(item?.count ?? 0) || 0,
+            }))
+            .filter((item) => item.value)
+        : [],
+    },
   };
 }
 
@@ -968,6 +1035,8 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
     "10th Grade",
     "11th Grade",
   ]);
+  const [recommendedSubjects, setRecommendedSubjects] = useState<RecommendationItem[]>([]);
+  const [recommendedGrades, setRecommendedGrades] = useState<RecommendationItem[]>([]);
   const [educationEntries, setEducationEntries] = useState<TutorEducationApiItem[]>(
     tutorEducationEntries.map((entry) => ({
       id: entry.id,
@@ -1128,6 +1197,8 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
       .then((data) => {
         setSelectedSubjects(data.subjects || []);
         setSelectedGrades(data.grades || []);
+        setRecommendedSubjects(Array.isArray(data.recommendations?.subjects) ? data.recommendations.subjects : []);
+        setRecommendedGrades(Array.isArray(data.recommendations?.grades) ? data.recommendations.grades : []);
       })
       .catch(() => {
         // Keep static fallback chips.
@@ -2007,6 +2078,12 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
 
                   <div className="mt-6">
                     <p className="text-[16px] font-semibold text-[#20242b]">Subjects You Teach</p>
+                    <RecommendationChips
+                      title="Recommended subjects on the system"
+                      items={recommendedSubjects}
+                      selectedValues={selectedSubjects}
+                      onToggle={(value) => toggleChip(value, selectedSubjects, setSelectedSubjects)}
+                    />
                     <div className="mt-4 flex flex-wrap gap-2">
                       {subjectOptions.map((subject) => {
                         const active = selectedSubjects.includes(subject);
@@ -2033,6 +2110,12 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
 
                   <div className="mt-5 border-t border-[#eceef2] pt-5">
                     <p className="text-[16px] font-semibold text-[#20242b]">Grade Levels</p>
+                    <RecommendationChips
+                      title="Recommended grade levels on the system"
+                      items={recommendedGrades}
+                      selectedValues={selectedGrades}
+                      onToggle={(value) => toggleChip(value, selectedGrades, setSelectedGrades)}
+                    />
                     <div className="mt-4 flex flex-wrap gap-2">
                       {gradeOptions.map((grade) => {
                         const active = selectedGrades.includes(grade);

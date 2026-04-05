@@ -4,6 +4,8 @@ import {
 } from "@/components/student/student-profile-page";
 import { apiGet } from "@/lib/api/api-client";
 
+export const dynamic = "force-dynamic";
+
 type StudentProfileApiResponse = {
   first_name: string;
   last_name: string;
@@ -36,6 +38,16 @@ async function fetchStudentProfile(): Promise<StudentProfileData> {
 }
 
 export default async function StudentProfileRoute() {
-  const profile = await fetchStudentProfile();
+  const profile = await fetchStudentProfile().catch(() => ({
+    firstName: "Student",
+    lastName: "",
+    email: "",
+    gradeLevel: "",
+    initials: "ST",
+    planName: "Student Plan",
+    planPrice: "$0",
+    renewsOn: "",
+    activePlanLabel: "Inactive",
+  }));
   return <StudentProfilePage profile={profile} />;
 }

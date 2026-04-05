@@ -4,7 +4,7 @@ import { AdminTutorDetailPage } from "@/components/admin/admin-tutor-detail-page
 import { apiGet } from "@/lib/api/api-client";
 import type { AdminTutorDetail } from "@/lib/admin/tutors-data";
 
-type TutorApiStatus = "approved" | "pending" | "suspended";
+type TutorApiStatus = "approved" | "unverified" | "suspended";
 
 type TutorDetailApiResponse = {
   item: {
@@ -88,9 +88,9 @@ function initialsClassFromName(name: string) {
   return classes[first % classes.length];
 }
 
-function toUiStatus(status: TutorApiStatus): "Approved" | "Pending" | "Suspended" {
+function toUiStatus(status: TutorApiStatus): "Approved" | "Unverified" | "Suspended" {
   if (status === "approved") return "Approved";
-  if (status === "pending") return "Pending";
+  if (status === "unverified") return "Unverified";
   return "Suspended";
 }
 

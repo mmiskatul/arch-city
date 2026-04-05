@@ -90,7 +90,9 @@ function mapStudentScheduleItem(item: StudentScheduleApiItem): StudentScheduleIt
     duration: `${item.duration_minutes} min`,
     type: item.session_type === "In-Person" ? "In-Person" : "Virtual",
     status:
-      String(item.status).toLowerCase() === "completed"
+      String(item.status).toLowerCase() === "completion requested"
+        ? "Completion Requested"
+        : String(item.status).toLowerCase() === "completed"
         ? "Completed"
         : String(item.status).toLowerCase() === "cancelled"
           ? "Cancelled"

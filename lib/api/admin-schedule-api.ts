@@ -208,8 +208,10 @@ export async function fetchAdminScheduleRows(): Promise<AdminScheduleRow[]> {
     meetingLocation: row.meeting_location || row.meetingLocation || "",
     duration: row.duration_minutes ? `${row.duration_minutes} min` : "",
     type: row.session_type === "In-Person" ? "In-Person" : "Virtual",
-    status:
-      String(row.status).toLowerCase() === "completed"
+  status:
+      String(row.status).toLowerCase() === "completion requested"
+        ? "Completion Requested"
+        : String(row.status).toLowerCase() === "completed"
         ? "Completed"
         : String(row.status).toLowerCase() === "cancelled"
           ? "Cancelled"

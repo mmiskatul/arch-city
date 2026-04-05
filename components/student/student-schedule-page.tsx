@@ -9,10 +9,11 @@ import { cancelStudentScheduleItemById } from "@/lib/api/student-schedule-cancel
 import { STUDENT_FIND_TUTORS_ROUTE, STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
 import { studentScheduleItems, type StudentScheduleItem } from "@/lib/student/schedule-data";
 
-type ScheduleTab = "Upcoming" | "Completed" | "Cancelled";
+type ScheduleTab = "Upcoming" | "Completion Requested" | "Completed" | "Cancelled";
 
 const tabs: Array<{ key: ScheduleTab; label: string }> = [
   { key: "Upcoming", label: "Upcoming" },
+  { key: "Completion Requested", label: "Requested" },
   { key: "Completed", label: "Completed" },
   { key: "Cancelled", label: "Cancelled" },
 ];
@@ -24,6 +25,10 @@ function pillClass(type: StudentScheduleItem["type"]) {
 }
 
 function statusClass(status: StudentScheduleItem["status"]) {
+  if (status === "Completion Requested") {
+    return "bg-[#fff6de] text-[#9c7a1e]";
+  }
+
   if (status === "Completed") {
     return "bg-[#ebf7ef] text-[#1b8a5a]";
   }
@@ -50,6 +55,7 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
   const counts = useMemo(
     () => ({
       Upcoming: sessions.filter((item) => item.status === "Upcoming").length,
+      "Completion Requested": sessions.filter((item) => item.status === "Completion Requested").length,
       Completed: sessions.filter((item) => item.status === "Completed").length,
       Cancelled: sessions.filter((item) => item.status === "Cancelled").length,
     }),

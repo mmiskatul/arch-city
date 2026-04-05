@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { IconType } from "react-icons";
 import { FiCalendar, FiCheckCircle, FiDollarSign, FiPlusCircle } from "react-icons/fi";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
+import { fetchTutorScheduleItemsClient } from "@/lib/api/tutor-schedule-browser-api";
 import { TUTOR_APPLY_ROUTE, TUTOR_AVAILABILITY_ROUTE, TUTOR_EARNINGS_ROUTE, TUTOR_PROFILE_ROUTE, TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
-import { tutorEarningsRows, tutorEarningsSummary } from "@/lib/tutor/earnings-data";
-import { tutorDashboardSessions, tutorPendingBanner } from "@/lib/tutor/dashboard-data";
-import { getTutorScheduleCounts } from "@/lib/tutor/schedule-data";
+import { tutorPendingBanner } from "@/lib/tutor/dashboard-data";
+import type { TutorScheduleItem } from "@/lib/tutor/schedule-data";
 import { useTutorApplicationStatus } from "@/lib/tutor/use-tutor-application-status";
 
 type DashboardView = "overview" | "schedule" | "earnings";
@@ -52,10 +52,34 @@ function SummaryCardView({ card, onView }: { card: SummaryCard; onView: (view: D
   );
 }
 
+function parseCurrency(value: string) {
+  const normalized = String(value || "").replace(/[^0-9.]+/g, "");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function isCompletedSession(session: TutorScheduleItem) {
+  return session.status === "Completed";
+}
+
+function isUpcomingSession(session: TutorScheduleItem) {
+  return session.status === "Upcoming" || session.status === "Completion Requested";
+}
+
 export function TutorDashboardPage() {
   const searchParams = useSearchParams();
   const [activeView, setActiveView] = useState<DashboardView>("overview");
-  const counts = getTutorScheduleCounts();
+  const [scheduleItems, setScheduleItems] = useState<TutorScheduleItem[]>([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
+  const [scheduleError, setScheduleError] = useState("");
   const { status, isApproved } = useTutorApplicationStatus();
   const showApplicationState = !isApproved;
   const showSubmittedMessage = searchParams.get("application") === "submitted";
@@ -64,13 +88,62 @@ export function TutorDashboardPage() {
       ? "Your application is pending review."
       : status === "rejected"
         ? "Your application was not approved yet."
-        : "Apply as a tutor to unlock your dashboard.";
+      : "Apply as a tutor to unlock your dashboard.";
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSchedule() {
+      if (showApplicationState) {
+        setScheduleItems([]);
+        setLoadingSchedule(false);
+        return;
+      }
+
+      setLoadingSchedule(true);
+      setScheduleError("");
+
+      try {
+        const items = await fetchTutorScheduleItemsClient();
+        if (!active) return;
+        setScheduleItems(items);
+      } catch (error) {
+        if (!active) return;
+        setScheduleItems([]);
+        setScheduleError(error instanceof Error ? error.message : "Failed to load tutor schedule.");
+      } finally {
+        if (active) {
+          setLoadingSchedule(false);
+        }
+      }
+    }
+
+    void loadSchedule();
+
+    return () => {
+      active = false;
+    };
+  }, [showApplicationState]);
+
+  const dashboardMetrics = useMemo(() => {
+    const upcoming = scheduleItems.filter(isUpcomingSession);
+    const completed = scheduleItems.filter(isCompletedSession);
+    const totalEarnings = completed.reduce((sum, item) => sum + parseCurrency(item.rate), 0);
+
+    return {
+      upcomingCount: upcoming.length,
+      completedCount: completed.length,
+      totalEarnings: formatCurrency(totalEarnings),
+      upcomingSessions: upcoming.slice(0, 5),
+      completedSessions: completed.slice(0, 4),
+    };
+  }, [scheduleItems]);
 
   const summaryCards: SummaryCard[] = [
     {
       title: "Upcoming Sessions",
-      value: String(counts.Upcoming),
-      subtitle: "Sessions scheduled",
+      value: String(dashboardMetrics.upcomingCount),
+      subtitle: "Live sessions scheduled",
       action: "View schedule",
       view: "schedule",
       icon: FiCalendar,
@@ -78,8 +151,8 @@ export function TutorDashboardPage() {
     },
     {
       title: "Completed Sessions",
-      value: String(counts.Completed),
-      subtitle: "All-time completed",
+      value: String(dashboardMetrics.completedCount),
+      subtitle: "Completed sessions loaded",
       action: "View history",
       view: "schedule",
       icon: FiCheckCircle,
@@ -88,8 +161,8 @@ export function TutorDashboardPage() {
     },
     {
       title: "Total Earnings",
-      value: "$2,115",
-      subtitle: "Earned all-time",
+      value: dashboardMetrics.totalEarnings,
+      subtitle: "Derived from completed sessions",
       action: "View earnings",
       view: "earnings",
       icon: FiDollarSign,
@@ -139,7 +212,18 @@ export function TutorDashboardPage() {
               <span>Status</span>
             </div>
             <div className="divide-y divide-[#eceef2]">
-              {tutorDashboardSessions.map((session) => (
+              {loadingSchedule ? (
+                <div className="px-4 py-6 text-center text-[14px] text-[#6b7280]">Loading live schedule...</div>
+              ) : null}
+              {!loadingSchedule && scheduleError ? (
+                <div className="px-4 py-6 text-center text-[14px] text-[#b4233b]">{scheduleError}</div>
+              ) : null}
+              {!loadingSchedule && !scheduleError && dashboardMetrics.upcomingSessions.length === 0 ? (
+                <div className="px-4 py-6 text-center text-[14px] text-[#6b7280]">No upcoming sessions found.</div>
+              ) : null}
+              {!loadingSchedule &&
+                !scheduleError &&
+                dashboardMetrics.upcomingSessions.map((session) => (
                 <div key={session.id} className="grid grid-cols-[1.6fr_1fr_1fr_0.9fr_0.9fr_0.8fr_0.7fr_0.8fr] gap-4 px-4 py-4 text-[13px] text-[#4b5563]">
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
@@ -159,7 +243,7 @@ export function TutorDashboardPage() {
                   </span>
                   <span className="font-semibold text-[#374151]">{session.rate}</span>
                   <span className="inline-flex w-fit rounded-full bg-[#fff6de] px-2.5 py-1 text-[11px] font-medium text-[#b58112]">
-                    Upcoming
+                    {session.status}
                   </span>
                 </div>
               ))}
@@ -170,6 +254,7 @@ export function TutorDashboardPage() {
     }
 
     if (activeView === "earnings") {
+      const earningsRows = dashboardMetrics.completedSessions;
       return (
         <section className="mt-4 rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -200,18 +285,18 @@ export function TutorDashboardPage() {
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
             <article className="rounded-[12px] border border-[#eceef2] bg-[#fafafb] p-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">This Month</p>
-              <p className="mt-3 text-[22px] font-bold text-[#d61c3f]">{tutorEarningsSummary.thisMonth}</p>
-              <p className="mt-1 text-[13px] text-[#6b7280]">{tutorEarningsSummary.thisMonthLabel}</p>
+              <p className="mt-3 text-[22px] font-bold text-[#d61c3f]">{dashboardMetrics.totalEarnings}</p>
+              <p className="mt-1 text-[13px] text-[#6b7280]">Derived from completed sessions loaded from the backend</p>
             </article>
             <article className="rounded-[12px] border border-[#eceef2] bg-[#fafafb] p-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">Completed Sessions</p>
-              <p className="mt-3 text-[22px] font-bold text-[#1b8a5a]">{tutorEarningsSummary.sessionsCompletedThisMonth}</p>
-              <p className="mt-1 text-[13px] text-[#6b7280]">This month</p>
+              <p className="mt-3 text-[22px] font-bold text-[#1b8a5a]">{dashboardMetrics.completedCount}</p>
+              <p className="mt-1 text-[13px] text-[#6b7280]">Loaded from your live schedule</p>
             </article>
             <article className="rounded-[12px] border border-[#eceef2] bg-[#fafafb] p-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">All-Time Total</p>
-              <p className="mt-3 text-[22px] font-bold text-[#b58112]">{tutorEarningsSummary.allTimeTotal}</p>
-              <p className="mt-1 text-[13px] text-[#6b7280]">{tutorEarningsSummary.allTimeSessions} sessions completed</p>
+              <p className="mt-3 text-[22px] font-bold text-[#b58112]">{dashboardMetrics.totalEarnings}</p>
+              <p className="mt-1 text-[13px] text-[#6b7280]">{dashboardMetrics.completedCount} sessions completed</p>
             </article>
           </div>
 
@@ -226,7 +311,7 @@ export function TutorDashboardPage() {
               <span>Status</span>
             </div>
             <div className="divide-y divide-[#eceef2]">
-              {tutorEarningsRows.slice(0, 4).map((row) => (
+              {earningsRows.slice(0, 4).map((row) => (
                 <div key={row.id} className="grid grid-cols-[1.5fr_1fr_1fr_0.8fr_0.8fr_0.7fr_0.7fr] gap-4 px-4 py-4 text-[13px] text-[#4b5563]">
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
@@ -240,10 +325,15 @@ export function TutorDashboardPage() {
                   <span>{row.type}</span>
                   <span className="font-semibold text-[#374151]">{row.rate}</span>
                   <span className="inline-flex w-fit rounded-full bg-[#e2f5ea] px-2.5 py-1 text-[11px] font-medium text-[#41a16f]">
-                    {row.status}
+                    Completed
                   </span>
                 </div>
               ))}
+              {earningsRows.length === 0 ? (
+                <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
+                  No completed sessions yet. Earnings will appear after a tutor and student mark the session as completed.
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
@@ -324,7 +414,13 @@ export function TutorDashboardPage() {
                 </div>
 
                 <div className="divide-y divide-[#eceef2]">
-                  {tutorDashboardSessions.map((session) => (
+                  {loadingSchedule ? (
+                    <div className="px-4 py-6 text-center text-[14px] text-[#6b7280]">Loading live schedule...</div>
+                  ) : null}
+                  {!loadingSchedule && scheduleError ? (
+                    <div className="px-4 py-6 text-center text-[14px] text-[#b4233b]">{scheduleError}</div>
+                  ) : null}
+                  {!loadingSchedule && !scheduleError && dashboardMetrics.upcomingSessions.map((session) => (
                     <div key={session.id} className="grid gap-4 px-4 py-4 md:grid-cols-[1.6fr_1fr_1fr_0.9fr_0.9fr_0.8fr_0.7fr_0.8fr] md:items-center">
                       <div className="flex items-center gap-3">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">

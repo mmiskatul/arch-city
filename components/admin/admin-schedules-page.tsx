@@ -86,6 +86,7 @@ function typeClassName(type: AdminScheduleType) {
 }
 
 function statusClassName(status: AdminScheduleStatus) {
+  if (status === "Completion Requested") return "bg-[#fff6de] text-[#9c7a1e]";
   if (status === "Upcoming") return "bg-[#fff6de] text-[#9c7a1e]";
   if (status === "Completed") return "bg-[#ebf7ef] text-[#239157]";
   return "bg-[#ffecef] text-[#d94a62]";
@@ -251,7 +252,7 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            {(["All", "Upcoming", "Completed", "Cancelled"] as const).map((value) => (
+            {(["All", "Upcoming", "Completion Requested", "Completed", "Cancelled"] as const).map((value) => (
               <button
                 key={value}
                 type="button"
@@ -262,7 +263,7 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
                     : "border border-[#e5e7eb] bg-[#f7f7f8] text-[#6b7280] hover:bg-[#f1f2f4]"
                 }`}
               >
-                {value}
+                {value === "Completion Requested" ? "Requested" : value}
               </button>
             ))}
           </div>

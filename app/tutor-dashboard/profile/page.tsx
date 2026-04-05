@@ -4,6 +4,8 @@ import {
 } from "@/components/tutor/tutor-profile-page";
 import { apiGet } from "@/lib/api/api-client";
 
+export const dynamic = "force-dynamic";
+
 type TutorProfileApiResponse = {
   first_name: string;
   last_name: string;
@@ -67,6 +69,37 @@ async function fetchTutorProfile(): Promise<TutorProfileData> {
 }
 
 export default async function TutorProfileRoute() {
-  const profile = await fetchTutorProfile();
+  const profile = await fetchTutorProfile().catch(() => ({
+    initials: "TU",
+    firstName: "Tutor",
+    lastName: "",
+    title: "Tutor",
+    email: "",
+    phone: "",
+    location: "",
+    status: "Active",
+    since: "",
+    totalSessions: "0",
+    avgRating: "0.0",
+    activeStudents: "0",
+    allTimeEarnings: "$0",
+    streetAddress: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    backgroundCheck: "Verified",
+    dateOfBirth: "",
+    gender: "",
+    bio: "",
+    schoolDistrict: "",
+    education: "",
+    workExperience: "",
+    subjectsAndGrades: "",
+    rates: "",
+    preferences: "",
+    locationPreference: "",
+  }));
   return <TutorProfilePage initialProfile={profile} />;
 }

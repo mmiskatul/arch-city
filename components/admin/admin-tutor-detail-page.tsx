@@ -12,9 +12,9 @@ import { ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
 type TutorAction = "suspend" | "unsuspend";
 
-function tutorStatusClassName(status: "Approved" | "Pending" | "Suspended") {
+function tutorStatusClassName(status: "Approved" | "Unverified" | "Suspended") {
   if (status === "Approved") return "bg-[#ebf7ef] text-[#239157]";
-  if (status === "Pending") return "bg-[#fff6de] text-[#9c7a1e]";
+  if (status === "Unverified") return "bg-[#fff6de] text-[#9c7a1e]";
   return "bg-[#ffecef] text-[#d94a62]";
 }
 
