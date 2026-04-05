@@ -29,15 +29,8 @@ function wait(ms: number) {
   });
 }
 
-function getChangePasswordEndpoints(scope: SettingsScope) {
-  const scopedPrefix =
-    scope === "student"
-      ? "/student/settings"
-      : scope === "parent"
-        ? "/parent/settings"
-        : "/tutor/settings";
-
-  return [`${scopedPrefix}/change-password`, "/settings/change-password"];
+function getChangePasswordEndpoints() {
+  return ["/settings/change-password"];
 }
 
 async function postWithEndpointFallback({
@@ -55,13 +48,12 @@ async function postWithEndpointFallback({
   return browserApiRequestWithFallback({
     urls: endpoints.map((endpoint) => `${baseUrl}${endpoint}`),
     method: "POST",
-      data: body,
-    });
-  }
+    data: body,
+  });
+}
 
 export function ChangePasswordPanel({
   confirmPlaceholder = "Re-enter new password",
-  scope = "student",
 }: ChangePasswordPanelProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -116,7 +108,7 @@ export function ChangePasswordPanel({
 
     try {
       const data = await postWithEndpointFallback({
-        endpoints: getChangePasswordEndpoints(scope),
+        endpoints: getChangePasswordEndpoints(),
         body: {
           current_password: currentPassword,
           new_password: newPassword,

@@ -18,11 +18,42 @@ export function readBrowserCookie(name: string) {
 }
 
 function getStatusFromError(error: unknown) {
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === "number") {
+      return status;
+    }
+  }
+
   if (axios.isAxiosError(error)) {
     return error.response?.status ?? 500;
   }
 
   return 500;
+}
+
+function getMessageFromError(error: unknown) {
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message.trim();
+    }
+  }
+
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    if (typeof data === "string" && data.trim()) {
+      return data.trim();
+    }
+    if (typeof data === "object" && data !== null) {
+      const detail = (data as { detail?: unknown; message?: unknown }).detail ?? (data as { message?: unknown }).message;
+      if (typeof detail === "string" && detail.trim()) {
+        return detail.trim();
+      }
+    }
+  }
+
+  return "";
 }
 
 function setBrowserCookie(name: string, value: string, maxAgeSeconds: number) {
@@ -132,6 +163,7 @@ export async function browserApiRequest<TResponse = unknown, TData = unknown>({
     return response.data;
   } catch (error) {
     const status = getStatusFromError(error);
+    const message = getMessageFromError(error);
     if (status === 401 && includeAuth && typeof window !== "undefined") {
       const refreshed = await refreshBrowserSession();
       if (refreshed) {
@@ -148,7 +180,9 @@ export async function browserApiRequest<TResponse = unknown, TData = unknown>({
         return retryResponse.data;
       }
     }
-    throw new Error(`API failed (${status}).`);
+    const apiError = new Error(message ? `${message}` : `API failed (${status}).`) as Error & { status?: number };
+    apiError.status = status;
+    throw apiError;
   }
 }
 
