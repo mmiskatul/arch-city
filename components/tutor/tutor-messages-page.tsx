@@ -166,6 +166,7 @@ export function TutorMessagesPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const messagesPaneRef = useRef<HTMLDivElement | null>(null);
   const sortedThreads = useMemo(() => sortThreadsByRecent(threads, fallbackOrder), [fallbackOrder, threads]);
@@ -182,6 +183,10 @@ export function TutorMessagesPage() {
     senderInitials: activeThread?.tutor_initials || "TU",
     counterpartInitials: activeThread?.student_initials || "ST",
   });
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   useEffect(() => {
     const pane = messagesPaneRef.current;
@@ -297,6 +302,8 @@ export function TutorMessagesPage() {
   );
 
   const activeThreadLabel = activeThread ? formatSessionMeta(activeThread) : "No active thread";
+  const showLoadingMessages =
+    isHydrated && (loadingMessages || threadMessages.loading) && threadMessages.messages.length === 0;
 
   const clearAttachment = () => {
     setAttachment(null);
@@ -417,7 +424,7 @@ export function TutorMessagesPage() {
                 ref={messagesPaneRef}
                 className="max-h-[calc(100vh-340px)] space-y-8 overflow-y-auto bg-[#fcfcfd] px-4 py-6"
               >
-                {loadingMessages || threadMessages.loading ? (
+                {showLoadingMessages ? (
                   <p className="text-[13px] text-[#6b7280]">Loading messages...</p>
                 ) : null}
                 {threadMessages.error ? (

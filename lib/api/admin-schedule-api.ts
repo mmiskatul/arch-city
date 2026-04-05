@@ -5,7 +5,10 @@ import type {
 } from "@/lib/admin/schedules-data";
 
 export type AdminScheduleApiRow = {
-  booking_id: string;
+  session_id?: string;
+  booking_id?: string;
+  schedule_id?: string;
+  checkout_id?: string;
   student_name: string;
   tutor_name: string;
   subject: string;
@@ -193,7 +196,7 @@ async function request<T>(path: string): Promise<T> {
 export async function fetchAdminScheduleRows(): Promise<AdminScheduleRow[]> {
   const data = await request<AdminSchedulesListResponse>("/api/admin/schedules");
   return (data.items || []).map((row) => ({
-    sessionId: row.booking_id,
+    sessionId: row.session_id || row.booking_id || row.schedule_id || row.checkout_id || "",
     studentInitials: row.student_initials || "",
     studentInitialsClassName: row.student_initials_class_name || "bg-[#f1f1f1] text-[#6b7280]",
     student: row.student_name,

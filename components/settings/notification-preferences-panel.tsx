@@ -22,14 +22,7 @@ type NotificationPreferencesResponse = {
 };
 
 function getNotificationPreferenceEndpoints(scope: SettingsScope) {
-  const scopedPrefix =
-    scope === "student"
-      ? "/student/settings"
-      : scope === "parent"
-        ? "/parent/settings"
-        : "/tutor/settings";
-
-  return [`${scopedPrefix}/notification-preferences`, "/settings/notification-preferences"];
+  return ["/settings/notification-preferences"];
 }
 
 function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {

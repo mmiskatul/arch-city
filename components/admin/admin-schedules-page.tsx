@@ -312,7 +312,7 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
                     key={`${row.sessionId || "session"}-${safePage}-${index}`}
                     className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563]"
                   >
-                    <span className="font-semibold text-[#9ca3af]">#{row.sessionId}</span>
+                    <span className="font-semibold text-[#9ca3af]">#{row.sessionId || "N/A"}</span>
 
                     <div className="flex items-center gap-2.5">
                       <span
@@ -344,12 +344,18 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
                     </div>
                     <span className="font-semibold text-[#374151]">{row.fee}</span>
                     <div>
-                      <Link
-                        href={`${ADMIN_SCHEDULES_ROUTE}/${row.sessionId}`}
-                        className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
-                      >
-                        View
-                      </Link>
+                      {row.sessionId ? (
+                        <Link
+                          href={`${ADMIN_SCHEDULES_ROUTE}/${encodeURIComponent(row.sessionId)}`}
+                          className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
+                        >
+                          View
+                        </Link>
+                      ) : (
+                        <span className="inline-flex h-7 items-center rounded-lg border border-dashed border-[#e5e7eb] bg-white px-3 text-[12px] font-semibold text-[#9ca3af]">
+                          View
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
