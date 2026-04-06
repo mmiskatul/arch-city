@@ -23,6 +23,7 @@ type TutorsApiItem = {
   hourly_rate: string;
   earned_mtd: string;
   status: TutorApiStatus;
+  application_status?: "not_submitted" | "pending" | "approved" | "rejected";
   application_id?: string | null;
 };
 
@@ -77,6 +78,8 @@ function toUiStatus(status: TutorApiStatus): AdminTutorStatus {
 }
 
 function toUiTutor(item: TutorsApiItem, index: number): AdminTutorRow {
+  const applicationStatus = item.application_status ?? (item.application_id ? "pending" : "not_submitted");
+
   return {
     id: item.tutor_id,
     initials: initialsFromName(item.name),
@@ -89,6 +92,7 @@ function toUiTutor(item: TutorsApiItem, index: number): AdminTutorRow {
     hourlyRate: item.hourly_rate || "-",
     earnedMtd: item.earned_mtd || "$0",
     status: toUiStatus(item.status),
+    applicationStatus,
     applicationId: item.application_id || undefined,
   };
 }
@@ -289,25 +293,16 @@ export function AdminTutorsPage() {
                           {tutor.status}
                         </span>
                       </div>
-                      <div>
-                        {tutor.status === "Unverified" ? (
-                          <Link
-                            href={
-                              tutor.applicationId
-                                ? `${ADMIN_TUTOR_APPLICATIONS_ROUTE}/${tutor.applicationId}`
-                                : ADMIN_TUTOR_APPLICATIONS_ROUTE
-                            }
-                            className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
-                          >
-                            Review
-                          </Link>
-                        ) : (
+                      <div className="flex items-center justify-end">
+                        {tutor.status === "Approved" ? (
                           <Link
                             href={`${ADMIN_TUTORS_ROUTE}/${encodeURIComponent(tutor.id)}`}
                             className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
                           >
                             View
                           </Link>
+                        ) : (
+                          <span className="text-[12px] text-[#9ca3af]">-</span>
                         )}
                       </div>
                     </div>

@@ -9,7 +9,7 @@ export type TutorDashboardSession = {
   type: "Virtual" | "In-Person";
   rate: string;
 };
-export type TutorApplicationStatus = "pending" | "approved";
+export type TutorApplicationStatus = "not_submitted" | "pending" | "approved" | "rejected";
 
 export const tutorDashboardSessions: TutorDashboardSession[] = [
   {
@@ -71,4 +71,4 @@ export const tutorDashboardSessions: TutorDashboardSession[] = [
 
 export const tutorApplicationStatus: TutorApplicationStatus = "pending";
 export const tutorPendingBanner =
-  "Your application is in pending, admin will review the document that you send";
+  "Your application is pending review. Admin will review the documents you submitted.";

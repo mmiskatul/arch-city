@@ -61,7 +61,7 @@ function statusClass(status: TutorEarningRow["status"]) {
 }
 
 export function TutorEarningsPage() {
-  const { isNotApproved: isPending } = useTutorApplicationStatus();
+  const { isBlocked: isPending } = useTutorApplicationStatus();
 
   const summaryCards: SummaryCard[] = isPending
     ? [

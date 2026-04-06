@@ -69,7 +69,7 @@ export function TutorSchedulePage() {
   const [sessions, setSessions] = useState<TutorScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const { isNotApproved: isPending } = useTutorApplicationStatus();
+  const { isBlocked: isPending } = useTutorApplicationStatus();
 
   useEffect(() => {
     let mounted = true;

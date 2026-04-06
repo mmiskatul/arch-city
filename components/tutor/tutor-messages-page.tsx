@@ -124,7 +124,7 @@ function formatAttachmentSize(bytes: number) {
 
 export function TutorMessagesPage() {
   const { tokenPresent } = useDashboardAuth();
-  const { isNotApproved: isPending } = useTutorApplicationStatus();
+  const { isBlocked: isPending } = useTutorApplicationStatus();
   const fallbackOrder = useMemo(
     () =>
       Object.fromEntries(

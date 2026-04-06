@@ -12,6 +12,7 @@ type TutorDetailApiResponse = {
     name: string;
     email: string;
     status: TutorApiStatus;
+    application_status: "not_submitted" | "pending" | "approved" | "rejected";
     application_id?: string | null;
     rating: string;
     total_sessions: number;
@@ -111,6 +112,7 @@ function toUiModel(payload: TutorDetailApiResponse): AdminTutorDetail {
     name: item.name,
     email: item.email,
     status: toUiStatus(item.status),
+    applicationStatus: item.application_status,
     applicationId: item.application_id || undefined,
     rating: item.rating,
     totalSessions: item.total_sessions,

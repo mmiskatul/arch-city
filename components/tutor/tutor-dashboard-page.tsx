@@ -80,15 +80,22 @@ export function TutorDashboardPage() {
   const [scheduleItems, setScheduleItems] = useState<TutorScheduleItem[]>([]);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [scheduleError, setScheduleError] = useState("");
-  const { status, isApproved } = useTutorApplicationStatus();
+  const { status, isApproved, isPendingApplication, isNotSubmitted } = useTutorApplicationStatus();
   const showApplicationState = !isApproved;
   const showSubmittedMessage = searchParams.get("application") === "submitted";
   const applicationLabel =
-    status === "pending"
+    isPendingApplication
       ? "Your application is pending review."
       : status === "rejected"
         ? "Your application was not approved yet."
-      : "Apply as a tutor to unlock your dashboard.";
+        : "Apply as a tutor to unlock your dashboard.";
+  const bannerMessage = isNotSubmitted
+    ? applicationLabel
+    : isPendingApplication
+      ? tutorPendingBanner
+      : status === "rejected"
+        ? "Your tutor application was rejected. Please update your profile and reapply."
+        : "Spring bookings are picking up! Make sure your availability is up to date to receive new session requests.";
 
   useEffect(() => {
     let active = true;
@@ -372,11 +379,7 @@ export function TutorDashboardPage() {
         ) : null}
 
         <div className="mt-4 rounded-lg bg-[#ffcc1d] px-4 py-3 text-[13px] font-medium text-[#7a5200]">
-          {showApplicationState
-            ? status === "not_submitted"
-              ? applicationLabel
-              : tutorPendingBanner
-            : "Spring bookings are picking up! Make sure your availability is up to date to receive new session requests."}
+          {showApplicationState ? bannerMessage : "Spring bookings are picking up! Make sure your availability is up to date to receive new session requests."}
         </div>
 
         {showApplicationState ? null : (

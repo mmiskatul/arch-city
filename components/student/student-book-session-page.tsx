@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FiAlertTriangle } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
-import { createStudentSessionCheckout } from "@/lib/api/student-checkout-api";
-import { STUDENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
+import { confirmStudentSessionCheckout, createStudentSessionCheckout } from "@/lib/api/student-checkout-api";
+import { STUDENT_FIND_TUTORS_ROUTE, STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
 import type { StudentTutor } from "@/lib/student/tutors-data";
 
 type SessionType = "Virtual" | "In-Person";
@@ -152,11 +152,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
   );
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [paymentEmail, setPaymentEmail] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
   const [cardName, setCardName] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  const [cardCountry, setCardCountry] = useState("Bangladesh");
   const [savePaymentInfo, setSavePaymentInfo] = useState(false);
   const [meetingLocation, setMeetingLocation] = useState(tutor.inPersonAvailable ? tutor.location : "");
   const [sessionNotes, setSessionNotes] = useState("");
@@ -164,6 +160,8 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [stripeConfirming, setStripeConfirming] = useState(false);
+  const [stripeReturnHandled, setStripeReturnHandled] = useState(false);
 
   const stepParam = searchParams.get("step") || "date-time";
   const activeStep: BookingStep =
@@ -172,6 +170,8 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
   const selectedGroup = availabilityGroups.find((group) => group.value === selectedDate) ?? availabilityGroups[0];
   const availableTimes = selectedGroup?.slots ?? [];
   const selectedDateLabel = selectedGroup?.label ?? selectedDate;
+  const stripeCheckoutId = searchParams.get("checkout_id") || "";
+  const stripeSessionId = searchParams.get("stripe_session_id") || "";
 
   const chargedToday = 5;
   const sessionRate = useMemo(() => (duration === 45 ? tutor.price45 : tutor.price60), [duration, tutor.price45, tutor.price60]);
@@ -212,18 +212,52 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
     setCheckoutSubmitting(false);
   }
 
+  useEffect(() => {
+    if (!stripeCheckoutId || !stripeSessionId || stripeConfirming || checkoutSuccess || stripeReturnHandled) {
+      return;
+    }
+
+    let active = true;
+    setStripeReturnHandled(true);
+    setStripeConfirming(true);
+    setCheckoutError(null);
+    setCheckoutStatus("Confirming Stripe payment...");
+
+    confirmStudentSessionCheckout({ checkoutId: stripeCheckoutId, stripeSessionId })
+      .then((result) => {
+        if (!active) return;
+        setCheckoutStatus(result.message);
+        setCheckoutSuccess(true);
+        window.setTimeout(() => {
+          router.push(STUDENT_SCHEDULE_ROUTE);
+        }, 1200);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setCheckoutError(error instanceof Error ? error.message : "Failed to confirm Stripe payment.");
+      })
+      .finally(() => {
+        if (active) {
+          setStripeConfirming(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [checkoutSuccess, router, stripeCheckoutId, stripeConfirming, stripeReturnHandled, stripeSessionId]);
+
   async function handleSessionCheckout() {
     setCheckoutError(null);
     setCheckoutStatus(null);
     setCheckoutSubmitting(true);
 
     try {
+      const currentUrl = new URL(window.location.href);
+      const baseUrl = `${currentUrl.origin}${currentUrl.pathname}`;
       const result = await createStudentSessionCheckout({
         paymentEmail,
         cardholderName: cardName,
-        cardNumber,
-        cardExpiry,
-        cardCountry,
         saveInformation: savePaymentInfo,
         tutorId: tutor.id,
         tutorName: tutor.name,
@@ -238,18 +272,13 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
         currency: "USD",
         meetingLocation: sessionType === "In-Person" ? meetingLocation.trim() || tutor.location : "",
         sessionNotes: sessionNotes.trim(),
+        successUrl: `${baseUrl}?step=confirm`,
+        cancelUrl: `${baseUrl}${currentUrl.search}`,
       });
 
-      setCheckoutStatus(result.message);
-      setCheckoutSuccess(true);
-      setTimeout(() => {
-        setIsReviewOpen(false);
-        setCheckoutSuccess(false);
-        setCheckoutStatus(null);
-        router.push(STUDENT_FIND_TUTORS_ROUTE);
-      }, 1200);
+      window.location.href = result.checkout_url;
     } catch (error) {
-      setCheckoutError(error instanceof Error ? error.message : "Failed to record payment.");
+      setCheckoutError(error instanceof Error ? error.message : "Failed to start Stripe checkout.");
     } finally {
       setCheckoutSubmitting(false);
     }
@@ -732,12 +761,9 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
               </div>
 
               <div className="bg-[#fbfbfc] px-3 py-3 lg:px-4 lg:py-4">
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-full items-center justify-center rounded-[4px] bg-[#00d66b] px-4 text-[12px] font-semibold text-[#13211d] shadow-[0_2px_0_rgba(0,0,0,0.06)]"
-                >
-                  Pay with <span className="ml-1 font-bold">link</span>
-                </button>
+                <div className="inline-flex h-9 w-full items-center justify-center rounded-[4px] bg-[#00d66b] px-4 text-[12px] font-semibold text-[#13211d] shadow-[0_2px_0_rgba(0,0,0,0.06)]">
+                  Stripe Checkout
+                </div>
 
                 <div className="mt-3 flex items-center gap-3">
                   <div className="h-px flex-1 bg-[#e5e7eb]" />
@@ -765,72 +791,19 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                   <h5 className="text-[13px] font-semibold text-[#333333]">Payment method</h5>
                   <div className="mt-3 rounded-[8px] border border-[#e5e7eb] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                     <div className="flex items-center gap-3 pb-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-sm bg-[#111827] text-[10px] font-semibold text-white">?</span>
-                        <p className="text-[12px] font-semibold text-[#333333]">Card</p>
+                      <span className="flex h-6 w-6 items-center justify-center rounded-sm bg-[#111827] text-[10px] font-semibold text-white">S</span>
+                      <p className="text-[12px] font-semibold text-[#333333]">Stripe Checkout</p>
                     </div>
-
-                    <div className="space-y-2">
-                      <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
-                        <span>Card information</span>
-                        <div className="rounded-[8px] border border-[#e5e7eb] bg-white px-3 py-2 shadow-[0_1px_1px_rgba(15,23,42,0.02)] transition focus-within:border-[#d61c3f] focus-within:ring-2 focus-within:ring-[#d61c3f]/10">
-                          <input
-                            value={cardNumber}
-                            onChange={(event) => setCardNumber(event.target.value)}
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="1234 1234 1234 1234"
-                            className="w-full bg-transparent text-[12px] outline-none placeholder:text-[#a1a1aa]"
-                          />
-                          <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
-                          <span className="rounded-sm bg-[#eef2ff] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#4338ca]">Visa</span>
-                            <span className="rounded-sm bg-[#fff2e8] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#c2410c]">Mastercard</span>
-                          </div>
-                        </div>
-                      </label>
-
-                      <div className="grid gap-2.5 sm:grid-cols-[1fr_92px]">
-                        <input
-                          value={cardExpiry}
-                          onChange={(event) => setCardExpiry(event.target.value)}
-                          type="text"
-                          placeholder="MM / YY"
-                          className="h-9 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[12px] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
-                        />
-                        <input
-                          value={cardCvc}
-                          onChange={(event) => setCardCvc(event.target.value)}
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="CVC"
-                          className="h-9 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[12px] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
-                        />
-                      </div>
-
-                      <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
-                        <span>Cardholder name</span>
-                        <input
-                          value={cardName}
-                          onChange={(event) => setCardName(event.target.value)}
-                          type="text"
-                          placeholder="Full name on card"
-                          className="h-9 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[12px] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
-                        />
-                      </label>
-
-                      <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
-                        <span>Country or region</span>
-                        <select
-                          value={cardCountry}
-                          onChange={(event) => setCardCountry(event.target.value)}
-                          className="h-10 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[13px] outline-none transition focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
-                        >
-                          <option>Bangladesh</option>
-                          <option>United States</option>
-                          <option>United Kingdom</option>
-                          <option>Canada</option>
-                        </select>
-                      </label>
-                    </div>
+                    <label className="block space-y-2 text-[11px] font-medium text-[#555555]">
+                      <span>Cardholder name</span>
+                      <input
+                        value={cardName}
+                        onChange={(event) => setCardName(event.target.value)}
+                        type="text"
+                        placeholder="Full name on card"
+                        className="h-9 w-full rounded-[8px] border border-[#e5e7eb] bg-white px-3 text-[12px] outline-none transition placeholder:text-[#a1a1aa] focus:border-[#d61c3f] focus:ring-2 focus:ring-[#d61c3f]/10"
+                      />
+                    </label>
                   </div>
                 </div>
 
@@ -850,7 +823,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                 </div>
 
                 <div className="mt-3 text-[10px] text-[#6b7280]">
-                  <p className="font-medium">Purchase Session</p>
+                  <p className="font-medium">You will be redirected to Stripe Checkout to complete payment securely.</p>
                 </div>
 
                 <button
@@ -859,7 +832,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                   disabled={checkoutSubmitting}
                   className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-[8px] bg-[#d61c3f] px-5 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(214,28,63,0.24)] transition hover:bg-[#bf1736] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {checkoutSubmitting ? "Processing..." : "Subscribe"}
+                  {checkoutSubmitting ? "Redirecting..." : "Continue to Stripe"}
                 </button>
 
                 {checkoutError ? (
@@ -871,10 +844,9 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                 ) : null}
 
                 <p className="mt-2 text-[9px] leading-4 text-[#6b7280]">
-                  By paying, you authorize Arch City Tutors to record this session checkout in USD at the displayed rate.
+                  Stripe will handle the secure card entry and payment authorization.
                 </p>
               </div>
-                </div>
               </div>
 
               {checkoutSuccess ? (
@@ -894,6 +866,7 @@ export function StudentBookSessionPage({ tutor }: { tutor: StudentTutor }) {
                 </div>
               ) : null}
             </div>
+          </div>
       ) : null}
     </StudentShell>
   );

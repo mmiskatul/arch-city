@@ -1,4 +1,5 @@
 export type AdminTutorStatus = "Approved" | "Unverified" | "Suspended";
+export type TutorApplicationStatus = "not_submitted" | "pending" | "approved" | "rejected";
 
 export type AdminTutorRow = {
   id: string;
@@ -12,6 +13,7 @@ export type AdminTutorRow = {
   hourlyRate: string;
   earnedMtd: string | null;
   status: AdminTutorStatus;
+  applicationStatus: TutorApplicationStatus;
   applicationId?: string;
 };
 
@@ -59,6 +61,7 @@ export type AdminTutorDetail = {
   name: string;
   email: string;
   status: AdminTutorStatus;
+  applicationStatus: TutorApplicationStatus;
   applicationId?: string;
   rating: string;
   totalSessions: number;
@@ -103,6 +106,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$45/hr",
     earnedMtd: "$2,340",
     status: "Approved",
+    applicationStatus: "approved",
   },
   {
     id: "TU-2002",
@@ -116,6 +120,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$40/hr",
     earnedMtd: "$1,950",
     status: "Approved",
+    applicationStatus: "approved",
   },
   {
     id: "TU-2003",
@@ -129,6 +134,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$55/hr",
     earnedMtd: "$1,820",
     status: "Approved",
+    applicationStatus: "approved",
   },
   {
     id: "TU-2004",
@@ -142,6 +148,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$50/hr",
     earnedMtd: "$1,540",
     status: "Approved",
+    applicationStatus: "approved",
   },
   {
     id: "TU-2005",
@@ -155,6 +162,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$60/hr",
     earnedMtd: null,
     status: "Unverified",
+    applicationStatus: "pending",
     applicationId: "TA-1024",
   },
   {
@@ -169,6 +177,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$45/hr",
     earnedMtd: null,
     status: "Unverified",
+    applicationStatus: "pending",
     applicationId: "TA-1025",
   },
   {
@@ -183,6 +192,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$35/hr",
     earnedMtd: "$640",
     status: "Suspended",
+    applicationStatus: "approved",
   },
   {
     id: "TU-2008",
@@ -196,6 +206,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$42/hr",
     earnedMtd: "$1,140",
     status: "Approved",
+    applicationStatus: "approved",
   },
   {
     id: "TU-2009",
@@ -209,6 +220,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$48/hr",
     earnedMtd: null,
     status: "Unverified",
+    applicationStatus: "pending",
     applicationId: "TA-1027",
   },
   {
@@ -223,6 +235,7 @@ export const adminTutors: AdminTutorRow[] = [
     hourlyRate: "$46/hr",
     earnedMtd: "$980",
     status: "Approved",
+    applicationStatus: "approved",
   },
 ];
 
@@ -234,6 +247,7 @@ function baseTutorDetail(tutor: AdminTutorRow): AdminTutorDetail {
     name: tutor.name,
     email: tutor.email,
     status: tutor.status,
+    applicationStatus: tutor.applicationStatus,
     rating: tutor.rating === "New" ? "0.0" : tutor.rating,
     totalSessions: tutor.sessions ?? 0,
     totalSessionsDelta: "+6 this month",

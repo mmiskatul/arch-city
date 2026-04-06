@@ -27,7 +27,6 @@ import {
   requestTutorWorkExperienceWithFallback,
 } from "@/lib/api/tutor-profile-api";
 import {
-  tutorEducationEntries,
   tutorLocationEntries,
   tutorProfile,
   tutorWorkExperienceEntries,
@@ -1037,14 +1036,7 @@ export function TutorProfilePage({ initialProfile }: { initialProfile?: TutorPro
   ]);
   const [recommendedSubjects, setRecommendedSubjects] = useState<RecommendationItem[]>([]);
   const [recommendedGrades, setRecommendedGrades] = useState<RecommendationItem[]>([]);
-  const [educationEntries, setEducationEntries] = useState<TutorEducationApiItem[]>(
-    tutorEducationEntries.map((entry) => ({
-      id: entry.id,
-      title: entry.title,
-      organization: entry.organization,
-      period: entry.period,
-    })),
-  );
+  const [educationEntries, setEducationEntries] = useState<TutorEducationApiItem[]>([]);
   const [isEducationModalOpen, setIsEducationModalOpen] = useState(false);
   const [educationMode, setEducationMode] = useState<"add" | "edit">("add");
   const [editingEducationId, setEditingEducationId] = useState<string | null>(null);
