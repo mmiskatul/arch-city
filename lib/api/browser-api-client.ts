@@ -163,7 +163,7 @@ export async function browserApiRequest<TResponse = unknown, TData = unknown>({
     return response.data;
   } catch (error) {
     const status = getStatusFromError(error);
-    const message = getMessageFromError(error);
+    const message = getMessageFromError(error) || (axios.isAxiosError(error) && !error.response ? error.message : "");
     if (status === 401 && includeAuth && typeof window !== "undefined") {
       const refreshed = await refreshBrowserSession();
       if (refreshed) {
@@ -180,7 +180,7 @@ export async function browserApiRequest<TResponse = unknown, TData = unknown>({
         return retryResponse.data;
       }
     }
-    const apiError = new Error(message ? `${message}` : `API failed (${status}).`) as Error & { status?: number };
+    const apiError = new Error(message ? `${message}` : status === 0 ? "Network Error" : `API failed (${status}).`) as Error & { status?: number };
     apiError.status = status;
     throw apiError;
   }

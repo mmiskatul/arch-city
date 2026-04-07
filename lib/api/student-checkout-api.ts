@@ -1,4 +1,6 @@
-type StudentSessionCheckoutPayload = {
+import { browserApiRequest, resolveBrowserApiBaseUrl } from "@/lib/api/browser-api-client";
+
+type StudentSessionBookingPayload = {
   paymentEmail: string;
   cardholderName: string;
   saveInformation: boolean;
@@ -15,8 +17,6 @@ type StudentSessionCheckoutPayload = {
   currency: string;
   meetingLocation?: string;
   sessionNotes?: string;
-  successUrl: string;
-  cancelUrl: string;
 };
 
 type StudentMembershipCheckoutPayload = {
@@ -27,8 +27,9 @@ type StudentMembershipCheckoutPayload = {
   billingInterval: string;
   amount: string;
   currency: string;
-  successUrl: string;
-  cancelUrl: string;
+  cardNumber: string;
+  cardExpiry: string;
+  cardCountry: string;
 };
 
 type StudentCheckoutResponse = {
@@ -42,62 +43,28 @@ type StudentCheckoutResponse = {
   amount: string;
   currency: string;
   message: string;
-};
-
-type StudentStripeCheckoutResponse = {
-  checkout_id: string;
-  checkout_type: "membership" | "session";
-  status: "pending";
-  student_email: string;
-  payment_email: string;
-  checkout_session_id: string;
-  checkout_url: string;
-  amount: string;
-  currency: string;
-  message: string;
-};
-
-type StudentStripeCheckoutConfirmPayload = {
-  checkoutId: string;
-  stripeSessionId: string;
+  created_at: string;
+  details: Record<string, string>;
 };
 
 async function submitStudentCheckout<TResponse>(path: string, payload: Record<string, unknown>): Promise<TResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  const baseUrl = resolveBrowserApiBaseUrl();
   if (!baseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
 
-  const response = await fetch(`${baseUrl}${path}`, {
+  return browserApiRequest<TResponse>({
+    url: `${baseUrl}${path}`,
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    body: JSON.stringify(payload),
+    data: payload,
+    includeAuth: true,
+    withCredentials: false,
   });
-
-  if (!response.ok) {
-    let detail = `Request failed (${response.status})`;
-    try {
-      const data = (await response.json()) as { detail?: string | { msg?: string }[] };
-      if (typeof data.detail === "string") {
-        detail = data.detail;
-      } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
-        detail = data.detail[0].msg as string;
-      }
-    } catch {
-      // keep fallback
-    }
-    throw new Error(detail);
-  }
-
-  return (await response.json()) as TResponse;
 }
 
 export async function createStudentSessionCheckout(
-  payload: StudentSessionCheckoutPayload,
-): Promise<StudentStripeCheckoutResponse> {
+  payload: StudentSessionBookingPayload,
+): Promise<StudentCheckoutResponse> {
   return submitStudentCheckout("/student/payments/session", {
     payment_email: payload.paymentEmail,
     cardholder_name: payload.cardholderName,
@@ -115,14 +82,12 @@ export async function createStudentSessionCheckout(
     currency: payload.currency,
     meeting_location: payload.meetingLocation ?? "",
     session_notes: payload.sessionNotes ?? "",
-    success_url: payload.successUrl,
-    cancel_url: payload.cancelUrl,
   });
 }
 
 export async function createStudentMembershipCheckout(
   payload: StudentMembershipCheckoutPayload,
-): Promise<StudentStripeCheckoutResponse> {
+): Promise<StudentCheckoutResponse> {
   return submitStudentCheckout("/student/payments/membership", {
     payment_email: payload.paymentEmail,
     cardholder_name: payload.cardholderName,
@@ -131,21 +96,8 @@ export async function createStudentMembershipCheckout(
     billing_interval: payload.billingInterval,
     amount: payload.amount,
     currency: payload.currency,
-    success_url: payload.successUrl,
-    cancel_url: payload.cancelUrl,
-  });
-}
-
-export async function confirmStudentSessionCheckout(payload: StudentStripeCheckoutConfirmPayload): Promise<StudentCheckoutResponse> {
-  return submitStudentCheckout("/student/payments/session/confirm", {
-    checkout_id: payload.checkoutId,
-    stripe_session_id: payload.stripeSessionId,
-  });
-}
-
-export async function confirmStudentMembershipCheckout(payload: StudentStripeCheckoutConfirmPayload): Promise<StudentCheckoutResponse> {
-  return submitStudentCheckout("/student/payments/membership/confirm", {
-    checkout_id: payload.checkoutId,
-    stripe_session_id: payload.stripeSessionId,
+    card_number: payload.cardNumber,
+    card_expiry: payload.cardExpiry,
+    card_country: payload.cardCountry,
   });
 }
