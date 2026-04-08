@@ -1,25 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-function normalizeBaseUrl(url: string) {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
-function resolveApiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return url ? normalizeBaseUrl(url) : null;
-}
+import { proxyAuthenticatedBackendRoute } from "../_common";
 
 export async function GET(request: NextRequest) {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) {
-    return NextResponse.json({ detail: "NEXT_PUBLIC_API_BASE_URL is not configured." }, { status: 500 });
-  }
-
-  const token = request.cookies.get("arch_access_token")?.value;
-  if (!token) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-  }
-
   const params = request.nextUrl.searchParams;
   const q = new URLSearchParams();
   const statusFilter = params.get("status_filter");
@@ -27,13 +10,8 @@ export async function GET(request: NextRequest) {
   if (statusFilter) q.set("status_filter", statusFilter);
   if (gradeFilter) q.set("grade_filter", gradeFilter);
 
-  const url = `${baseUrl}/admin-dashboard/students${q.toString() ? `?${q.toString()}` : ""}`;
-  const response = await fetch(url, {
+  return proxyAuthenticatedBackendRoute(request, {
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
+    backendPath: `/admin-dashboard/students${q.toString() ? `?${q.toString()}` : ""}`,
   });
-
-  const data = await response.json().catch(() => ({}));
-  return NextResponse.json(data, { status: response.status });
 }

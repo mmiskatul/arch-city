@@ -29,7 +29,7 @@ function MessageBubble({
   attachmentType,
   attachmentSize,
 }: {
-  sender: "tutor" | "student";
+  sender: "tutor" | "student" | "admin";
   avatarUrl?: string;
   initials: string;
   message: string;
@@ -39,6 +39,7 @@ function MessageBubble({
   attachmentSize?: number;
 }) {
   const isStudent = sender === "student";
+  const isAdmin = sender === "admin";
   const hasAttachment = Boolean(attachmentName);
 
   return (
@@ -46,7 +47,11 @@ function MessageBubble({
       <div className={`flex max-w-[78%] gap-3 ${isStudent ? "flex-row-reverse" : "flex-row"}`}>
         <div
           className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
-            isStudent ? "bg-[#ffe7eb] text-[#d61c3f]" : "bg-[#eef0f3] text-[#6b7280]"
+            isStudent
+              ? "bg-[#ffe7eb] text-[#d61c3f]"
+              : isAdmin
+                ? "bg-[#fff1f4] text-[#d61c3f]"
+                : "bg-[#eef0f3] text-[#6b7280]"
           }`}
         >
           {avatarUrl ? (
@@ -57,15 +62,23 @@ function MessageBubble({
         </div>
         <div className={`flex flex-col ${isStudent ? "items-end" : "items-start"}`}>
           <div
-            className={`rounded-[18px] px-4 py-3 text-[14px] leading-6 ${
-              isStudent ? "bg-[#d61c3f] text-white" : "bg-white text-[#4b5563]"
+              className={`rounded-[18px] px-4 py-3 text-[14px] leading-6 ${
+              isStudent
+                ? "bg-[#d61c3f] text-white"
+                : isAdmin
+                  ? "border border-[#f2cad3] bg-[#fff1f4] text-[#b91c1c]"
+                  : "bg-white text-[#4b5563]"
             }`}
           >
             <div className="whitespace-pre-wrap">{message}</div>
             {hasAttachment ? (
               <div
                 className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium ${
-                  isStudent ? "bg-white/15 text-white" : "bg-[#eef0f3] text-[#4b5563]"
+                  isStudent
+                    ? "bg-white/15 text-white"
+                    : isAdmin
+                      ? "bg-[#ffe2e8] text-[#b91c1c]"
+                      : "bg-[#eef0f3] text-[#4b5563]"
                 }`}
               >
                 <span>{attachmentType?.startsWith("image/") ? "Image" : "Attachment"}</span>
@@ -378,7 +391,14 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
                     key={message.id}
                     sender={message.sender}
                     avatarUrl={message.avatarUrl}
-                    initials={message.senderInitials || (message.sender === "student" ? studentInitials : tutorInitials)}
+                    initials={
+                      message.senderInitials ||
+                      (message.sender === "student"
+                        ? studentInitials
+                        : message.sender === "admin"
+                          ? "AD"
+                          : tutorInitials)
+                    }
                     message={message.message}
                     timestamp={message.timestamp}
                     attachmentName={message.attachmentName}

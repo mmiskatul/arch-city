@@ -64,7 +64,7 @@ function MessageBubble({
   attachmentType,
   attachmentSize,
 }: {
-  sender: "tutor" | "student";
+  sender: "tutor" | "student" | "admin";
   message: string;
   timestamp: string;
   attachmentName?: string;
@@ -72,25 +72,28 @@ function MessageBubble({
   attachmentSize?: number;
 }) {
   const isStudent = sender === "student";
+  const isAdmin = sender === "admin";
   const hasAttachment = Boolean(attachmentName);
 
   return (
     <div className={`flex ${isStudent ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[78%] ${isStudent ? "items-end" : "items-start"} flex flex-col`}>
         <div
-          className={`rounded-[20px] px-5 py-3 text-[14px] leading-7 ${
-            isStudent
-              ? "bg-[#d61c3f] text-white shadow-[0_8px_24px_rgba(214,28,63,0.18)]"
-              : "max-w-[620px] bg-transparent px-0 py-0 text-[#20242b]"
-          }`}
-        >
-          <div className="whitespace-pre-wrap">{message}</div>
-          {hasAttachment ? (
-            <div
-              className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium ${
-                isStudent ? "bg-white/15 text-white" : "bg-[#eef0f3] text-[#4b5563]"
-              }`}
-            >
+            className={`rounded-[20px] px-5 py-3 text-[14px] leading-7 ${
+              isStudent
+                ? "bg-[#d61c3f] text-white shadow-[0_8px_24px_rgba(214,28,63,0.18)]"
+                : isAdmin
+                  ? "max-w-[620px] border border-[#f2cad3] bg-[#fff1f4] px-5 py-3 text-[#b91c1c]"
+                  : "max-w-[620px] bg-transparent px-0 py-0 text-[#20242b]"
+            }`}
+          >
+            <div className="whitespace-pre-wrap">{message}</div>
+            {hasAttachment ? (
+              <div
+                className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium ${
+                  isStudent ? "bg-white/15 text-white" : "bg-[#eef0f3] text-[#4b5563]"
+                }`}
+              >
               <span>{attachmentType?.startsWith("image/") ? "Image" : "Attachment"}</span>
               <span className="max-w-[180px] truncate">{attachmentName}</span>
               {typeof attachmentSize === "number" && attachmentSize > 0 ? (
@@ -153,6 +156,7 @@ export function StudentMessagesPage() {
       updated_at: "",
       unread_count_student: thread.unreadCount,
       unread_count_tutor: 0,
+      unread_count_admin: 0,
       })),
       fallbackOrder,
     ),
@@ -242,6 +246,7 @@ export function StudentMessagesPage() {
             updated_at: "",
             unread_count_student: thread.unreadCount,
             unread_count_tutor: 0,
+            unread_count_admin: 0,
             })),
             fallbackOrder,
           ));

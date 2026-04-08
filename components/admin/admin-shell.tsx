@@ -29,6 +29,10 @@ import {
   ADMIN_TUTORS_ROUTE,
 } from "@/lib/routes";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
+import { getAdminMessageCount } from "@/lib/api/admin-messages-api";
+import { getNotificationCount } from "@/lib/api/notifications-api";
+import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
+import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 
 type NavItem = {
@@ -49,7 +53,7 @@ const menuItems: NavItem[] = [
   { label: "Tutors", href: ADMIN_TUTORS_ROUTE, icon: FiUser },
   { label: "Schedules", href: ADMIN_SCHEDULES_ROUTE, icon: FiCalendar },
   { label: "Finances", href: ADMIN_FINANCES_ROUTE, icon: FiDollarSign },
-  { label: "Messages", href: ADMIN_MESSAGES_ROUTE, icon: FiMessageSquare, badge: "5" },
+  { label: "Messages", href: ADMIN_MESSAGES_ROUTE, icon: FiMessageSquare },
   { label: "Notifications", href: ADMIN_NOTIFICATIONS_ROUTE, icon: FiBell, badge: "3" },
   { label: "Settings", href: ADMIN_SETTINGS_ROUTE, icon: FiSettings },
 ];
@@ -94,11 +98,78 @@ function redirectToLogin() {
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { tokenPresent, isAuthenticated } = useDashboardAuth();
+  const [messageBadge, setMessageBadge] = useState("0");
+  const [notificationsBadge, setNotificationsBadge] = useState("0");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const topUserMenuRef = useRef<HTMLDivElement | null>(null);
+  useNotificationsSocket(tokenPresent && isAuthenticated);
+
+  useEffect(() => {
+    if (!tokenPresent || !isAuthenticated) {
+      setMessageBadge("0");
+      setNotificationsBadge("0");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadBadge() {
+      try {
+        const payload = await getAdminMessageCount();
+        if (cancelled) return;
+
+        setMessageBadge(String(payload.unread_count || 0));
+      } catch {
+        if (!cancelled) {
+          setMessageBadge("0");
+        }
+      }
+    }
+
+    async function loadNotificationsBadge() {
+      try {
+        const payload = await getNotificationCount("admin");
+        setNotificationsBadge(String(payload.unread_count || 0));
+      } catch {
+        setNotificationsBadge("0");
+      }
+    }
+
+    void loadBadge();
+    void loadNotificationsBadge();
+
+    const refresh = () => {
+      void loadBadge();
+    };
+    const refreshNotifications = () => {
+      void loadNotificationsBadge();
+    };
+
+    window.addEventListener("arch-messages-updated", refresh);
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshNotifications);
+    window.addEventListener("focus", refresh);
+
+    const intervalId = window.setInterval(loadBadge, 30000);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("arch-messages-updated", refresh);
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshNotifications);
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(intervalId);
+    };
+  }, [isAuthenticated, tokenPresent]);
+
+  const sidebarItems = menuItems.map((item) =>
+    item.href === ADMIN_MESSAGES_ROUTE ? { ...item, badge: messageBadge !== "0" ? messageBadge : undefined } : item,
+  ).map((item) =>
+    item.href === ADMIN_NOTIFICATIONS_ROUTE
+      ? { ...item, badge: notificationsBadge !== "0" ? notificationsBadge : undefined }
+      : item,
+  );
 
   useEffect(() => {
     function onMouseDown(event: MouseEvent) {
@@ -171,7 +242,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             style={hiddenScrollbarStyle}
           >
             <nav className="space-y-1">
-              {menuItems.map((item) => (
+              {sidebarItems.map((item) => (
                 <SidebarLink
                   key={item.label}
                   item={item}

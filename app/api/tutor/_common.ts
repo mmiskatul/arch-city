@@ -3,4 +3,4 @@ export {
   proxyAuthenticatedBackendRoute,
   resolveApiBaseUrl,
   unauthorizedResponse,
-} from "../_common";
+} from "../_auth";

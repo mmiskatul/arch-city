@@ -24,6 +24,7 @@ import {
   TUTOR_DASHBOARD_ROUTE,
   TUTOR_EARNINGS_ROUTE,
   TUTOR_MESSAGES_ROUTE,
+  TUTOR_NOTIFICATIONS_ROUTE,
   TUTOR_PROFILE_ROUTE,
   TUTOR_SCHEDULE_ROUTE,
   TUTOR_SETTINGS_ROUTE,
@@ -31,6 +32,9 @@ import {
 import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { getTutorMessageCount } from "@/lib/api/session-messages-api";
+import { getNotificationCount } from "@/lib/api/notifications-api";
+import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
+import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 
 type NavItem = {
   label: string;
@@ -49,6 +53,7 @@ const menuItems: NavItem[] = [
   { label: "My Schedule", href: TUTOR_SCHEDULE_ROUTE, icon: FiCalendar },
   { label: "Availability", href: TUTOR_AVAILABILITY_ROUTE, icon: FiClock },
   { label: "Messages", href: TUTOR_MESSAGES_ROUTE, icon: FiMessageSquare },
+  { label: "Notifications", href: TUTOR_NOTIFICATIONS_ROUTE, icon: FiBell },
   { label: "Earnings", href: TUTOR_EARNINGS_ROUTE, icon: FiDollarSign },
   { label: "Profile", href: TUTOR_PROFILE_ROUTE, icon: FiUser },
   { label: "Settings", href: TUTOR_SETTINGS_ROUTE, icon: FiSettings },
@@ -111,6 +116,7 @@ export function TutorShell({
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [messagesUnreadCount, setMessagesUnreadCount] = useState(0);
+  const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
     initials: "TU",
     name: "Tutor",
@@ -118,6 +124,7 @@ export function TutorShell({
   });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const topUserMenuRef = useRef<HTMLDivElement | null>(null);
+  useNotificationsSocket(tokenPresent && isAuthenticated);
 
   useEffect(() => {
     async function loadMessagesCount() {
@@ -129,6 +136,15 @@ export function TutorShell({
         setMessagesUnreadCount(data.unread_count || 0);
       } catch {
         setMessagesUnreadCount(0);
+      }
+    }
+
+    async function loadNotificationsCount() {
+      try {
+        const payload = await getNotificationCount("tutor");
+        setNotificationsUnreadCount(payload.unread_count || 0);
+      } catch {
+        setNotificationsUnreadCount(0);
       }
     }
 
@@ -177,12 +193,15 @@ export function TutorShell({
 
     loadProfile();
     loadMessagesCount();
+    void loadNotificationsCount();
     window.addEventListener("arch-profile-updated", onProfileUpdated as EventListener);
     window.addEventListener("arch-messages-updated", loadMessagesCount);
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, loadNotificationsCount);
 
     return () => {
       window.removeEventListener("arch-profile-updated", onProfileUpdated as EventListener);
       window.removeEventListener("arch-messages-updated", loadMessagesCount);
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, loadNotificationsCount);
     };
   }, [tokenPresent]);
   useEffect(() => {
@@ -252,6 +271,14 @@ export function TutorShell({
               ? String(resolvedMessagesUnreadCount)
               : undefined,
         }
+      : item.href === TUTOR_NOTIFICATIONS_ROUTE
+        ? {
+            ...item,
+            badge:
+              notificationsUnreadCount > 0
+                ? String(notificationsUnreadCount)
+                : undefined,
+          }
       : item,
   );
 

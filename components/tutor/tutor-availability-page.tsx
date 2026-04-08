@@ -5,7 +5,11 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { io, type Socket } from "socket.io-client";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
-import { readBrowserCookie, resolveBrowserApiBaseUrl } from "@/lib/api/browser-api-client";
+import {
+  readBrowserCookie,
+  refreshBrowserSession,
+  resolveBrowserApiBaseUrl,
+} from "@/lib/api/browser-api-client";
 import {
   addTutorAvailabilitySlot,
   clearTutorAvailabilitySlots,
@@ -365,33 +369,57 @@ export function TutorAvailabilityPage() {
   }, [loadAvailability]);
 
   useEffect(() => {
-    const token = readBrowserCookie("arch_access_token");
-    const apiBaseUrl = resolveBrowserApiBaseUrl();
-    const socketBaseUrl = apiBaseUrl ? apiBaseUrl.replace(/\/api\/v1\/?$/, "") : null;
+    let active = true;
 
-    if (!token || !socketBaseUrl) {
-      return;
+    async function connectSocket() {
+      const apiBaseUrl = resolveBrowserApiBaseUrl();
+      const socketBaseUrl = apiBaseUrl ? apiBaseUrl.replace(/\/api\/v1\/?$/, "") : null;
+
+      if (!socketBaseUrl) {
+        return;
+      }
+
+      if (!readBrowserCookie("arch_access_token")) {
+        const refreshed = await refreshBrowserSession();
+        if (!refreshed || !active) {
+          return;
+        }
+      }
+
+      const token = readBrowserCookie("arch_access_token");
+      if (!token || !active) {
+        return;
+      }
+
+      const socket = io(socketBaseUrl, {
+        path: "/socket.io",
+        transports: ["websocket"],
+        autoConnect: true,
+        withCredentials: false,
+        auth: {
+          token,
+        },
+      });
+
+      socketRef.current = socket;
+
+      socket.on("tutor_availability_updated", () => {
+        void loadAvailability({ silent: true });
+      });
+
+      return () => {
+        socket.removeAllListeners();
+        socket.disconnect();
+        socketRef.current = null;
+      };
     }
 
-    const socket = io(socketBaseUrl, {
-      path: "/socket.io",
-      transports: ["websocket"],
-      autoConnect: true,
-      withCredentials: false,
-      auth: {
-        token,
-      },
-    });
-
-    socketRef.current = socket;
-
-    socket.on("tutor_availability_updated", () => {
-      void loadAvailability({ silent: true });
-    });
-
+    const cleanupPromise = connectSocket();
     return () => {
-      socket.removeAllListeners();
-      socket.disconnect();
+      active = false;
+      void cleanupPromise;
+      socketRef.current?.removeAllListeners();
+      socketRef.current?.disconnect();
       socketRef.current = null;
     };
   }, [loadAvailability]);

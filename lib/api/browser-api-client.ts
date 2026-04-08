@@ -88,7 +88,7 @@ function persistSessionCookies(data: unknown) {
   return true;
 }
 
-async function refreshBrowserSession(): Promise<boolean> {
+export async function refreshBrowserSession(): Promise<boolean> {
   const baseUrl = resolveBrowserApiBaseUrl();
   if (!baseUrl || typeof window === "undefined") return false;
 

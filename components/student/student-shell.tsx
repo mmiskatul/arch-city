@@ -20,6 +20,7 @@ import {
   STUDENT_DASHBOARD_ROUTE,
   STUDENT_FIND_TUTORS_ROUTE,
   STUDENT_MESSAGES_ROUTE,
+  STUDENT_NOTIFICATIONS_ROUTE,
   STUDENT_PROFILE_ROUTE,
   STUDENT_SCHEDULE_ROUTE,
   STUDENT_SETTINGS_ROUTE,
@@ -27,6 +28,9 @@ import {
 import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { getStudentMessageCount } from "@/lib/api/session-messages-api";
+import { getNotificationCount } from "@/lib/api/notifications-api";
+import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
+import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 
 type NavItem = {
   label: string;
@@ -50,6 +54,7 @@ const menuItems: NavItem[] = [
     icon: FiMessageSquare,
     badge: undefined,
   },
+  { label: "Notifications", href: STUDENT_NOTIFICATIONS_ROUTE, icon: FiBell },
   { label: "Profile", href: STUDENT_PROFILE_ROUTE, icon: FiUser },
   { label: "Settings", href: STUDENT_SETTINGS_ROUTE, icon: FiSettings },
 ];
@@ -106,6 +111,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [messagesUnreadCount, setMessagesUnreadCount] = useState(0);
+  const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
     initials: "ST",
     name: "Student",
@@ -113,6 +119,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
   });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const topUserMenuRef = useRef<HTMLDivElement | null>(null);
+  useNotificationsSocket(tokenPresent && isAuthenticated);
 
   useEffect(() => {
     async function loadMessagesCount() {
@@ -124,6 +131,15 @@ export function StudentShell({ children }: { children: ReactNode }) {
         setMessagesUnreadCount(data.unread_count || 0);
       } catch {
         setMessagesUnreadCount(0);
+      }
+    }
+
+    async function loadNotificationsCount() {
+      try {
+        const payload = await getNotificationCount("student");
+        setNotificationsUnreadCount(payload.unread_count || 0);
+      } catch {
+        setNotificationsUnreadCount(0);
       }
     }
 
@@ -172,12 +188,15 @@ export function StudentShell({ children }: { children: ReactNode }) {
 
     loadProfile();
     loadMessagesCount();
+    void loadNotificationsCount();
     window.addEventListener("arch-profile-updated", onProfileUpdated as EventListener);
     window.addEventListener("arch-messages-updated", loadMessagesCount);
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, loadNotificationsCount);
 
     return () => {
       window.removeEventListener("arch-profile-updated", onProfileUpdated as EventListener);
       window.removeEventListener("arch-messages-updated", loadMessagesCount);
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, loadNotificationsCount);
     };
   }, [tokenPresent]);
   useEffect(() => {
@@ -261,6 +280,14 @@ export function StudentShell({ children }: { children: ReactNode }) {
                           badge:
                             messagesUnreadCount > 0 ? String(messagesUnreadCount) : undefined,
                         }
+                      : item.href === STUDENT_NOTIFICATIONS_ROUTE
+                        ? {
+                            ...item,
+                            badge:
+                              notificationsUnreadCount > 0
+                                ? String(notificationsUnreadCount)
+                                : undefined,
+                          }
                       : item
                   }
                   active={

@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 
-import { readBrowserCookie, resolveBrowserApiBaseUrl } from "@/lib/api/browser-api-client";
+import {
+  readBrowserCookie,
+  refreshBrowserSession,
+  resolveBrowserApiBaseUrl,
+} from "@/lib/api/browser-api-client";
 
 export type SessionChatMessage = {
   id: string;
-  sender: "student" | "tutor";
+  sender: "student" | "tutor" | "admin";
   message: string;
   timestamp: string;
   avatarUrl?: string;
@@ -79,11 +83,11 @@ function normalizeMessage(message: SessionChatMessageInput): SessionChatMessage 
   const attachmentSize = Number(attachmentSizeRaw) > 0 ? Number(attachmentSizeRaw) : undefined;
   return {
     id,
-    sender: message.sender === "student" ? "student" : "tutor",
+    sender: message.sender === "student" || message.sender === "admin" ? message.sender : "tutor",
     message: String(message.message || ""),
     timestamp: formatTimestamp(message.timestamp),
     avatarUrl,
-    senderInitials,
+    senderInitials: senderInitials || (message.sender === "admin" ? "AD" : undefined),
     clientMessageId: clientMessageId || id,
     attachmentName,
     attachmentType,
@@ -133,10 +137,7 @@ export function useSessionChat({
   );
   const [draft, setDraft] = useState("");
   const [connected, setConnected] = useState(false);
-  const [loading, setLoading] = useState(() => {
-    const token = readBrowserCookie("arch_access_token");
-    return Boolean(bookingId && token && normalizeSocketBaseUrl());
-  });
+  const [loading, setLoading] = useState(() => Boolean(bookingId && normalizeSocketBaseUrl()));
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -145,8 +146,18 @@ export function useSessionChat({
       normalizedInitialMessages.map((item) =>
         normalizeMessage({
           ...item,
-          senderInitials: item.sender === senderRole ? senderInitials : counterpartInitials,
-          avatarUrl: item.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl,
+          senderInitials:
+            item.sender === "admin"
+              ? item.senderInitials
+              : item.sender === senderRole
+                ? senderInitials
+                : counterpartInitials,
+          avatarUrl:
+            item.sender === "admin"
+              ? item.avatarUrl
+              : item.sender === senderRole
+                ? senderAvatarUrl
+                : counterpartAvatarUrl,
         }),
       ),
     );
@@ -165,117 +176,149 @@ export function useSessionChat({
     setMessages((current) =>
       current.map((item) => ({
         ...item,
-        senderInitials: item.sender === senderRole ? senderInitials : counterpartInitials,
-        avatarUrl: item.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl,
+        senderInitials:
+          item.sender === "admin"
+            ? item.senderInitials
+            : item.sender === senderRole
+              ? senderInitials
+              : counterpartInitials,
+        avatarUrl:
+          item.sender === "admin"
+            ? item.avatarUrl
+            : item.sender === senderRole
+              ? senderAvatarUrl
+              : counterpartAvatarUrl,
       })),
     );
   }, [counterpartInitials, counterpartAvatarUrl, senderAvatarUrl, senderInitials, senderRole]);
 
   useEffect(() => {
-    const token = readBrowserCookie("arch_access_token");
-    const socketBaseUrl = normalizeSocketBaseUrl();
+    let active = true;
 
-    if (!bookingId || !token || !socketBaseUrl) {
-      return;
+    async function connectSocket() {
+      const socketBaseUrl = normalizeSocketBaseUrl();
+      if (!bookingId || !socketBaseUrl) {
+        setLoading(false);
+        return;
+      }
+
+      if (!readBrowserCookie("arch_access_token")) {
+        const refreshed = await refreshBrowserSession();
+        if (!refreshed || !active) {
+          setLoading(false);
+          setError("Session expired. Please sign in again.");
+          return;
+        }
+      }
+
+      const token = readBrowserCookie("arch_access_token");
+      if (!token || !active) {
+        setLoading(false);
+        setError("Session expired. Please sign in again.");
+        return;
+      }
+
+      const socket = io(socketBaseUrl, {
+        path: "/socket.io",
+        transports: ["websocket"],
+        autoConnect: true,
+        withCredentials: false,
+        auth: {
+          token,
+        },
+      });
+
+      socketRef.current = socket;
+
+      socket.on("connect", () => {
+        setConnected(true);
+        setLoading(false);
+        setError(null);
+        socket.emit("join_session", { booking_id: bookingId });
+      });
+
+      socket.on("disconnect", () => {
+        setConnected(false);
+      });
+
+      socket.on("connect_error", (event) => {
+        setError(event.message || "Unable to connect to chat.");
+        setLoading(false);
+      });
+
+      socket.on("session_history", (payload: SessionHistoryPayload) => {
+        if (String(payload.booking_id || "") !== bookingId) return;
+        const nextMessages = Array.isArray(payload.messages)
+          ? payload.messages.map((item) =>
+                normalizeMessage({
+                  ...item,
+                  senderInitials:
+                    item.senderInitials ||
+                    item.sender_initials ||
+                    (item.sender === senderRole ? senderInitials : counterpartInitials),
+                  avatarUrl:
+                    item.avatarUrl ||
+                    item.avatar_url ||
+                    item.profile_image_url ||
+                    item.image_url ||
+                    item.photo_url ||
+                    (item.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl),
+                  clientMessageId: item.clientMessageId || item.client_message_id,
+                  attachmentName: item.attachmentName || item.attachment_name,
+                  attachmentType: item.attachmentType || item.attachment_type,
+                  attachmentSize:
+                    Number(item.attachmentSize ?? item.attachment_size ?? 0) > 0
+                      ? Number(item.attachmentSize ?? item.attachment_size ?? 0)
+                      : undefined,
+                }),
+              )
+          : [];
+        setMessages(nextMessages);
+        setLoading(false);
+      });
+
+      socket.on("session_message", (payload: SessionMessagePayload) => {
+        if (String(payload.booking_id || bookingId) !== bookingId) return;
+        setMessages((current) =>
+          mergeMessages(current, [
+            normalizeMessage({
+              ...payload,
+              senderInitials:
+                payload.senderInitials ||
+                payload.sender_initials ||
+                (payload.sender === senderRole ? senderInitials : counterpartInitials),
+              avatarUrl:
+                payload.avatarUrl ||
+                payload.avatar_url ||
+                payload.profile_image_url ||
+                payload.image_url ||
+                payload.photo_url ||
+                (payload.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl),
+              clientMessageId: payload.clientMessageId || payload.client_message_id,
+              attachmentName: payload.attachmentName || payload.attachment_name,
+              attachmentType: payload.attachmentType || payload.attachment_type,
+              attachmentSize:
+                Number(payload.attachmentSize ?? payload.attachment_size ?? 0) > 0
+                  ? Number(payload.attachmentSize ?? payload.attachment_size ?? 0)
+                  : undefined,
+            }),
+          ]),
+        );
+        window.dispatchEvent(new Event("arch-messages-updated"));
+      });
+
+      socket.on("session_error", (payload: { message?: string }) => {
+        setError(payload.message || "Unable to update chat.");
+        setLoading(false);
+      });
     }
 
-    const socket = io(socketBaseUrl, {
-      path: "/socket.io",
-      transports: ["websocket"],
-      autoConnect: true,
-      withCredentials: false,
-      auth: {
-        token,
-      },
-    });
-
-    socketRef.current = socket;
-
-    socket.on("connect", () => {
-      setConnected(true);
-      setLoading(false);
-      setError(null);
-      socket.emit("join_session", { booking_id: bookingId });
-    });
-
-    socket.on("disconnect", () => {
-      setConnected(false);
-    });
-
-    socket.on("connect_error", (event) => {
-      setError(event.message || "Unable to connect to chat.");
-      setLoading(false);
-    });
-
-    socket.on("session_history", (payload: SessionHistoryPayload) => {
-      if (String(payload.booking_id || "") !== bookingId) return;
-      const nextMessages = Array.isArray(payload.messages)
-        ? payload.messages.map((item) =>
-              normalizeMessage({
-                ...item,
-                senderInitials:
-                  item.senderInitials ||
-                  item.sender_initials ||
-                  (item.sender === senderRole ? senderInitials : counterpartInitials),
-                avatarUrl:
-                  item.avatarUrl ||
-                  item.avatar_url ||
-                  item.profile_image_url ||
-                  item.image_url ||
-                  item.photo_url ||
-                  (item.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl),
-                clientMessageId: item.clientMessageId || item.client_message_id,
-                attachmentName: item.attachmentName || item.attachment_name,
-                attachmentType: item.attachmentType || item.attachment_type,
-                attachmentSize:
-                  Number(item.attachmentSize ?? item.attachment_size ?? 0) > 0
-                    ? Number(item.attachmentSize ?? item.attachment_size ?? 0)
-                    : undefined,
-              }),
-            )
-        : [];
-      setMessages(nextMessages);
-      setLoading(false);
-    });
-
-    socket.on("session_message", (payload: SessionMessagePayload) => {
-      if (String(payload.booking_id || bookingId) !== bookingId) return;
-      setMessages((current) =>
-        mergeMessages(current, [
-          normalizeMessage({
-            ...payload,
-            senderInitials:
-              payload.senderInitials ||
-              payload.sender_initials ||
-              (payload.sender === senderRole ? senderInitials : counterpartInitials),
-            avatarUrl:
-              payload.avatarUrl ||
-              payload.avatar_url ||
-              payload.profile_image_url ||
-              payload.image_url ||
-              payload.photo_url ||
-              (payload.sender === senderRole ? senderAvatarUrl : counterpartAvatarUrl),
-            clientMessageId: payload.clientMessageId || payload.client_message_id,
-            attachmentName: payload.attachmentName || payload.attachment_name,
-            attachmentType: payload.attachmentType || payload.attachment_type,
-            attachmentSize:
-              Number(payload.attachmentSize ?? payload.attachment_size ?? 0) > 0
-                ? Number(payload.attachmentSize ?? payload.attachment_size ?? 0)
-                : undefined,
-          }),
-        ]),
-      );
-      window.dispatchEvent(new Event("arch-messages-updated"));
-    });
-
-    socket.on("session_error", (payload: { message?: string }) => {
-      setError(payload.message || "Unable to update chat.");
-      setLoading(false);
-    });
+    void connectSocket();
 
     return () => {
-      socket.removeAllListeners();
-      socket.disconnect();
+      active = false;
+      socketRef.current?.removeAllListeners();
+      socketRef.current?.disconnect();
       socketRef.current = null;
     };
   }, [bookingId, counterpartAvatarUrl, counterpartInitials, senderAvatarUrl, senderInitials, senderRole]);

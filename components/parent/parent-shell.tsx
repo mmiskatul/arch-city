@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { IconType } from "react-icons";
 import {
+  FiBell,
   FiCalendar,
   FiGrid,
   FiLogOut,
@@ -20,6 +21,7 @@ import {
   PARENT_DASHBOARD_ROUTE,
   PARENT_FIND_TUTORS_ROUTE,
   PARENT_MESSAGES_ROUTE,
+  PARENT_NOTIFICATIONS_ROUTE,
   PARENT_PROFILE_ROUTE,
   PARENT_SCHEDULE_ROUTE,
   PARENT_SETTINGS_ROUTE,
@@ -28,6 +30,9 @@ import {
 import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { parentMessagesUnreadCount } from "@/lib/parent/messages-data";
+import { getNotificationCount } from "@/lib/api/notifications-api";
+import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
+import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 
 type NavItem = {
   label: string;
@@ -52,6 +57,7 @@ const menuItems: NavItem[] = [
     icon: FiMessageSquare,
     badge: parentMessagesUnreadCount > 0 ? String(parentMessagesUnreadCount) : undefined,
   },
+  { label: "Notifications", href: PARENT_NOTIFICATIONS_ROUTE, icon: FiBell },
   { label: "Profile", href: PARENT_PROFILE_ROUTE, icon: FiUser },
   { label: "Settings", href: PARENT_SETTINGS_ROUTE, icon: FiSettings },
 ];
@@ -113,6 +119,7 @@ export function ParentShell({
   const { tokenPresent, isAuthenticated } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
     initials: "PA",
     name: "Parent",
@@ -120,6 +127,7 @@ export function ParentShell({
     phone: "",
   });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  useNotificationsSocket(tokenPresent && isAuthenticated);
 
   useEffect(() => {
     async function loadProfile() {
@@ -149,6 +157,15 @@ export function ParentShell({
       }
     }
 
+    async function loadNotificationsCount() {
+      try {
+        const payload = await getNotificationCount("parent");
+        setNotificationsUnreadCount(payload.unread_count || 0);
+      } catch {
+        setNotificationsUnreadCount(0);
+      }
+    }
+
     function onProfileUpdated(event: Event) {
       const customEvent = event as CustomEvent<{
         role?: string;
@@ -170,10 +187,13 @@ export function ParentShell({
     }
 
     loadProfile();
+    void loadNotificationsCount();
     window.addEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, loadNotificationsCount);
 
     return () => {
       window.removeEventListener("arch-profile-updated", onProfileUpdated as EventListener);
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, loadNotificationsCount);
     };
   }, [tokenPresent]);
   useEffect(() => {
@@ -226,6 +246,14 @@ export function ParentShell({
               ? String(resolvedMessagesUnreadCount)
               : undefined,
         }
+      : item.href === PARENT_NOTIFICATIONS_ROUTE
+        ? {
+            ...item,
+            badge:
+              notificationsUnreadCount > 0
+                ? String(notificationsUnreadCount)
+                : undefined,
+          }
       : item,
   );
 

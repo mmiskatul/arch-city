@@ -1,42 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-import { configurationErrorResponse, getAdminToken, resolveApiBaseUrl, unauthorizedResponse } from "../_common";
+import { proxyAuthenticatedBackendRoute } from "../_common";
 
 export async function GET(request: NextRequest) {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) return configurationErrorResponse();
-
-  const token = getAdminToken(request);
-  if (!token) return unauthorizedResponse();
-
-  const response = await fetch(`${baseUrl}/admin-dashboard/settings/general`, {
+  return proxyAuthenticatedBackendRoute(request, {
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
+    backendPath: "/admin-dashboard/settings/general",
   });
-
-  const data = await response.json().catch(() => ({}));
-  return NextResponse.json(data, { status: response.status });
 }
 
 export async function PUT(request: NextRequest) {
-  const baseUrl = resolveApiBaseUrl();
-  if (!baseUrl) return configurationErrorResponse();
-
-  const token = getAdminToken(request);
-  if (!token) return unauthorizedResponse();
-
   const body = await request.json().catch(() => ({}));
-  const response = await fetch(`${baseUrl}/admin-dashboard/settings/general`, {
+  return proxyAuthenticatedBackendRoute(request, {
     method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
+    backendPath: "/admin-dashboard/settings/general",
+    body,
   });
-
-  const data = await response.json().catch(() => ({}));
-  return NextResponse.json(data, { status: response.status });
 }

@@ -272,10 +272,15 @@ export function AdminDashboardPage({
 
         setData((current) => ({
           ...current,
+          summary_cards: Array.isArray(payload?.summary_cards) ? payload.summary_cards : current.summary_cards,
           recent_sessions: Array.isArray(payload?.recent_sessions) ? payload.recent_sessions : [],
           pending_actions: Array.isArray(payload?.pending_actions) ? payload.pending_actions : [],
+          top_tutors_this_month: Array.isArray(payload?.top_tutors_this_month)
+            ? payload.top_tutors_this_month
+            : current.top_tutors_this_month,
           recent_sessions_meta: payload?.recent_sessions_meta ?? current.recent_sessions_meta,
           pending_actions_meta: payload?.pending_actions_meta ?? current.pending_actions_meta,
+          top_tutors_meta: payload?.top_tutors_meta ?? current.top_tutors_meta,
         }));
       } catch (error) {
         if (!cancelled) {

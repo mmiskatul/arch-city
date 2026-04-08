@@ -97,6 +97,51 @@ function toUiTutor(item: TutorsApiItem, index: number): AdminTutorRow {
   };
 }
 
+function TutorsTableSkeleton() {
+  return (
+    <div className="divide-y divide-[#eceef2]">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="grid grid-cols-[1.7fr_1.45fr_0.75fr_0.7fr_0.9fr_0.95fr_0.85fr_0.95fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563] animate-pulse"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 shrink-0 rounded-full bg-[#eef1f4]" />
+            <div className="space-y-1">
+              <div className="h-4 w-32 rounded bg-[#eceef2]" />
+              <div className="h-3 w-28 rounded bg-[#f1f3f6]" />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1">
+            <div className="h-6 w-16 rounded-full bg-[#f1f3f6]" />
+            <div className="h-6 w-20 rounded-full bg-[#f1f3f6]" />
+          </div>
+
+          <div className="flex items-center">
+            <div className="h-4 w-10 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-4 w-16 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-4 w-14 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-4 w-20 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-6 w-16 rounded-full bg-[#f1f3f6]" />
+          </div>
+          <div className="flex items-center justify-end">
+            <div className="h-7 w-12 rounded bg-[#f1f3f6]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function AdminTutorsPage() {
   const [tutors, setTutors] = useState<AdminTutorRow[]>([]);
   const [stats, setStats] = useState<TutorStatsResponse>({ total: 0, approved: 0, pending: 0, suspended: 0 });
@@ -244,7 +289,7 @@ export function AdminTutorsPage() {
 
               <div className="divide-y divide-[#eceef2]">
                 {isLoading ? (
-                  <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">Loading tutors...</div>
+                  <TutorsTableSkeleton />
                 ) : pageRows.length === 0 ? (
                   <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">No tutors found.</div>
                 ) : (

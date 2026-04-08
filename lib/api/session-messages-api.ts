@@ -2,9 +2,15 @@ import { browserApiRequest, resolveBrowserApiBaseUrl } from "@/lib/api/browser-a
 
 export type SessionMessage = {
   id: string;
-  sender: "student" | "tutor";
+  sender: "student" | "tutor" | "admin";
   message: string;
   timestamp: string;
+  senderName?: string;
+  senderInitials?: string;
+  clientMessageId?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
 };
 
 export type SessionMessageThreadSummary = {
@@ -28,6 +34,7 @@ export type SessionMessageThreadSummary = {
   updated_at: string;
   unread_count_student: number;
   unread_count_tutor: number;
+  unread_count_admin: number;
 };
 
 export type SessionMessageThreadListResponse = {

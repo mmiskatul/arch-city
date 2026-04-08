@@ -94,19 +94,39 @@ function toUiStudent(item: StudentsApiItem, index: number): AdminStudentRow {
 function StudentsTableSkeleton() {
   return (
     <div className="divide-y divide-[#eceef2]">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <div key={index} className="grid grid-cols-[1.8fr_0.9fr_1.35fr_0.75fr_0.95fr_1fr_0.75fr_0.65fr] gap-3 px-4 py-3">
-          <div className="space-y-1">
-            <div className="h-4 w-2/3 animate-pulse rounded bg-[#eceef2]" />
-            <div className="h-3 w-1/2 animate-pulse rounded bg-[#f1f3f6]" />
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="grid grid-cols-[1.8fr_0.9fr_1.35fr_0.75fr_0.95fr_1fr_0.75fr_0.65fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563] animate-pulse"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 shrink-0 rounded-full bg-[#eef1f4]" />
+            <div className="space-y-1">
+              <div className="h-4 w-32 rounded bg-[#eceef2]" />
+              <div className="h-3 w-28 rounded bg-[#f1f3f6]" />
+            </div>
           </div>
-          <div className="h-4 animate-pulse rounded bg-[#eceef2]" />
-          <div className="h-4 animate-pulse rounded bg-[#eceef2]" />
-          <div className="h-4 animate-pulse rounded bg-[#eceef2]" />
-          <div className="h-4 animate-pulse rounded bg-[#eceef2]" />
-          <div className="h-6 animate-pulse rounded bg-[#f1f3f6]" />
-          <div className="h-6 w-16 animate-pulse rounded-full bg-[#f1f3f6]" />
-          <div className="h-7 w-12 animate-pulse rounded bg-[#f1f3f6]" />
+          <div className="flex items-center">
+            <div className="h-4 w-16 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-4 w-28 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-4 w-10 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-4 w-14 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-4 w-20 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center">
+            <div className="h-6 w-16 rounded-full bg-[#f1f3f6]" />
+          </div>
+          <div className="flex items-center justify-end">
+            <div className="h-7 w-12 rounded bg-[#f1f3f6]" />
+          </div>
         </div>
       ))}
     </div>

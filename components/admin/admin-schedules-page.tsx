@@ -167,14 +167,72 @@ function matchesRangeFilter(row: AdminScheduleRow, filter: RangeFilter) {
   return parsed >= monthStart && parsed < nextMonthStart;
 }
 
+function ScheduleTableSkeleton() {
+  return (
+    <div className="divide-y divide-[#eceef2]">
+      {Array.from({ length: 6 }).map((_, rowIndex) => (
+        <div
+          key={`schedule-table-skeleton-${rowIndex}`}
+          className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563] animate-pulse"
+        >
+          <div className="flex items-center">
+            <div className="h-4 w-24 rounded bg-[#eceef2]" />
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 shrink-0 rounded-full bg-[#eef1f4]" />
+            <div className="h-4 w-36 rounded bg-[#eef1f4]" />
+          </div>
+          <div className="h-4 w-28 rounded bg-[#eceef2]" />
+          <div className="h-4 w-24 rounded bg-[#eceef2]" />
+          <div className="space-y-1.5">
+            <div className="h-4 w-32 rounded bg-[#eceef2]" />
+            <div className="h-3 w-24 rounded bg-[#f1f3f6]" />
+          </div>
+          <div className="h-4 w-16 rounded bg-[#eceef2]" />
+          <div className="inline-flex h-6 w-16 rounded-full bg-[#eef1f4]" />
+          <div className="inline-flex h-6 w-20 rounded-full bg-[#eef1f4]" />
+          <div className="h-4 w-14 rounded bg-[#eceef2]" />
+          <div className="inline-flex h-7 w-14 rounded-lg bg-[#eef1f4]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminScheduleRow[] }) {
   const [rangeFilter, setRangeFilter] = useState<RangeFilter>("All");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [tutorFilter, setTutorFilter] = useState<string>("All Tutors");
   const [typeFilter, setTypeFilter] = useState<(typeof typeFilters)[number]>("All Types");
   const [currentPage, setCurrentPage] = useState(1);
-  const rows = initialRows ?? [];
+  const [rows, setRows] = useState<AdminScheduleRow[]>(initialRows ?? []);
+  const [isTableLoading, setIsTableLoading] = useState(false);
+  const transitionTimeoutRef = useRef<number | null>(null);
   const tutorFilters = ["All Tutors", ...Array.from(new Set(rows.map((item) => item.tutor)))];
+
+  useEffect(() => {
+    setRows(initialRows ?? []);
+  }, [initialRows]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current !== null) {
+        window.clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerTableLoading = () => {
+    setIsTableLoading(true);
+    if (transitionTimeoutRef.current !== null) {
+      window.clearTimeout(transitionTimeoutRef.current);
+    }
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setIsTableLoading(false);
+      transitionTimeoutRef.current = null;
+    }, 180);
+  };
+
   const rangeRows = useMemo(
     () => rows.filter((item) => matchesRangeFilter(item, rangeFilter)),
     [rangeFilter, rows],
@@ -201,6 +259,7 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
   const endIndex = Math.min(safePage * pageSize, filteredRows.length);
 
   const handleStatusFilter = (value: StatusFilter) => {
+    triggerTableLoading();
     setStatusFilter(value);
     setCurrentPage(1);
   };
@@ -212,16 +271,20 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
           <h1 className="text-[38px] font-bold leading-none text-[#20242b]">Schedules</h1>
 
           <div className="inline-flex rounded-xl border border-[#e5e7eb] bg-white p-0.5">
-                {(["All", "Today", "Week", "Month"] as const).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    aria-pressed={rangeFilter === item}
-                    onClick={() => setRangeFilter(item)}
-                    className={`h-9 rounded-lg px-4 text-[13px] font-semibold transition ${
-                      rangeFilter === item
-                        ? "bg-[#ffecef] text-[#d61c3f]"
-                        : "text-[#6b7280] hover:bg-[#f7f7f8]"
+            {(["All", "Today", "Week", "Month"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                aria-pressed={rangeFilter === item}
+                onClick={() => {
+                  triggerTableLoading();
+                  setRangeFilter(item);
+                  setCurrentPage(1);
+                }}
+                className={`h-9 rounded-lg px-4 text-[13px] font-semibold transition ${
+                  rangeFilter === item
+                    ? "bg-[#ffecef] text-[#d61c3f]"
+                    : "text-[#6b7280] hover:bg-[#f7f7f8]"
                 }`}
               >
                 {item}
@@ -273,6 +336,7 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
               value={tutorFilter}
               options={tutorFilters}
               onChange={(value) => {
+                triggerTableLoading();
                 setTutorFilter(value);
                 setCurrentPage(1);
               }}
@@ -283,6 +347,7 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
               value={typeFilter}
               options={[...typeFilters]}
               onChange={(value) => {
+                triggerTableLoading();
                 setTypeFilter(value as (typeof typeFilters)[number]);
                 setCurrentPage(1);
               }}
@@ -307,66 +372,70 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
                 <span> </span>
               </div>
 
-              <div className="divide-y divide-[#eceef2]">
-                {pagedRows.map((row, index) => (
-                  <div
-                    key={`${row.sessionId || "session"}-${safePage}-${index}`}
-                    className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563]"
-                  >
-                    <span className="font-semibold text-[#9ca3af]">#{row.sessionId || "N/A"}</span>
+              {isTableLoading ? (
+                <ScheduleTableSkeleton />
+              ) : (
+                <div className="divide-y divide-[#eceef2]">
+                  {pagedRows.map((row, index) => (
+                    <div
+                      key={`${row.sessionId || "session"}-${safePage}-${index}`}
+                      className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 px-4 py-3 text-[13px] text-[#4b5563]"
+                    >
+                      <span className="font-semibold text-[#9ca3af]">#{row.sessionId || "N/A"}</span>
 
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${row.studentInitialsClassName}`}
-                      >
-                        {row.studentInitials}
-                      </span>
-                      <span className="font-medium text-[#374151]">{row.student}</span>
-                    </div>
-
-                    <span>{row.tutor}</span>
-                    <span>{row.subject}</span>
-                    <div>
-                      <span>{formatDateTimeLabel(row)}</span>
-                      {row.meetingLocation ? (
-                        <p className="mt-0.5 text-[11px] text-[#9ca3af]">{row.meetingLocation}</p>
-                      ) : null}
-                    </div>
-                    <span>{row.duration}</span>
-                    <div>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeClassName(row.type)}`}>
-                        {row.type}
-                      </span>
-                    </div>
-                    <div>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClassName(row.status)}`}>
-                        {row.status}
-                      </span>
-                    </div>
-                    <span className="font-semibold text-[#374151]">{row.fee}</span>
-                    <div>
-                      {row.sessionId ? (
-                        <Link
-                          href={`${ADMIN_SCHEDULES_ROUTE}/${encodeURIComponent(row.sessionId)}`}
-                          className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${row.studentInitialsClassName}`}
                         >
-                          View
-                        </Link>
-                      ) : (
-                        <span className="inline-flex h-7 items-center rounded-lg border border-dashed border-[#e5e7eb] bg-white px-3 text-[12px] font-semibold text-[#9ca3af]">
-                          View
+                          {row.studentInitials}
                         </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                        <span className="font-medium text-[#374151]">{row.student}</span>
+                      </div>
 
-                {pagedRows.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
-                    No schedule records found in the database for the selected filters.
-                  </div>
-                ) : null}
-              </div>
+                      <span>{row.tutor}</span>
+                      <span>{row.subject}</span>
+                      <div>
+                        <span>{formatDateTimeLabel(row)}</span>
+                        {row.meetingLocation ? (
+                          <p className="mt-0.5 text-[11px] text-[#9ca3af]">{row.meetingLocation}</p>
+                        ) : null}
+                      </div>
+                      <span>{row.duration}</span>
+                      <div>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeClassName(row.type)}`}>
+                          {row.type}
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClassName(row.status)}`}>
+                          {row.status}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-[#374151]">{row.fee}</span>
+                      <div>
+                        {row.sessionId ? (
+                          <Link
+                            href={`${ADMIN_SCHEDULES_ROUTE}/${encodeURIComponent(row.sessionId)}`}
+                            className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
+                          >
+                            View
+                          </Link>
+                        ) : (
+                          <span className="inline-flex h-7 items-center rounded-lg border border-dashed border-[#e5e7eb] bg-white px-3 text-[12px] font-semibold text-[#9ca3af]">
+                            View
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {pagedRows.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
+                      No schedule records found in the database for the selected filters.
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -380,7 +449,10 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              onClick={() => {
+                triggerTableLoading();
+                setCurrentPage((prev) => Math.max(1, prev - 1));
+              }}
               disabled={safePage === 1}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#e5e7eb] bg-white text-[#6b7280] disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -393,7 +465,10 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
                 <button
                   key={pageNumber}
                   type="button"
-                  onClick={() => setCurrentPage(pageNumber)}
+                  onClick={() => {
+                    triggerTableLoading();
+                    setCurrentPage(pageNumber);
+                  }}
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-md border text-[12px] font-semibold ${
                     active
                       ? "border-[#e24961] bg-[#ffecef] text-[#d61c3f]"
@@ -406,7 +481,10 @@ export function AdminSchedulesPage({ initialRows }: { initialRows?: AdminSchedul
             })}
             <button
               type="button"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              onClick={() => {
+                triggerTableLoading();
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+              }}
               disabled={safePage === totalPages}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#e5e7eb] bg-white text-[#6b7280] disabled:cursor-not-allowed disabled:opacity-40"
             >
