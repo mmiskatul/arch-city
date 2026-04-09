@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiSearch, FiStar } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
+import { fetchAvailableParentTutors } from "@/lib/api/public-tutors-api";
 import {
   parentBookingStudents,
   parentTutorDefaultFilters,
   parentTutorFilterOptions,
   parentTutorResults,
+  type ParentTutorCard,
 } from "@/lib/parent/find-tutors-data";
 import { PARENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
 
@@ -53,19 +55,76 @@ function FilterOption({
   );
 }
 
+function RatingStars({ rating }: { rating: number }) {
+  const normalized = Math.max(0, Math.min(5, rating));
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, index) => {
+        const value = index + 1;
+        const difference = normalized - index;
+        const isFull = difference >= 1;
+        const isHalf = difference >= 0.5 && difference < 1;
+
+        return (
+          <span key={value} className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
+            <FiStar className={`absolute h-3.5 w-3.5 ${isFull || isHalf ? "text-[#f3b300]" : "text-[#d1d5db]"}`} />
+            {isFull ? <FiStar className="absolute h-3.5 w-3.5 fill-[#f3b300] text-[#f3b300]" /> : null}
+            {isHalf ? (
+              <>
+                <FiStar className="absolute h-3.5 w-3.5 fill-[#f3b300] text-[#f3b300]" />
+                <span className="absolute right-0 top-0 h-full w-1/2 bg-white" />
+              </>
+            ) : null}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 export function ParentFindTutorsPage() {
   const [draftFilters, setDraftFilters] = useState<FilterState>(initialAppliedFilters);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialAppliedFilters);
+  const [tutors, setTutors] = useState<ParentTutorCard[]>(parentTutorResults);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadTutors() {
+      try {
+        setLoadError(null);
+        const liveTutors = await fetchAvailableParentTutors();
+        if (mounted) {
+          setTutors(liveTutors);
+        }
+      } catch (error) {
+        if (mounted) {
+          setTutors(parentTutorResults);
+          setLoadError(error instanceof Error ? error.message : "Unable to load live tutor data.");
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadTutors();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredTutors = useMemo(() => {
     const search = appliedFilters.search.trim().toLowerCase();
 
-    return parentTutorResults.filter((tutor) => {
+    return tutors.filter((tutor) => {
       const matchesBookingStudent = appliedFilters.bookingFor.length > 0;
-      const matchesSubject =
-        !appliedFilters.subject || tutor.subjects.includes(appliedFilters.subject);
-      const matchesGrade =
-        !appliedFilters.gradeLevel || tutor.gradeLevels.includes(appliedFilters.gradeLevel);
+      const matchesSubject = !appliedFilters.subject || tutor.subjects.includes(appliedFilters.subject);
+      const matchesGrade = !appliedFilters.gradeLevel || tutor.gradeLevels.includes(appliedFilters.gradeLevel);
       const matchesSessionType =
         !appliedFilters.sessionType || tutor.sessionTypes.includes(appliedFilters.sessionType as "Virtual" | "In-Person");
       const matchesRate = tutor.price60 <= appliedFilters.maxRate;
@@ -84,7 +143,7 @@ export function ParentFindTutorsPage() {
         matchesSearch
       );
     });
-  }, [appliedFilters]);
+  }, [appliedFilters, tutors]);
 
   function applyFilters() {
     setAppliedFilters(draftFilters);
@@ -231,9 +290,9 @@ export function ParentFindTutorsPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <p className="text-[18px] font-medium text-[#4b5563]">
                 <span className="font-bold text-[#20242b]">
-                  {filteredTutors.length} tutor{filteredTutors.length === 1 ? "" : "s"} found
+                  {isLoading ? "Loading tutors..." : `${filteredTutors.length} tutor${filteredTutors.length === 1 ? "" : "s"} found`}
                 </span>{" "}
-                for {appliedFilters.bookingFor} — {appliedFilters.subject || "All Subjects"}
+                for {appliedFilters.bookingFor} - {appliedFilters.subject || "All Subjects"}
               </p>
 
               <div className="relative w-full max-w-[220px]">
@@ -269,7 +328,7 @@ export function ParentFindTutorsPage() {
                       <h3 className="text-[14px] font-bold text-[#20242b]">{tutor.name}</h3>
                       <p className="text-[13px] text-[#6b7280]">{tutor.title}</p>
                       <div className="mt-1 flex items-center gap-1 text-[13px] font-semibold text-[#b58112]">
-                        <FiStar className="h-3.5 w-3.5 fill-current" />
+                        <RatingStars rating={tutor.rating} />
                         <span>{tutor.rating.toFixed(1)}</span>
                         <span className="text-[#8a7a38]">· {tutor.sessions} sessions</span>
                       </div>
@@ -311,6 +370,8 @@ export function ParentFindTutorsPage() {
                 </article>
               ))}
             </div>
+
+            {loadError ? <p className="mt-4 text-[12px] text-[#8a5b00]">{loadError}</p> : null}
 
             {filteredTutors.length === 0 ? (
               <div className="mt-6 rounded-[14px] border border-[#eceef2] bg-white px-5 py-8 text-center text-[14px] text-[#6b7280]">

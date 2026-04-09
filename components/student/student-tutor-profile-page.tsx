@@ -5,6 +5,33 @@ import { StudentShell } from "@/components/student/student-shell";
 import { STUDENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
 import type { StudentTutor } from "@/lib/student/tutors-data";
 
+function RatingStars({ rating }: { rating: number }) {
+  const normalized = Math.max(0, Math.min(5, rating));
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, index) => {
+        const value = index + 1;
+        const difference = normalized - index;
+        const isFull = difference >= 1;
+        const isHalf = difference >= 0.5 && difference < 1;
+
+        return (
+          <span key={value} className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
+            <FiStar className={`absolute h-3.5 w-3.5 ${isFull || isHalf ? "text-[#f4b400]" : "text-[#d1d5db]"}`} />
+            {isFull ? <FiStar className="absolute h-3.5 w-3.5 fill-[#f4b400] text-[#f4b400]" /> : null}
+            {isHalf ? (
+              <>
+                <FiStar className="absolute h-3.5 w-3.5 fill-[#f4b400] text-[#f4b400]" />
+                <span className="absolute right-0 top-0 h-full w-1/2 bg-white" />
+              </>
+            ) : null}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 function InfoCard({
   title,
   children,
@@ -49,7 +76,7 @@ export function StudentTutorProfilePage({ tutor }: { tutor: StudentTutor }) {
                     </span>
                   </div>
                   <div className="mt-2 flex items-center gap-1 text-[12px] text-[#f4b400]">
-                    <FiStar className="h-3.5 w-3.5 fill-current" />
+                    <RatingStars rating={tutor.rating} />
                     <span className="font-semibold">{tutor.rating.toFixed(1)}</span>
                     <span className="text-[#6b7280]">({tutor.reviews} reviews)</span>
                   </div>

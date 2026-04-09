@@ -31,6 +31,9 @@ export type TutorScheduleApiItem = {
   card_brand: string;
   card_last4: string;
   details: Record<string, string>;
+  student_rating_score?: number | null;
+  student_rating_comment?: string;
+  student_rating_submitted_at?: string | null;
 };
 
 export type TutorScheduleListResponse = {
@@ -101,6 +104,9 @@ function mapScheduleItem(api: TutorScheduleApiItem): TutorScheduleItem {
       message: message.message,
       timestamp: message.timestamp,
     })),
+    studentRatingScore: api.student_rating_score ?? null,
+    studentRatingComment: api.student_rating_comment ?? "",
+    studentRatingSubmittedAt: api.student_rating_submitted_at ?? undefined,
   };
 }
 

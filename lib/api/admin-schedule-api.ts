@@ -193,8 +193,7 @@ async function request<T>(path: string): Promise<T> {
   return proxyApiGet<T>(path);
 }
 
-export async function fetchAdminScheduleRows(): Promise<AdminScheduleRow[]> {
-  const data = await request<AdminSchedulesListResponse>("/api/admin/schedules");
+export function mapAdminScheduleRows(data: AdminSchedulesListResponse): AdminScheduleRow[] {
   return (data.items || []).map((row) => ({
     sessionId: row.session_id || row.booking_id || row.schedule_id || row.checkout_id || "",
     studentInitials: row.student_initials || "",
@@ -208,16 +207,21 @@ export async function fetchAdminScheduleRows(): Promise<AdminScheduleRow[]> {
     meetingLocation: row.meeting_location || row.meetingLocation || "",
     duration: row.duration_minutes ? `${row.duration_minutes} min` : "",
     type: row.session_type === "In-Person" ? "In-Person" : "Virtual",
-  status:
+    status:
       String(row.status).toLowerCase() === "completion requested"
         ? "Completion Requested"
         : String(row.status).toLowerCase() === "completed"
-        ? "Completed"
-        : String(row.status).toLowerCase() === "cancelled"
-          ? "Cancelled"
-          : "Upcoming",
+          ? "Completed"
+          : String(row.status).toLowerCase() === "cancelled"
+            ? "Cancelled"
+            : "Upcoming",
     fee: row.amount,
   }));
+}
+
+export async function fetchAdminScheduleRows(): Promise<AdminScheduleRow[]> {
+  const data = await request<AdminSchedulesListResponse>("/api/admin/schedules");
+  return mapAdminScheduleRows(data);
 }
 
 export async function fetchAdminScheduleDetailById(sessionId: string): Promise<AdminScheduleDetail | null> {

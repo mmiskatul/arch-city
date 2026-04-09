@@ -32,6 +32,7 @@ export type SessionMessageThreadSummary = {
   last_sender_role: string;
   last_message_at: string;
   updated_at: string;
+  created_at: string;
   unread_count_student: number;
   unread_count_tutor: number;
   unread_count_admin: number;

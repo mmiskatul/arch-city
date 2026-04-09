@@ -1,4 +1,5 @@
 import { browserApiRequest } from "@/lib/api/browser-api-client";
+import type { ParentTutorCard } from "@/lib/parent/find-tutors-data";
 import type { StudentTutor } from "@/lib/student/tutors-data";
 
 type PublicTutorAvailabilityItem = {
@@ -29,6 +30,7 @@ type PublicTutorItem = {
   name: string;
   reviews: number;
   rating: number;
+  sessions?: number;
   mode: "Virtual" | "In-Person" | "Both";
   certification: string;
   district: string;
@@ -43,6 +45,8 @@ type PublicTutorItem = {
   availability: PublicTutorAvailabilityItem[];
   price45: number;
   price60: number;
+  in_person_price45?: number;
+  in_person_price60?: number;
   in_person_available: boolean;
 };
 
@@ -153,6 +157,41 @@ function mapTutor(item: PublicTutorItem): StudentTutor {
   };
 }
 
+function mapTutorToParentCard(item: PublicTutorItem): ParentTutorCard {
+  const subjects = item.subjects.length > 0 ? item.subjects : item.subject_tags.length > 0 ? item.subject_tags.slice(0, 4) : ["General Tutoring"];
+  const title = item.certification || item.experience?.title || subjects[0] || "Tutor";
+  const sessionTypes: ParentTutorCard["sessionTypes"] =
+    item.mode === "Both"
+      ? ["Virtual", "In-Person"]
+      : [item.mode === "In-Person" ? "In-Person" : "Virtual"];
+
+  return {
+    id: item.id,
+    initials: item.initials || "TU",
+    name: item.name || "Tutor",
+    title,
+    rating: item.rating ?? 0,
+    reviews: item.reviews ?? 0,
+    sessions: item.sessions ?? 0,
+    subjects,
+    gradeLevels: item.grades
+      ? item.grades.split(",").map((entry) => entry.trim()).filter(Boolean)
+      : item.grade_group
+        ? [item.grade_group]
+        : [],
+    sessionTypes,
+    location: item.location || "",
+    price45: item.price45 ?? 0,
+    price60: item.price60 ?? 0,
+    inPerson45: item.in_person_price45 ?? 0,
+    inPerson60: item.in_person_price60 ?? 0,
+    about: item.about || "Tutor profile is being updated.",
+    education: (item.education || []).map((entry) => `${entry.degree} - ${entry.school} (${entry.year})`),
+    availability: (item.availability || []).map((slot) => `${slot.day} - ${slot.time}`),
+    verified: true,
+  };
+}
+
 export async function fetchAvailableStudentTutors(): Promise<StudentTutor[]> {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
   if (!baseUrl) {
@@ -172,5 +211,27 @@ export async function fetchAvailableStudentTutors(): Promise<StudentTutor[]> {
 
 export async function fetchAvailableStudentTutorById(id: string): Promise<StudentTutor | null> {
   const tutors = await fetchAvailableStudentTutors();
+  return tutors.find((tutor) => tutor.id === id) ?? null;
+}
+
+export async function fetchAvailableParentTutors(): Promise<ParentTutorCard[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+  }
+
+  const data = await browserApiRequest<PublicTutorsResponse>({
+    url: `${baseUrl}/public/tutors/available`,
+    method: "GET",
+    includeAuth: false,
+    withCredentials: false,
+  });
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  return items.map(mapTutorToParentCard);
+}
+
+export async function fetchAvailableParentTutorById(id: string): Promise<ParentTutorCard | null> {
+  const tutors = await fetchAvailableParentTutors();
   return tutors.find((tutor) => tutor.id === id) ?? null;
 }

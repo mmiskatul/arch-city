@@ -34,6 +34,7 @@ import { getNotificationCount } from "@/lib/api/notifications-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
+import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
 
 type NavItem = {
   label: string;
@@ -108,11 +109,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   useNotificationsSocket(tokenPresent && isAuthenticated);
 
   useEffect(() => {
-    if (!tokenPresent || !isAuthenticated) {
-      setMessageBadge("0");
-      setNotificationsBadge("0");
-      return;
-    }
+    if (!tokenPresent || !isAuthenticated) return;
 
     let cancelled = false;
 
@@ -223,6 +220,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
       : pathname.startsWith(ADMIN_SETTINGS_ROUTE)
         ? ""
         : "Search students, tutors, sessions...";
+  const isMessagesRoute = pathname.startsWith(ADMIN_MESSAGES_ROUTE);
+  const contentWrapperClassName = isMessagesRoute
+    ? "px-0 py-0 xl:max-w-[calc(100vw-206px)]"
+    : "px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-206px)]";
 
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-[#1f2937]">
@@ -314,14 +315,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
               </div>
 
               <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
-                  aria-label="Notifications"
-                >
-                  <FiBell className="h-4 w-4" />
-                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#d61c3f]" />
-                </button>
+                <NotificationBellMenu
+                  role="admin"
+                  viewAllHref={ADMIN_NOTIFICATIONS_ROUTE}
+                  badgeCount={Number(notificationsBadge) || 0}
+                  onBeforeOpen={() => {
+                    setUserMenuOpen(false);
+                    setTopUserMenuOpen(false);
+                  }}
+                />
                 <div className="relative" ref={topUserMenuRef}>
                   <button
                     type="button"
@@ -362,7 +364,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <div className="px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-206px)]">{children}</div>
+          <div className={contentWrapperClassName}>{children}</div>
         </section>
       </div>
     </main>

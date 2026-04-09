@@ -36,7 +36,7 @@ function formatSessionMeta(thread: AdminMessageThreadSummary) {
 }
 
 function formatThreadTime(thread: AdminMessageThreadSummary) {
-  const value = thread.last_message_at || thread.updated_at;
+  const value = thread.last_message_at;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return thread.session_time || thread.session_date || "";
@@ -129,7 +129,9 @@ export function AdminMessagesPage({ selectedConversationId }: { selectedConversa
         if (cancelled) return;
 
         const nextThreads = [...payload.items].sort(
-          (left, right) => parseTimestamp(right.last_message_at || right.updated_at) - parseTimestamp(left.last_message_at || left.updated_at),
+          (left, right) =>
+            parseTimestamp(right.last_message_at || right.updated_at) -
+            parseTimestamp(left.last_message_at || left.updated_at),
         );
         setThreads(nextThreads);
         setActiveThreadId((current) => {
@@ -149,7 +151,7 @@ export function AdminMessagesPage({ selectedConversationId }: { selectedConversa
       }
     }
 
-    loadThreads();
+    void loadThreads();
 
     return () => {
       cancelled = true;
@@ -191,9 +193,7 @@ export function AdminMessagesPage({ selectedConversationId }: { selectedConversa
         setMessages(sortMessages(payload.messages));
         setThreads((current) =>
           current.map((thread) =>
-            thread.booking_id === activeThread.booking_id
-              ? { ...thread, unread_count_admin: 0 }
-              : thread,
+            thread.booking_id === activeThread.booking_id ? { ...thread, unread_count_admin: 0 } : thread,
           ),
         );
         window.dispatchEvent(new Event("arch-messages-updated"));
@@ -221,10 +221,7 @@ export function AdminMessagesPage({ selectedConversationId }: { selectedConversa
     pane.scrollTop = pane.scrollHeight;
   }, [activeThreadId, messages]);
 
-  const unreadCount = threads.reduce(
-    (sum, thread) => sum + ((thread.unread_count_admin || 0) > 0 ? 1 : 0),
-    0,
-  );
+  const unreadCount = threads.reduce((sum, thread) => sum + ((thread.unread_count_admin || 0) > 0 ? 1 : 0), 0);
 
   const handleSend = async () => {
     const text = draft.trim();
@@ -297,185 +294,182 @@ export function AdminMessagesPage({ selectedConversationId }: { selectedConversa
   return (
     <AdminShell>
       <div className="w-full">
-        <div className="overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white">
-          <div className="grid min-h-[720px] xl:grid-cols-[360px_minmax(0,1fr)]">
-            <aside className="border-r border-[#eceef2]">
-              <div className="border-b border-[#eceef2] p-4">
-                <h1 className="text-[36px] font-bold leading-none text-[#20242b]">Messages</h1>
+        <div className="grid xl:grid-cols-[360px_minmax(0,1fr)]">
+          <aside className="border-r border-[#eceef2] bg-white px-4 py-4">
+            <div className="border-b border-[#eceef2] pb-4">
+              <h1 className="text-[36px] font-bold leading-none text-[#20242b]">Messages</h1>
 
-                <div className="mt-3 flex items-center gap-3 border-b border-[#eceef2]">
-                  {(["All", "Unread", "Flagged"] as const).map((item) => {
-                    const active = tab === item;
-                    return (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => setTab(item)}
-                        className={`inline-flex h-9 items-center gap-1 border-b-2 px-1 text-[14px] font-semibold transition ${
-                          active
-                            ? "border-[#d94a62] text-[#d61c3f]"
-                            : "border-transparent text-[#6b7280] hover:text-[#374151]"
-                        }`}
-                      >
-                        {item}
-                        {item === "Unread" && unreadCount > 0 ? (
-                          <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d61c3f] px-1 text-[10px] text-white">
-                            {unreadCount}
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="divide-y divide-[#eceef2]">
-                {loadingThreads ? (
-                  <div className="px-4 py-4 text-[14px] text-[#6b7280]">Loading conversations...</div>
-                ) : null}
-
-                {!loadingThreads && filteredThreads.length === 0 ? (
-                  <div className="px-4 py-8 text-[14px] text-[#6b7280]">No message threads found.</div>
-                ) : null}
-
-                {filteredThreads.map((thread) => {
-                  const active = activeThread?.booking_id === thread.booking_id;
-                  const unreadTotal = thread.unread_count_admin || 0;
-
+              <div className="mt-3 flex items-center gap-3 border-b border-[#eceef2]">
+                {(["All", "Unread", "Flagged"] as const).map((item) => {
+                  const active = tab === item;
                   return (
                     <button
-                      key={thread.booking_id}
+                      key={item}
                       type="button"
-                      onClick={() => setActiveThreadId(thread.booking_id)}
-                      className={`flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left transition ${
+                      onClick={() => setTab(item)}
+                      className={`inline-flex h-9 items-center gap-1 border-b-2 px-1 text-[14px] font-semibold transition ${
                         active
-                          ? "border-[#d94a62] bg-[#fff7f9]"
-                          : "border-transparent hover:bg-[#fafafb]"
+                          ? "border-[#d94a62] text-[#d61c3f]"
+                          : "border-transparent text-[#6b7280] hover:text-[#374151]"
                       }`}
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d61c3f]">
-                        {thread.student_initials || thread.tutor_initials || "AD"}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-[14px] font-semibold text-[#20242b]">
-                              {thread.student_name || "Student"} <span className="text-[#9ca3af]">↔</span>{" "}
-                              {thread.tutor_name || "Tutor"}
-                            </p>
-                            <p className="truncate text-[13px] text-[#6b7280]">
-                              {thread.subject || "Session conversation"}
-                            </p>
-                          </div>
-                          <span className="shrink-0 text-[12px] font-medium text-[#d94a62]">
-                            {formatThreadTime(thread)}
-                          </span>
-                        </div>
-                        <p className="mt-1 truncate text-[13px] text-[#4b5563]">
-                          {thread.last_message || "Session booked"}
-                        </p>
-                      </div>
-                      {unreadTotal > 0 ? (
-                        <span className="mt-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d61c3f] px-1.5 text-[10px] font-semibold text-white">
-                          {unreadTotal}
+                      {item}
+                      {item === "Unread" && unreadCount > 0 ? (
+                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d61c3f] px-1 text-[10px] text-white">
+                          {unreadCount}
                         </span>
                       ) : null}
                     </button>
                   );
                 })}
               </div>
-            </aside>
+            </div>
 
-            <section className="flex min-h-[720px] flex-col bg-[#fbfbfc]">
-              {activeThread ? (
-                <>
-                  <header className="border-b border-[#eceef2] bg-white px-4 py-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-[16px] font-bold text-[#20242b]">
-                          {activeThread.student_name || "Student"} <span className="text-[#9ca3af]">↔</span>{" "}
-                          {activeThread.tutor_name || "Tutor"}
-                        </p>
-                        <p className="text-[13px] text-[#6b7280]">{formatSessionMeta(activeThread)}</p>
-                      </div>
+            <div className="divide-y divide-[#eceef2]">
+              {loadingThreads ? (
+                <div className="px-4 py-4 text-[14px] text-[#6b7280]">Loading conversations...</div>
+              ) : null}
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="inline-flex h-8 items-center rounded-lg border border-[#f0d58a] bg-[#fff6de] px-3 text-[12px] font-semibold text-[#8f6b10]"
-                        >
-                          Flag
-                        </button>
-                        <Link
-                          href={`${ADMIN_SCHEDULES_ROUTE}/${activeThread.booking_id}`}
-                          className="inline-flex h-8 items-center rounded-lg border border-[#e5e7eb] bg-white px-3 text-[12px] font-semibold text-[#4b5563]"
-                        >
-                          View Session
-                        </Link>
-                      </div>
+              {!loadingThreads && filteredThreads.length === 0 ? (
+                <div className="px-4 py-8 text-[14px] text-[#6b7280]">No message threads found.</div>
+              ) : null}
+
+              {filteredThreads.map((thread) => {
+                const active = activeThread?.booking_id === thread.booking_id;
+                const unreadTotal = thread.unread_count_admin || 0;
+
+                return (
+                  <button
+                    key={thread.booking_id}
+                    type="button"
+                    onClick={() => setActiveThreadId(thread.booking_id)}
+                    className={`flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left transition ${
+                      active ? "border-[#d94a62] bg-[#fff7f9]" : "border-transparent hover:bg-[#fafafb]"
+                    }`}
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d61c3f]">
+                      {thread.student_initials || thread.tutor_initials || "AD"}
                     </div>
-                  </header>
-
-                  <div className="flex-1 px-4 py-4">
-                    <p className="text-center text-[12px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">
-                      Today
-                    </p>
-
-                    <div ref={messagesPaneRef} className="mt-4 max-h-[calc(100vh-340px)] space-y-8 overflow-y-auto pr-1">
-                      {loadingMessages && messages.length === 0 ? (
-                        <p className="text-[13px] text-[#6b7280]">Loading chat...</p>
-                      ) : null}
-
-                      {error ? <p className="text-[13px] text-[#b91c1c]">{error}</p> : null}
-
-                      {messages.map((message) => (
-                        <MessageBubble key={message.id} message={message} />
-                      ))}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-[14px] font-semibold text-[#20242b]">
+                            {thread.student_name || "Student"} <span className="text-[#9ca3af]">↔</span>{" "}
+                            {thread.tutor_name || "Tutor"}
+                          </p>
+                          <p className="truncate text-[13px] text-[#6b7280]">
+                            {thread.subject || "Session conversation"}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-[12px] font-medium text-[#d94a62]">
+                          {formatThreadTime(thread)}
+                        </span>
+                      </div>
+                      <p className="mt-1 truncate text-[13px] text-[#4b5563]">{thread.last_message || "Session booked"}</p>
                     </div>
-                  </div>
+                    {unreadTotal > 0 ? (
+                      <span className="mt-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d61c3f] px-1.5 text-[10px] font-semibold text-white">
+                        {unreadTotal}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
 
-                  <footer className="mt-auto border-t border-[#eceef2] bg-white px-3 py-2">
+          <section className="flex flex-col bg-[#fbfbfc] px-4 py-4">
+            {activeThread ? (
+              <>
+                <header className="border-b border-[#eceef2] bg-white px-4 py-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-[16px] font-bold text-[#20242b]">
+                        {activeThread.student_name || "Student"} <span className="text-[#9ca3af]">↔</span>{" "}
+                        {activeThread.tutor_name || "Tutor"}
+                      </p>
+                      <p className="text-[13px] text-[#6b7280]">{formatSessionMeta(activeThread)}</p>
+                    </div>
+
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#6b7280] hover:bg-[#f7f7f8]"
-                        aria-label="Attach file"
-                        title="Attachments are not enabled for admin replies yet"
+                        className="inline-flex h-8 items-center rounded-lg border border-[#f0d58a] bg-[#fff6de] px-3 text-[12px] font-semibold text-[#8f6b10]"
                       >
-                        <FiPaperclip className="h-4 w-4" />
+                        Flag
                       </button>
-                      <input
-                        value={draft}
-                        onChange={(event) => setDraft(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" && !event.shiftKey) {
-                            event.preventDefault();
-                            void handleSend();
-                          }
-                        }}
-                        type="text"
-                        placeholder="Type a message..."
-                        className="h-9 flex-1 rounded-full border border-[#e5e7eb] bg-[#f7f7f8] px-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => void handleSend()}
-                        disabled={sending || draft.trim().length === 0}
-                        className="inline-flex h-8 items-center gap-2 rounded-full bg-[#d61c3f] px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      <Link
+                        href={`${ADMIN_SCHEDULES_ROUTE}/${activeThread.booking_id}`}
+                        className="inline-flex h-8 items-center rounded-lg border border-[#e5e7eb] bg-white px-3 text-[12px] font-semibold text-[#4b5563]"
                       >
-                        <FiSend className="h-3.5 w-3.5" />
-                        Send
-                      </button>
+                        View Session
+                      </Link>
                     </div>
-                  </footer>
-                </>
-              ) : (
-                <div className="flex flex-1 items-center justify-center text-[14px] text-[#6b7280]">
-                  No conversations found.
+                  </div>
+                </header>
+
+                <div className="flex-1">
+                  <p className="px-4 pt-4 text-center text-[12px] font-semibold uppercase tracking-[0.04em] text-[#6b7280]">
+                    Today
+                  </p>
+
+                  <div
+                    ref={messagesPaneRef}
+                    className="mt-4 max-h-[calc(100vh-340px)] space-y-8 overflow-y-auto px-4 pr-1"
+                  >
+                    {loadingMessages && messages.length === 0 ? (
+                      <p className="text-[13px] text-[#6b7280]">Loading chat...</p>
+                    ) : null}
+
+                    {error ? <p className="text-[13px] text-[#b91c1c]">{error}</p> : null}
+
+                    {messages.map((message) => (
+                      <MessageBubble key={message.id} message={message} />
+                    ))}
+                  </div>
                 </div>
-              )}
-            </section>
-          </div>
+
+                <footer className="mt-auto border-t border-[#eceef2] bg-white px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#6b7280] hover:bg-[#f7f7f8]"
+                      aria-label="Attach file"
+                      title="Attachments are not enabled for admin replies yet"
+                    >
+                      <FiPaperclip className="h-4 w-4" />
+                    </button>
+                    <input
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          void handleSend();
+                        }
+                      }}
+                      type="text"
+                      placeholder="Type a message..."
+                      className="h-9 flex-1 rounded-full border border-[#e5e7eb] bg-[#f7f7f8] px-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleSend()}
+                      disabled={sending || draft.trim().length === 0}
+                      className="inline-flex h-8 items-center gap-2 rounded-full bg-[#d61c3f] px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <FiSend className="h-3.5 w-3.5" />
+                      Send
+                    </button>
+                  </div>
+                </footer>
+              </>
+            ) : (
+              <div className="flex flex-1 items-center justify-center text-[14px] text-[#6b7280]">
+                No conversations found.
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </AdminShell>

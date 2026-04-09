@@ -8,14 +8,14 @@ import {
   FiCheckCircle,
   FiClock,
   FiDollarSign,
-  FiMessageSquare,
   FiPhone,
+  FiStar,
   FiVideo,
 } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
 import { browserApiRequest, resolveBrowserApiBaseUrl } from "@/lib/api/browser-api-client";
-import { STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
+import { STUDENT_FIND_TUTORS_ROUTE, STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
 import { useSessionChat } from "@/lib/realtime/session-chat";
 import type { StudentScheduleItem } from "@/lib/student/schedule-data";
 
@@ -166,11 +166,20 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
   const [isSending, setIsSending] = useState(false);
   const [isUpdatingCompletion, setIsUpdatingCompletion] = useState(false);
   const [completionActionError, setCompletionActionError] = useState("");
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [ratingError, setRatingError] = useState("");
   const messagesPaneRef = useRef<HTMLDivElement | null>(null);
   const tutorInitials = currentSession.tutorInitials || initialsFromName(currentSession.tutorName, "TU");
 
   useEffect(() => {
     setCurrentSession(session);
+    setSelectedRating(session.studentRatingScore ?? 0);
+    setRatingComment(session.studentRatingComment ?? "");
+    setRatingSubmitted(Boolean(session.studentRatingScore));
+    setRatingError("");
   }, [session]);
 
   useEffect(() => {
@@ -258,6 +267,39 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
   const completionRequested = currentSession.status === "Completion Requested";
   const completed = currentSession.status === "Completed";
 
+  async function handleSubmitRating() {
+    if (!selectedRating || ratingSubmitted || ratingSubmitting) return;
+
+    const baseUrl = resolveBrowserApiBaseUrl();
+    if (!baseUrl) {
+      setRatingError("API base URL is not configured.");
+      return;
+    }
+
+    setRatingSubmitting(true);
+    setRatingError("");
+
+    try {
+      const updated = await browserApiRequest<StudentScheduleItem, { rating: number; comment: string }>({
+        url: `${baseUrl}/student/schedule/${encodeURIComponent(currentSession.id)}/rating`,
+        method: "POST",
+        data: {
+          rating: selectedRating,
+          comment: ratingComment,
+        },
+      });
+
+      setCurrentSession(updated);
+      setSelectedRating(updated.studentRatingScore ?? selectedRating);
+      setRatingComment(updated.studentRatingComment ?? ratingComment);
+      setRatingSubmitted(true);
+    } catch (error) {
+      setRatingError(error instanceof Error ? error.message : "Failed to submit rating.");
+    } finally {
+      setRatingSubmitting(false);
+    }
+  }
+
   return (
     <StudentShell>
       <div className="w-full">
@@ -343,13 +385,15 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
               <span>Get Assistance from Arch City Tutors Management Team</span>
             </button>
 
-            <button
-              type="button"
-              className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white"
-              disabled
-            >
-              Cancel Session
-            </button>
+            {!completed ? (
+              <button
+                type="button"
+                className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white"
+                disabled
+              >
+                Cancel Session
+              </button>
+            ) : null}
             {completionActionError ? (
               <p className="mt-2 text-[12px] text-[#d61c3f]">{completionActionError}</p>
             ) : null}
@@ -360,6 +404,70 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
                 <p>Full session rate required if cancelled within 12 hours.</p>
               </div>
             </div>
+
+            {completed ? (
+              <div className="mt-4 rounded-[12px] border border-[#eceef2] bg-[#fafafb] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-[14px] font-bold text-[#20242b]">Rate your tutor</h3>
+                    <p className="mt-1 text-[12px] text-[#6b7280]">Leave feedback before booking a new tutor.</p>
+                  </div>
+                  {ratingSubmitted ? (
+                    <span className="rounded-full bg-[#eaf7ef] px-2.5 py-1 text-[11px] font-medium text-[#2d8f5f]">
+                      Thanks
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-3 flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, index) => {
+                    const value = index + 1;
+                    const active = value <= selectedRating;
+
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setSelectedRating(value)}
+                        className="rounded-md p-1 transition hover:bg-[#f3f4f6]"
+                        aria-label={`Rate ${value} star${value === 1 ? "" : "s"}`}
+                      >
+                        <FiStar className={`h-5 w-5 ${active ? "fill-[#f3b300] text-[#f3b300]" : "text-[#d1d5db]"}`} />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <textarea
+                  value={ratingComment}
+                  onChange={(event) => setRatingComment(event.target.value)}
+                  rows={3}
+                  placeholder="Add a short note about the session..."
+                  className="mt-3 w-full rounded-[12px] border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#374151] outline-none placeholder:text-[#9ca3af]"
+                />
+                {ratingError ? <p className="mt-2 text-[12px] text-[#d61c3f]">{ratingError}</p> : null}
+
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSubmitRating}
+                    disabled={!selectedRating || ratingSubmitted || ratingSubmitting}
+                    className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {ratingSubmitted ? "Rating Submitted" : ratingSubmitting ? "Submitting..." : "Submit Rating"}
+                  </button>
+
+                  {ratingSubmitted ? (
+                    <Link
+                      href={STUDENT_FIND_TUTORS_ROUTE}
+                      className="inline-flex h-10 items-center justify-center rounded-full border border-[#d61c3f] px-5 text-[13px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
+                    >
+                      Find New Tutor
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </aside>
 
           <section className="min-w-0">

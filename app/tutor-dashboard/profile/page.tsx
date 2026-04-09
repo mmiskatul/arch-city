@@ -26,6 +26,10 @@ type TutorProfileApiResponse = {
   gender?: string;
   bio?: string;
   school_district?: string;
+  total_sessions?: number;
+  avg_rating?: number;
+  active_students?: number;
+  all_time_earnings?: string;
 };
 
 function mapTutorProfile(data: TutorProfileApiResponse): TutorProfileData {
@@ -39,10 +43,10 @@ function mapTutorProfile(data: TutorProfileApiResponse): TutorProfileData {
     location: data.location || "",
     status: data.status || "Active",
     since: "",
-    totalSessions: "0",
-    avgRating: "0.0",
-    activeStudents: "0",
-    allTimeEarnings: "$0",
+    totalSessions: String(data.total_sessions ?? 0),
+    avgRating: (data.avg_rating ?? 0).toFixed(1),
+    activeStudents: String(data.active_students ?? 0),
+    allTimeEarnings: data.all_time_earnings || "$0",
     streetAddress: data.street_address,
     city: data.city,
     state: data.state,

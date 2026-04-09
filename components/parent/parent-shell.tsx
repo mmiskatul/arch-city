@@ -33,6 +33,7 @@ import { parentMessagesUnreadCount } from "@/lib/parent/messages-data";
 import { getNotificationCount } from "@/lib/api/notifications-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
+import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
 
 type NavItem = {
   label: string;
@@ -331,6 +332,14 @@ export function ParentShell({
         </aside>
 
         <section className="min-w-0 xl:min-h-screen">
+          <div className="flex items-center justify-end px-4 py-4 sm:px-5 lg:px-6 xl:sticky xl:top-0 xl:z-20 xl:bg-white">
+            <NotificationBellMenu
+              role="parent"
+              viewAllHref={PARENT_NOTIFICATIONS_ROUTE}
+              badgeCount={notificationsUnreadCount}
+              onBeforeOpen={() => setUserMenuOpen(false)}
+            />
+          </div>
           <div className="py-5 xl:max-w-[calc(100vw-172px)]">{children}</div>
         </section>
       </div>

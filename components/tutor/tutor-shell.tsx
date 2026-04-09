@@ -35,6 +35,7 @@ import { getTutorMessageCount } from "@/lib/api/session-messages-api";
 import { getNotificationCount } from "@/lib/api/notifications-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
+import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
 
 type NavItem = {
   label: string;
@@ -380,14 +381,15 @@ export function TutorShell({
               ) : null}
 
               <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
-                  aria-label="Notifications"
-                >
-                  <FiBell className="h-4 w-4" />
-                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#d61c3f]" />
-                </button>
+                <NotificationBellMenu
+                  role="tutor"
+                  viewAllHref={TUTOR_NOTIFICATIONS_ROUTE}
+                  badgeCount={notificationsUnreadCount}
+                  onBeforeOpen={() => {
+                    setUserMenuOpen(false);
+                    setTopUserMenuOpen(false);
+                  }}
+                />
 
                 <div className="relative" ref={topUserMenuRef}>
                   <button

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { IconType } from "react-icons";
@@ -31,6 +31,7 @@ import { getStudentMessageCount } from "@/lib/api/session-messages-api";
 import { getNotificationCount } from "@/lib/api/notifications-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
+import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
 
 type NavItem = {
   label: string;
@@ -106,6 +107,8 @@ type ShellUserProfile = {
 
 export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { tokenPresent, isAuthenticated } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
@@ -245,12 +248,33 @@ export function StudentShell({ children }: { children: ReactNode }) {
     redirectToLogin();
   }
 
-  const hideTopHeader =
+  const hideTopSearch =
+    pathname === STUDENT_DASHBOARD_ROUTE ||
     pathname.startsWith("/student-dashboard/find-tutors/") ||
     pathname.startsWith("/student-dashboard/schedule") ||
+    pathname === STUDENT_NOTIFICATIONS_ROUTE ||
+    pathname.startsWith(`${STUDENT_SETTINGS_ROUTE}/`) ||
     pathname === STUDENT_MESSAGES_ROUTE ||
     pathname === STUDENT_PROFILE_ROUTE ||
     pathname === STUDENT_SETTINGS_ROUTE;
+  const showTutorSearch = pathname === STUDENT_FIND_TUTORS_ROUTE;
+  const tutorSearchValue = showTutorSearch ? searchParams.get("q") ?? "" : "";
+
+  const handleTutorSearchChange = (value: string) => {
+    if (!showTutorSearch) return;
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (value) {
+      nextParams.set("q", value);
+    } else {
+      nextParams.delete("q");
+    }
+
+    const queryString = nextParams.toString();
+    router.replace(queryString ? `${STUDENT_FIND_TUTORS_ROUTE}?${queryString}` : STUDENT_FIND_TUTORS_ROUTE, {
+      scroll: false,
+    });
+  };
 
   return (
     <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
@@ -345,7 +369,56 @@ export function StudentShell({ children }: { children: ReactNode }) {
         </aside>
 
         <section className="min-w-0 xl:min-h-screen">
-          {!hideTopHeader ? (
+          {hideTopSearch ? (
+            <div className="flex items-center justify-end gap-3 px-4 py-4 sm:px-5 lg:px-6 xl:sticky xl:top-0 xl:z-20 xl:bg-white">
+              <NotificationBellMenu
+                role="student"
+                viewAllHref={STUDENT_NOTIFICATIONS_ROUTE}
+                badgeCount={notificationsUnreadCount}
+                onBeforeOpen={() => {
+                  setUserMenuOpen(false);
+                  setTopUserMenuOpen(false);
+                }}
+              />
+
+              <div className="relative" ref={topUserMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    setTopUserMenuOpen((open) => !open);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f] transition hover:opacity-90"
+                  aria-label="Open profile menu"
+                >
+                  {userProfile.initials}
+                </button>
+
+                {topUserMenuOpen ? (
+                  <div className="absolute right-0 top-full z-30 mt-2 w-40 rounded-xl border border-[#e8eaef] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.12)]">
+                    <Link
+                      href={STUDENT_PROFILE_ROUTE}
+                      onClick={() => setTopUserMenuOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-[#374151] transition hover:bg-[#f7f7f8]"
+                    >
+                      <FiUser className="h-4 w-4 text-[#6b7280]" />
+                      <span>Profile</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] font-medium text-[#d61c3f] transition hover:bg-[#fff1f3] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <FiLogOut className="h-4 w-4" />
+                      <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
             <header className="border-b border-[#eceef2] bg-white xl:sticky xl:top-0 xl:z-20">
               <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
                 <div className="relative w-full max-w-[560px]">
@@ -353,18 +426,22 @@ export function StudentShell({ children }: { children: ReactNode }) {
                   <input
                     type="text"
                     placeholder="Search tutors, subjects, sessions..."
+                    value={tutorSearchValue}
+                    onChange={(event) => handleTutorSearchChange(event.target.value)}
                     className="h-11 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] pl-11 pr-4 text-[14px] outline-none placeholder:text-[#9ca3af] focus:border-[#d1d5db]"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
-                    aria-label="Notifications"
-                  >
-                    <FiBell className="h-4 w-4" />
-                  </button>
+              <div className="flex items-center justify-end gap-3">
+                <NotificationBellMenu
+                  role="student"
+                  viewAllHref={STUDENT_NOTIFICATIONS_ROUTE}
+                  badgeCount={notificationsUnreadCount}
+                  onBeforeOpen={() => {
+                    setUserMenuOpen(false);
+                    setTopUserMenuOpen(false);
+                  }}
+                />
 
                   <div className="relative" ref={topUserMenuRef}>
                     <button
@@ -405,7 +482,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </header>
-          ) : null}
+          )}
 
           <div className="px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-172px)]">
             {children}

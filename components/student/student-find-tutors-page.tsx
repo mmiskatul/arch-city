@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { FiChevronDown, FiStar } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
@@ -29,6 +30,30 @@ function ratingThreshold(option: string) {
     default:
       return 0;
   }
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightText(text: string, query: string) {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) return text;
+
+  const pattern = new RegExp(`(${escapeRegExp(trimmedQuery)})`, "ig");
+  const parts = text.split(pattern);
+
+  return parts.map((part, index) => {
+    if (part.toLowerCase() === trimmedQuery.toLowerCase()) {
+      return (
+        <mark key={`${part}-${index}`} className="rounded bg-[#fff2a8] px-0.5 text-inherit">
+          {part}
+        </mark>
+      );
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
 }
 
 function FilterGroup({
@@ -67,7 +92,34 @@ function FilterGroup({
   );
 }
 
-function TutorCardView({ tutor }: { tutor: StudentTutor }) {
+function RatingStars({ rating }: { rating: number }) {
+  const normalized = Math.max(0, Math.min(5, rating));
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, index) => {
+        const value = index + 1;
+        const difference = normalized - index;
+        const isFull = difference >= 1;
+        const isHalf = difference >= 0.5 && difference < 1;
+
+        return (
+          <span key={value} className="relative inline-flex h-3 w-3 items-center justify-center">
+            <FiStar className={`absolute h-3 w-3 ${isFull || isHalf ? "text-[#f3b300]" : "text-[#d1d5db]"}`} />
+            {isFull ? <FiStar className="absolute h-3 w-3 fill-[#f3b300] text-[#f3b300]" /> : null}
+            {isHalf ? (
+              <>
+                <FiStar className="absolute h-3 w-3 fill-[#f3b300] text-[#f3b300]" />
+                <span className="absolute right-0 top-0 h-full w-1/2 bg-white" />
+              </>
+            ) : null}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function TutorCardView({ tutor, searchQuery }: { tutor: StudentTutor; searchQuery: string }) {
   const nextSlot = tutor.availability[0];
   const openSlotCount = tutor.availability.length;
 
@@ -83,11 +135,9 @@ function TutorCardView({ tutor }: { tutor: StudentTutor }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-[15px] font-bold text-[#20242b]">{tutor.name}</h2>
+              <h2 className="truncate text-[15px] font-bold text-[#20242b]">{highlightText(tutor.name, searchQuery)}</h2>
               <div className="mt-1 flex items-center gap-1 text-[12px] text-[#f3b300]">
-                {[0, 1, 2, 3, 4].map((star) => (
-                  <FiStar key={star} className="h-3 w-3 fill-current" />
-                ))}
+                <RatingStars rating={tutor.rating} />
                 <span className="ml-1 font-semibold text-[#6b7280]">
                   {tutor.rating > 0 ? `(${tutor.rating.toFixed(1)} - ${tutor.reviews} reviews)` : "(New tutor)"}
                 </span>
@@ -110,13 +160,13 @@ function TutorCardView({ tutor }: { tutor: StudentTutor }) {
             key={subject}
             className="rounded-md border border-[#e5e7eb] bg-[#f8fafc] px-2 py-1 text-[11px] font-medium text-[#6b7280]"
           >
-            {subject}
+            {highlightText(subject, searchQuery)}
           </span>
         ))}
       </div>
 
       <p className="mt-3 text-[13px] text-[#6b7280]">
-        {tutor.grades} - {tutor.district}
+        {highlightText(tutor.grades, searchQuery)} - {tutor.district}
       </p>
 
       <div className="mt-3 rounded-[12px] border border-[#eceef2] bg-[#fafbfc] px-3 py-2 text-[12px] text-[#4b5563]">
@@ -126,7 +176,7 @@ function TutorCardView({ tutor }: { tutor: StudentTutor }) {
             Available
           </span>
         </div>
-        {nextSlot ? <p className="mt-1 text-[12px] text-[#6b7280]">{nextSlot.day} - {nextSlot.time}</p> : null}
+        {nextSlot ? <p className="mt-1 text-[12px] text-[#6b7280]">{highlightText(`${nextSlot.day} - ${nextSlot.time}`, searchQuery)}</p> : null}
       </div>
 
       <div className="mt-3 border-t border-[#eceef2] pt-3 text-[13px] text-[#6b7280]">
@@ -189,6 +239,8 @@ function TutorCardSkeleton() {
 }
 
 export function StudentFindTutorsPage() {
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get("q")?.trim().toLowerCase() ?? "";
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedGradeLevel, setSelectedGradeLevel] = useState<string | null>(null);
   const [selectedTutoringMode, setSelectedTutoringMode] = useState<string | null>(null);
@@ -229,6 +281,12 @@ export function StudentFindTutorsPage() {
 
   const filteredTutors = useMemo(() => {
     const filtered = tutors.filter((tutor) => {
+      const matchesSearch =
+        !searchQuery ||
+        [tutor.name, tutor.grades, ...tutor.subjects]
+          .join(" ")
+          .toLowerCase()
+          .includes(searchQuery);
       const matchesSubject = !selectedSubject || tutor.subjects.includes(selectedSubject);
       const matchesGrade = !selectedGradeLevel || tutor.gradeGroup === selectedGradeLevel;
       const matchesMode =
@@ -238,7 +296,7 @@ export function StudentFindTutorsPage() {
         (selectedTutoringMode === "In-Person" && tutor.mode === "Both");
       const matchesRating = tutor.rating >= ratingThreshold(selectedMinRating ?? "Any");
 
-      return matchesSubject && matchesGrade && matchesMode && matchesRating;
+      return matchesSearch && matchesSubject && matchesGrade && matchesMode && matchesRating;
     });
 
     return [...filtered].sort((a, b) => {
@@ -253,7 +311,7 @@ export function StudentFindTutorsPage() {
           return b.availability.length - a.availability.length || b.rating - a.rating || a.name.localeCompare(b.name);
       }
     });
-  }, [selectedGradeLevel, selectedMinRating, selectedSubject, selectedTutoringMode, sortBy, tutors]);
+  }, [searchQuery, selectedGradeLevel, selectedMinRating, selectedSubject, selectedTutoringMode, sortBy, tutors]);
 
   function resetFilters() {
     setSelectedSubject(null);
@@ -313,6 +371,11 @@ export function StudentFindTutorsPage() {
                 <h2 className="text-[16px] font-bold text-[#20242b]">
                   {isLoading ? "Loading tutors..." : `${filteredTutors.length} tutor${filteredTutors.length === 1 ? "" : "s"} found`}
                 </h2>
+                {!isLoading && searchQuery ? (
+                  <p className="mt-1 text-[12px] text-[#6b7280]">
+                    Showing results for <span className="font-semibold text-[#20242b]">&quot;{searchQuery}&quot;</span>
+                  </p>
+                ) : null}
                 {loadError ? <p className="mt-1 text-[12px] text-[#8a5b00]">{loadError}</p> : null}
               </div>
               <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -346,7 +409,7 @@ export function StudentFindTutorsPage() {
               <>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
                   {filteredTutors.map((tutor) => (
-                    <TutorCardView key={tutor.id} tutor={tutor} />
+                    <TutorCardView key={tutor.id} tutor={tutor} searchQuery={searchQuery} />
                   ))}
                 </div>
 

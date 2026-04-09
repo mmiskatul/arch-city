@@ -21,6 +21,9 @@ export type StudentScheduleApiItem = {
   card_brand: string;
   card_last4: string;
   details: Record<string, string>;
+  student_rating_score?: number | null;
+  student_rating_comment?: string;
+  student_rating_submitted_at?: string | null;
 };
 
 export type StudentScheduleListResponse = {
@@ -100,6 +103,9 @@ function mapStudentScheduleItem(item: StudentScheduleApiItem): StudentScheduleIt
     fullDate: fullDateLabel(item.session_date),
     sessionRate: sessionRateFromDetails(item),
     chat: [],
+    studentRatingScore: item.student_rating_score ?? null,
+    studentRatingComment: item.student_rating_comment ?? "",
+    studentRatingSubmittedAt: item.student_rating_submitted_at ?? undefined,
   };
 }
 

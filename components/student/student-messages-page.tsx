@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiBell, FiPaperclip, FiSearch } from "react-icons/fi";
+import { FiPaperclip, FiSearch } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
 import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
@@ -54,6 +54,20 @@ function sortThreadsByRecent(
     const rightFallback = fallbackOrder[right.booking_id] ?? Number.MAX_SAFE_INTEGER;
     return leftFallback - rightFallback;
   });
+}
+
+function formatThreadTimestamp(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(parsed);
 }
 
 function MessageBubble({
@@ -154,6 +168,7 @@ export function StudentMessagesPage() {
       last_sender_role: "",
       last_message_at: "",
       updated_at: "",
+      created_at: "",
       unread_count_student: thread.unreadCount,
       unread_count_tutor: 0,
       unread_count_admin: 0,
@@ -244,6 +259,7 @@ export function StudentMessagesPage() {
             last_sender_role: "",
             last_message_at: "",
             updated_at: "",
+            created_at: "",
             unread_count_student: thread.unreadCount,
             unread_count_tutor: 0,
             unread_count_admin: 0,
@@ -259,7 +275,7 @@ export function StudentMessagesPage() {
     return () => {
       cancelled = true;
     };
-  }, [tokenPresent]);
+  }, [fallbackOrder, tokenPresent]);
 
   useEffect(() => {
     if (!tokenPresent || !activeThreadId) return;
@@ -307,6 +323,9 @@ export function StudentMessagesPage() {
   const activeThreadLabel = activeThread
     ? formatSessionMeta(activeThread)
     : "No active thread";
+  const sessionCreatedLabel = activeThread
+    ? formatThreadTimestamp(activeThread.created_at || activeThread.updated_at || activeThread.last_message_at)
+    : "";
   const showLoadingMessages =
     isHydrated && (loadingMessages || threadMessages.loading) && threadMessages.messages.length === 0;
 
@@ -328,21 +347,7 @@ export function StudentMessagesPage() {
   return (
     <StudentShell>
       <div className="w-full">
-        <div className="flex items-center justify-between pb-5">
-          <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Messages</h1>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
-              aria-label="Notifications"
-            >
-              <FiBell className="h-4 w-4" />
-            </button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
-              JD
-            </div>
-          </div>
-        </div>
+        <h1 className="pb-5 text-[18px] font-bold text-[#20242b] sm:text-[22px]">Messages</h1>
 
         <div className="grid min-h-[720px] border-y border-[#e7e7eb] bg-white xl:grid-cols-[360px_minmax(0,1fr)] xl:border">
           <aside className="border-b border-[#eceef2] xl:border-r xl:border-b-0">
@@ -385,7 +390,9 @@ export function StudentMessagesPage() {
                           </p>
                         </div>
                         <span className="shrink-0 text-[12px] font-medium text-[#d94a62]">
-                          {thread.session_time || thread.session_date}
+                          {formatThreadTimestamp(thread.last_message_at || thread.updated_at) ||
+                            thread.session_time ||
+                            thread.session_date}
                         </span>
                       </div>
                       <p className="mt-1 truncate text-[13px] text-[#4b5563]">
@@ -424,11 +431,13 @@ export function StudentMessagesPage() {
                 </Link>
               </div>
 
-              <div className="bg-[#fcfcfd] px-4 py-3 text-center">
-                <span className="inline-flex rounded-full bg-[#eef1f4] px-3 py-1 text-[12px] text-[#6b7280]">
-                  Session created - Monday, March 30, 2026
-                </span>
-              </div>
+              {sessionCreatedLabel ? (
+                <div className="bg-[#fcfcfd] px-4 py-3 text-center">
+                  <span className="inline-flex rounded-full bg-[#eef1f4] px-3 py-1 text-[12px] text-[#6b7280]">
+                    Session created - {sessionCreatedLabel}
+                  </span>
+                </div>
+              ) : null}
 
               <div
                 ref={messagesPaneRef}

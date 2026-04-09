@@ -4,6 +4,7 @@ export type ParentTutorCard = {
   name: string;
   title: string;
   rating: number;
+  reviews?: number;
   sessions: number;
   subjects: string[];
   gradeLevels: string[];
@@ -45,6 +46,7 @@ export const parentTutorResults: ParentTutorCard[] = [
     name: "Marcus Thompson",
     title: "Mathematics Specialist",
     rating: 4.9,
+    reviews: 48,
     sessions: 47,
     subjects: ["Math", "Algebra I", "Algebra II", "Pre-Calculus", "Geometry", "Statistics", "ACT Math Prep"],
     gradeLevels: ["10th Grade", "11th Grade", "12th Grade"],
@@ -71,6 +73,7 @@ export const parentTutorResults: ParentTutorCard[] = [
     name: "Dr. Aisha Patel",
     title: "STEM Educator",
     rating: 5.0,
+    reviews: 62,
     sessions: 62,
     subjects: ["Math", "Calculus", "Physics", "Chemistry", "Biology", "Science"],
     gradeLevels: ["11th Grade", "12th Grade"],
@@ -97,6 +100,7 @@ export const parentTutorResults: ParentTutorCard[] = [
     name: "James Rivera",
     title: "SAT Math & Writing Coach",
     rating: 4.8,
+    reviews: 31,
     sessions: 31,
     subjects: ["Math", "SAT Prep", "SAT Math", "Essay Writing", "English"],
     gradeLevels: ["10th Grade", "11th Grade", "12th Grade"],

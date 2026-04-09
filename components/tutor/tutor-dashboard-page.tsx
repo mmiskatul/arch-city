@@ -7,6 +7,7 @@ import type { IconType } from "react-icons";
 import { FiCalendar, FiCheckCircle, FiDollarSign, FiPlusCircle } from "react-icons/fi";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
+import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { fetchTutorScheduleItemsClient } from "@/lib/api/tutor-schedule-browser-api";
 import { TUTOR_APPLY_ROUTE, TUTOR_AVAILABILITY_ROUTE, TUTOR_EARNINGS_ROUTE, TUTOR_PROFILE_ROUTE, TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
 import { tutorPendingBanner } from "@/lib/tutor/dashboard-data";
@@ -80,6 +81,7 @@ export function TutorDashboardPage() {
   const [scheduleItems, setScheduleItems] = useState<TutorScheduleItem[]>([]);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [scheduleError, setScheduleError] = useState("");
+  const [firstName, setFirstName] = useState("Tutor");
   const { status, isApproved, isPendingApplication, isNotSubmitted } = useTutorApplicationStatus();
   const showApplicationState = !isApproved;
   const showSubmittedMessage = searchParams.get("application") === "submitted";
@@ -131,6 +133,40 @@ export function TutorDashboardPage() {
       active = false;
     };
   }, [showApplicationState]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadTutorProfile() {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
+      if (!baseUrl) return;
+
+      try {
+        const profile = await browserApiRequest<{
+          first_name?: string;
+          last_name?: string;
+        }>({
+          url: `${baseUrl}/tutor/profile`,
+          method: "GET",
+        });
+
+        if (!active) return;
+
+        const nextFirstName = String(profile.first_name || "").trim();
+        setFirstName(nextFirstName || "Tutor");
+      } catch {
+        if (active) {
+          setFirstName("Tutor");
+        }
+      }
+    }
+
+    void loadTutorProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const dashboardMetrics = useMemo(() => {
     const upcoming = scheduleItems.filter(isUpcomingSession);
@@ -355,7 +391,7 @@ export function TutorDashboardPage() {
       <div className="w-full">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Hey, Marcus!</h1>
+            <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Hey, {firstName}!</h1>
             <p className="mt-1 text-[14px] text-[#6b7280]">Saturday, March 28, 2026</p>
           </div>
 

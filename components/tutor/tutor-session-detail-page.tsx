@@ -11,6 +11,7 @@ import {
   FiMessageSquare,
   FiPhone,
   FiVideo,
+  FiStar,
 } from "react-icons/fi";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
@@ -248,6 +249,8 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
   const canRequestCompletion = currentSession.status === "Upcoming";
   const completionRequested = currentSession.status === "Completion Requested";
   const completed = currentSession.status === "Completed";
+  const hasRating = typeof currentSession.studentRatingScore === "number" && currentSession.studentRatingScore > 0;
+  const ratingDisplay = hasRating ? currentSession.studentRatingScore!.toFixed(1).replace(/\.0$/, "") : "";
 
   return (
     <TutorShell>
@@ -326,6 +329,33 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
               </div>
             </div>
 
+            {hasRating ? (
+              <div className="mt-4 rounded-[14px] border border-[#f1d7db] bg-[#fff8f9] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#b4233b]">Student Rating</p>
+                    <h3 className="mt-1 text-[16px] font-bold text-[#20242b]">{currentSession.studentName}</h3>
+                    <p className="mt-1 text-[13px] text-[#6b7280]">{currentSession.subject} - {currentSession.type}</p>
+                  </div>
+                  <div className="inline-flex items-center gap-1 rounded-full bg-[#fff1f4] px-3 py-1 text-[13px] font-semibold text-[#d61c3f]">
+                    <FiStar className="h-4 w-4 fill-current" />
+                    <span>{ratingDisplay}</span>
+                  </div>
+                </div>
+
+                {currentSession.studentRatingComment ? (
+                  <div className="mt-4 rounded-[12px] border border-[#f5d9df] bg-white p-4">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6b7280]">Comment</p>
+                    <p className="mt-2 whitespace-pre-wrap text-[14px] leading-6 text-[#374151]">
+                      {currentSession.studentRatingComment}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-[13px] text-[#6b7280]">No comment was left with this rating.</p>
+                )}
+              </div>
+            ) : null}
+
             <button
               type="button"
               onClick={handleRequestCompletion}
@@ -354,13 +384,15 @@ export function TutorSessionDetailPage({ session }: { session: TutorScheduleItem
               <span>Notify Admin</span>
             </button>
 
-            <button
-              type="button"
-              className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white"
-              disabled
-            >
-              Cancel Session
-            </button>
+            {!completed ? (
+              <button
+                type="button"
+                className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white"
+                disabled
+              >
+                Cancel Session
+              </button>
+            ) : null}
             {completionRequestError ? (
               <p className="mt-2 text-[12px] text-[#d61c3f]">{completionRequestError}</p>
             ) : null}

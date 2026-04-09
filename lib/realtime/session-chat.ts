@@ -125,7 +125,10 @@ export function useSessionChat({
   senderAvatarUrl?: string;
   counterpartAvatarUrl?: string;
 }) {
-  const normalizedInitialMessages = Array.isArray(initialMessages) ? initialMessages : [];
+  const normalizedInitialMessages = useMemo(
+    () => (Array.isArray(initialMessages) ? initialMessages : []),
+    [initialMessages],
+  );
   const [messages, setMessages] = useState<SessionChatMessage[]>(() =>
     normalizedInitialMessages.map((item) =>
       normalizeMessage({
@@ -140,57 +143,6 @@ export function useSessionChat({
   const [loading, setLoading] = useState(() => Boolean(bookingId && normalizeSocketBaseUrl()));
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
-
-  useEffect(() => {
-    setMessages(
-      normalizedInitialMessages.map((item) =>
-        normalizeMessage({
-          ...item,
-          senderInitials:
-            item.sender === "admin"
-              ? item.senderInitials
-              : item.sender === senderRole
-                ? senderInitials
-                : counterpartInitials,
-          avatarUrl:
-            item.sender === "admin"
-              ? item.avatarUrl
-              : item.sender === senderRole
-                ? senderAvatarUrl
-                : counterpartAvatarUrl,
-        }),
-      ),
-    );
-  }, [
-    bookingId,
-    counterpartAvatarUrl,
-    counterpartInitials,
-    initialMessages,
-    senderAvatarUrl,
-    senderInitials,
-    senderRole,
-    normalizedInitialMessages,
-  ]);
-
-  useEffect(() => {
-    setMessages((current) =>
-      current.map((item) => ({
-        ...item,
-        senderInitials:
-          item.sender === "admin"
-            ? item.senderInitials
-            : item.sender === senderRole
-              ? senderInitials
-              : counterpartInitials,
-        avatarUrl:
-          item.sender === "admin"
-            ? item.avatarUrl
-            : item.sender === senderRole
-              ? senderAvatarUrl
-              : counterpartAvatarUrl,
-      })),
-    );
-  }, [counterpartInitials, counterpartAvatarUrl, senderAvatarUrl, senderInitials, senderRole]);
 
   useEffect(() => {
     let active = true;

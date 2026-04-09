@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { FiBell } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
 import { cancelStudentScheduleItemById } from "@/lib/api/student-schedule-cancel-api";
@@ -83,24 +82,12 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Schedule</h1>
 
-          <div className="flex items-center gap-3 self-start lg:self-auto">
-            <Link
-              href={STUDENT_FIND_TUTORS_ROUTE}
-              className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
-            >
-              + Book Session
-            </Link>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
-              aria-label="Notifications"
-            >
-              <FiBell className="h-4 w-4" />
-            </button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
-              JD
-            </div>
-          </div>
+          <Link
+            href={STUDENT_FIND_TUTORS_ROUTE}
+            className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] self-start lg:self-auto"
+          >
+            + Book Session
+          </Link>
         </div>
 
         <div className="mt-5 flex flex-col gap-4 rounded-[12px] border border-[#e7e7eb] bg-white p-0 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">

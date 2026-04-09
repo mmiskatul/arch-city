@@ -21,6 +21,9 @@ export type TutorScheduleItem = {
     message: string;
     timestamp: string;
   }>;
+  studentRatingScore?: number | null;
+  studentRatingComment?: string;
+  studentRatingSubmittedAt?: string | null;
 };
 
 export const tutorScheduleItems: TutorScheduleItem[] = [

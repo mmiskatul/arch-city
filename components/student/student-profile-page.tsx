@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { FiBell, FiCheckCircle, FiHelpCircle, FiLogOut } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { FiCheckCircle, FiHelpCircle, FiLogOut } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
-import { studentScheduleItems } from "@/lib/student/schedule-data";
+import { fetchStudentScheduleItemsBrowser } from "@/lib/api/student-schedule-browser-api";
+import type { StudentScheduleItem } from "@/lib/student/schedule-data";
 
 export type StudentProfileData = {
   firstName: string;
@@ -41,8 +42,6 @@ const profileTabs: ProfileTab[] = [
   "Session History",
   "FAQ's & Support",
 ];
-
-const recentSessionHistory = studentScheduleItems.filter((item) => item.status === "Completed");
 
 const faqItems = [
   {
@@ -257,7 +256,15 @@ function ManagePlanSection({ profile }: { profile: StudentProfileData }) {
   );
 }
 
-function SessionHistorySection() {
+function SessionHistorySection({
+  sessions,
+  loading,
+  error,
+}: {
+  sessions: StudentScheduleItem[];
+  loading: boolean;
+  error: string | null;
+}) {
   return (
     <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="flex items-center justify-between gap-4">
@@ -277,7 +284,15 @@ function SessionHistorySection() {
         </div>
 
         <div className="divide-y divide-[#eceef2]">
-          {recentSessionHistory.slice(0, 8).map((session) => (
+          {loading ? (
+            <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">Loading session history...</div>
+          ) : null}
+          {!loading && error ? (
+            <div className="px-4 py-8 text-center text-[14px] text-[#b4233b]">{error}</div>
+          ) : null}
+          {!loading &&
+            !error &&
+            sessions.slice(0, 8).map((session) => (
             <div
               key={session.id}
               className="grid grid-cols-[1.3fr_0.9fr_1fr_0.8fr_0.9fr] gap-4 px-4 py-4 text-[14px] text-[#4b5563]"
@@ -292,12 +307,28 @@ function SessionHistorySection() {
               <div>{session.subject}</div>
               <div>{session.duration}</div>
               <div>
-                <span className="inline-flex rounded-full bg-[#ebf7ef] px-2.5 py-1 text-[11px] font-medium text-[#1b8a5a]">
-                  Completed
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                    session.status === "Completed"
+                      ? "bg-[#ebf7ef] text-[#1b8a5a]"
+                      : session.status === "Completion Requested"
+                        ? "bg-[#fff6de] text-[#b58112]"
+                        : session.status === "Cancelled"
+                          ? "bg-[#ffecef] text-[#d94a62]"
+                          : "bg-[#eef2ff] text-[#3557b7]"
+                  }`}
+                >
+                  {session.status}
                 </span>
               </div>
             </div>
           ))}
+
+          {!loading && !error && sessions.length === 0 ? (
+            <div className="px-4 py-8 text-center text-[14px] text-[#6b7280]">
+              No session history found yet.
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -359,6 +390,9 @@ function FaqSupportSection() {
 export function StudentProfilePage({ profile }: { profile: StudentProfileData }) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("Personal Info");
   const [currentProfile, setCurrentProfile] = useState<StudentProfileData>(profile);
+  const [sessions, setSessions] = useState<StudentScheduleItem[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<ProfileFormValues>({
     firstName: profile.firstName,
     lastName: profile.lastName,
@@ -369,6 +403,36 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSessions() {
+      setSessionsLoading(true);
+      setSessionsError(null);
+
+      try {
+        const items = await fetchStudentScheduleItemsBrowser();
+        if (cancelled) return;
+        setSessions(items);
+      } catch {
+        if (!cancelled) {
+          setSessions([]);
+          setSessionsError("Unable to load session history.");
+        }
+      } finally {
+        if (!cancelled) {
+          setSessionsLoading(false);
+        }
+      }
+    }
+
+    void loadSessions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleFieldChange = (field: keyof ProfileFormValues, value: string) => {
     setFormValues((previous) => ({ ...previous, [field]: value }));
@@ -439,21 +503,7 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
   return (
     <StudentShell>
       <div className="w-full">
-        <div className="flex items-center justify-between pb-5">
-          <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Profile</h1>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-[#f4f4f5]"
-              aria-label="Notifications"
-            >
-              <FiBell className="h-4 w-4" />
-            </button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f]">
-              {currentProfile.initials}
-            </div>
-          </div>
-        </div>
+        <h1 className="pb-5 text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Profile</h1>
 
         <div className="space-y-4">
           <section className="rounded-[12px] border border-[#e7e7eb] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -515,7 +565,9 @@ export function StudentProfilePage({ profile }: { profile: StudentProfileData })
             />
           ) : null}
           {activeTab === "Manage Plan" ? <ManagePlanSection profile={currentProfile} /> : null}
-          {activeTab === "Session History" ? <SessionHistorySection /> : null}
+          {activeTab === "Session History" ? (
+            <SessionHistorySection sessions={sessions} loading={sessionsLoading} error={sessionsError} />
+          ) : null}
           {activeTab === "FAQ's & Support" ? <FaqSupportSection /> : null}
 
           <button
