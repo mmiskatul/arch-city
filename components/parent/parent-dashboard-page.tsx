@@ -11,13 +11,7 @@ import {
 } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
-import {
-  parentDashboardState,
-  parentStudents,
-  parentSummaryCards,
-  parentUpcomingSessions,
-  type ParentSummaryCard,
-} from "@/lib/parent/dashboard-data";
+import type { ParentDashboardOverview, ParentSummaryCard } from "@/lib/api/parent-dashboard-api";
 import {
   PARENT_FIND_TUTORS_ROUTE,
   PARENT_MESSAGES_ROUTE,
@@ -205,7 +199,7 @@ function EmptyDashboard() {
   );
 }
 
-function ActiveDashboard() {
+function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
   return (
     <>
       <div className="flex items-center justify-between gap-4 border-b border-[#eceef2] bg-white px-4 py-4 sm:px-5 lg:px-6">
@@ -222,7 +216,7 @@ function ActiveDashboard() {
         <section className="rounded-[14px] border border-[#e7e7eb] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[14px] font-medium text-[#374151]">Viewing stats for:</span>
-            {parentStudents.map((student) => (
+            {data.students.map((student) => (
               <button
                 key={student.name}
                 type="button"
@@ -254,7 +248,7 @@ function ActiveDashboard() {
           <p className="text-[18px] font-medium text-[#374151]">Jordan Wilson — 11th Grade</p>
 
           <div className="mt-3 grid gap-3 lg:grid-cols-3">
-            {parentSummaryCards.map((card) => (
+            {data.summaryCards.map((card) => (
               <SummaryCardView key={card.title} card={card} />
             ))}
           </div>
@@ -281,7 +275,7 @@ function ActiveDashboard() {
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {parentUpcomingSessions.map((session) => (
+              {data.upcomingSessions.map((session) => (
                 <div
                   key={session.id}
                   className="grid gap-4 px-4 py-4 md:grid-cols-[1.5fr_0.9fr_0.7fr_0.9fr_0.7fr_0.7fr_0.8fr_0.8fr] md:items-center"
@@ -347,11 +341,11 @@ function ActiveDashboard() {
   );
 }
 
-export function ParentDashboardPage() {
+export function ParentDashboardPage({ initialData }: { initialData: ParentDashboardOverview }) {
   return (
     <ParentShell>
       <div className="w-full">
-        {parentDashboardState === "empty" ? <EmptyDashboard /> : <ActiveDashboard />}
+        {initialData.state === "empty" ? <EmptyDashboard /> : <ActiveDashboard data={initialData} />}
       </div>
     </ParentShell>
   );

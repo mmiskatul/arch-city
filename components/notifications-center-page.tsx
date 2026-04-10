@@ -327,7 +327,7 @@ export function NotificationsCenterPage({
     <Shell>
       <div className="w-full">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-[38px] font-bold leading-none text-[#20242b]">Notifications</h1>
+          <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Notifications</h1>
           <button
             type="button"
             onClick={() => void handleMarkAllRead()}
