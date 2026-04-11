@@ -15,6 +15,12 @@ import {
 } from "react-icons/fi";
 
 import { fetchTutorScheduleItemByIdClient } from "@/lib/api/tutor-schedule-browser-api";
+import {
+  acceptStudentParentInvitation,
+  declineStudentParentInvitation,
+  getStudentParentInvitation,
+  type ParentStudentInvitationResponse,
+} from "@/lib/api/parent-students-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import {
   getNotifications,
@@ -30,7 +36,7 @@ type Tab = "All" | string;
 function getIconConfig(item: NotificationItem) {
   const text = `${item.title} ${item.category}`.toLowerCase();
 
-  if (text.includes("application")) {
+  if (text.includes("application") || text.includes("invitation")) {
     return { icon: FiUserPlus, className: "bg-[#ffecef] text-[#d94a62]" };
   }
   if (text.includes("dispute") || text.includes("alert")) {
@@ -165,6 +171,105 @@ function RatingPreviewModal({
   );
 }
 
+function ParentInvitationModal({
+  open,
+  loading,
+  submitting,
+  error,
+  data,
+  onAccept,
+  onDecline,
+  onClose,
+}: {
+  open: boolean;
+  loading: boolean;
+  submitting: boolean;
+  error: string;
+  data: ParentStudentInvitationResponse | null;
+  onAccept: () => void;
+  onDecline: () => void;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+
+  const item = data?.item;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
+      <div className="relative w-full max-w-[640px] overflow-hidden rounded-[20px] bg-white shadow-[0_25px_80px_rgba(15,23,42,0.25)]">
+        <div className="border-b border-[#eceef2] px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#b4233b]">Parent Invitation</p>
+              <h2 className="mt-1 text-[22px] font-bold text-[#20242b]">Review request</h2>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-[#6b7280] transition hover:text-[#20242b]"
+              aria-label="Close parent invitation"
+            >
+              <FiX className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          {loading ? (
+            <div className="rounded-[14px] border border-[#e7e7eb] bg-[#fafafb] px-4 py-6 text-[14px] text-[#6b7280]">
+              Loading invitation...
+            </div>
+          ) : error ? (
+            <div className="rounded-[14px] border border-[#f1c2c7] bg-[#fff4f6] px-4 py-3 text-[14px] text-[#b91c1c]">
+              {error}
+            </div>
+          ) : item ? (
+            <>
+              <div className="rounded-[16px] border border-[#f1d7db] bg-[#fff8f9] p-4">
+                <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">From parent</p>
+                <h3 className="mt-1 text-[18px] font-bold text-[#20242b]">{item.parent_name}</h3>
+                <p className="mt-1 text-[13px] text-[#6b7280]">{item.parent_email}</p>
+              </div>
+
+              <div className="rounded-[16px] border border-[#e7e7eb] bg-white p-4">
+                <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">Message</p>
+                <p className="mt-3 whitespace-pre-wrap text-[14px] leading-6 text-[#374151]">
+                  {item.message || `${item.parent_name} wants to connect your student account to their parent dashboard.`}
+                </p>
+              </div>
+
+              {item.status === "pending" ? (
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={onDecline}
+                    disabled={submitting}
+                    className="inline-flex h-10 items-center rounded-full border border-[#d61c3f] px-5 text-[14px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onAccept}
+                    disabled={submitting}
+                    className="inline-flex h-10 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submitting ? "Saving..." : "Accept"}
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-[14px] border border-[#e5e7eb] bg-[#fafafb] px-4 py-3 text-[14px] text-[#4b5563]">
+                  This invitation has already been {item.status}.
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function NotificationsCenterPage({
   role,
   Shell,
@@ -176,6 +281,7 @@ export function NotificationsCenterPage({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const ratingBookingId = role === "tutor" ? String(searchParams.get("rating") || "").trim() : "";
+  const inviteId = role === "student" ? String(searchParams.get("invite") || "").trim() : "";
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [loading, setLoading] = useState(true);
@@ -183,6 +289,10 @@ export function NotificationsCenterPage({
   const [ratingSession, setRatingSession] = useState<Awaited<ReturnType<typeof fetchTutorScheduleItemByIdClient>>>(null);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingError, setRatingError] = useState("");
+  const [invitationData, setInvitationData] = useState<ParentStudentInvitationResponse | null>(null);
+  const [invitationLoading, setInvitationLoading] = useState(false);
+  const [invitationError, setInvitationError] = useState("");
+  const [invitationSubmitting, setInvitationSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -273,6 +383,52 @@ export function NotificationsCenterPage({
     };
   }, [role, ratingBookingId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const inviteNotificationId = inviteId ? `student-parent-invite-${inviteId}` : "";
+
+    async function loadInvitation() {
+      if (!inviteId || role !== "student") {
+        setInvitationData(null);
+        setInvitationLoading(false);
+        setInvitationError("");
+        return;
+      }
+
+      setInvitationLoading(true);
+      setInvitationError("");
+
+      try {
+        const response = await getStudentParentInvitation(inviteId);
+        if (cancelled) return;
+        setInvitationData(response);
+        if (inviteNotificationId) {
+          try {
+            await markNotificationsRead(role, { notification_ids: [inviteNotificationId] });
+            window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT));
+          } catch {
+            // Ignore read-state failures; the modal still opened successfully.
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setInvitationData(null);
+          setInvitationError(error instanceof Error ? error.message : "Invitation could not be loaded.");
+        }
+      } finally {
+        if (!cancelled) {
+          setInvitationLoading(false);
+        }
+      }
+    }
+
+    void loadInvitation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteId, role]);
+
   const tabs = useMemo(() => {
     const categories = Array.from(new Set(items.map((item) => item.category)));
     return ["All", ...categories];
@@ -301,6 +457,38 @@ export function NotificationsCenterPage({
     next.delete("rating");
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname);
+  };
+
+  const closeInvitationModal = () => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("invite");
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  };
+
+  const handleInvitationDecision = async (decision: "accept" | "decline") => {
+    if (!inviteId || role !== "student") return;
+
+    setInvitationSubmitting(true);
+    setInvitationError("");
+    try {
+      const response =
+        decision === "accept"
+          ? await acceptStudentParentInvitation(inviteId)
+          : await declineStudentParentInvitation(inviteId);
+      setInvitationData(response);
+      setItems((current) =>
+        current.map((item) =>
+          item.id === `student-parent-invite-${inviteId}` ? { ...item, unread: false, section: "earlier" } : item,
+        ),
+      );
+      window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT));
+      closeInvitationModal();
+    } catch (error) {
+      setInvitationError(error instanceof Error ? error.message : "Unable to update invitation.");
+    } finally {
+      setInvitationSubmitting(false);
+    }
   };
 
   const openNotification = async (item: NotificationItem) => {
@@ -439,6 +627,16 @@ export function NotificationsCenterPage({
           error={ratingError}
           session={ratingSession}
           onClose={closeRatingModal}
+        />
+        <ParentInvitationModal
+          open={Boolean(inviteId)}
+          loading={invitationLoading}
+          submitting={invitationSubmitting}
+          error={invitationError}
+          data={invitationData}
+          onAccept={() => void handleInvitationDecision("accept")}
+          onDecline={() => void handleInvitationDecision("decline")}
+          onClose={closeInvitationModal}
         />
       </div>
     </Shell>

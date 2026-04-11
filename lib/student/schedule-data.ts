@@ -13,10 +13,13 @@ export type StudentScheduleItem = {
   sessionRate: number;
   chat: Array<{
     id: string;
-    sender: "tutor" | "student";
+    sender: "tutor" | "student" | "admin";
     message: string;
     timestamp: string;
   }>;
+  studentRatingScore?: number | null;
+  studentRatingComment?: string;
+  studentRatingSubmittedAt?: string;
 };
 
 export const studentScheduleItems: StudentScheduleItem[] = [

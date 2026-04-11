@@ -39,7 +39,7 @@ type EmptyStateCard = {
 
 const emptyStateCards: EmptyStateCard[] = [
   {
-    eyebrow: "Empty State — No Students Added",
+    eyebrow: "Empty State - No Students Added",
     title: "No students yet",
     description: "Add your child's profile to start booking sessions with our verified tutors.",
     actionLabel: "+ Add Your First Student",
@@ -49,7 +49,7 @@ const emptyStateCards: EmptyStateCard[] = [
     buttonClassName: "bg-[#d61c3f] text-white hover:bg-[#be1837]",
   },
   {
-    eyebrow: "Empty State — No Sessions Booked",
+    eyebrow: "Empty State - No Sessions Booked",
     title: "No sessions scheduled",
     description: "Browse our vetted tutors and book your child's first session today.",
     actionLabel: "Find a Tutor",
@@ -59,7 +59,7 @@ const emptyStateCards: EmptyStateCard[] = [
     buttonClassName: "bg-[#d61c3f] text-white hover:bg-[#be1837]",
   },
   {
-    eyebrow: "Empty State — No Messages",
+    eyebrow: "Empty State - No Messages",
     title: "No messages yet",
     description: "Messages from tutors will appear here once your child's sessions are booked.",
     actionLabel: "Book a Session",
@@ -69,7 +69,7 @@ const emptyStateCards: EmptyStateCard[] = [
     buttonClassName: "border border-[#d61c3f] text-[#d61c3f] hover:bg-[#fff4f6]",
   },
   {
-    eyebrow: "Empty State — No Session History",
+    eyebrow: "Empty State - No Session History",
     title: "No completed sessions",
     description: "Completed sessions will appear here. Book your first session to get started.",
     actionLabel: "Find a Tutor",
@@ -136,9 +136,7 @@ function EmptyStateCardView({ card }: { card: EmptyStateCard }) {
 
   return (
     <section>
-      <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6673]">
-        {card.eyebrow}
-      </p>
+      <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6673]">{card.eyebrow}</p>
       <article className="mt-3 flex min-h-[250px] flex-col items-center justify-center rounded-[16px] bg-[#f9fafb] px-6 py-10 text-center">
         <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${card.iconClassName}`}>
           <Icon className="h-6 w-6" />
@@ -163,13 +161,9 @@ function SummaryCardView({ card }: { card: ParentSummaryCard }) {
     <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">
-            {card.title}
-          </p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">{card.title}</p>
           {card.value ? (
-            <p className={`mt-4 text-[22px] font-bold text-[#20242b] ${valueClassName}`}>
-              {card.value}
-            </p>
+            <p className={`mt-4 text-[22px] font-bold text-[#20242b] ${valueClassName}`}>{card.value}</p>
           ) : (
             <p className="mt-4 text-[18px] font-bold text-[#20242b]">{card.extra}</p>
           )}
@@ -200,6 +194,13 @@ function EmptyDashboard() {
 }
 
 function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
+  const activeStudent = data.students.find((student) => student.active) ?? data.students[0];
+  const activeStudentName = activeStudent?.name || "Your student";
+  const overviewHeading =
+    activeStudentName === "Your student" ? "Student overview" : `${activeStudentName} overview`;
+  const sessionsHeading =
+    activeStudentName === "Your student" ? "Upcoming Sessions" : `${activeStudentName}'s Upcoming Sessions`;
+
   return (
     <>
       <div className="flex items-center justify-between gap-4 border-b border-[#eceef2] bg-white px-4 py-4 sm:px-5 lg:px-6">
@@ -245,7 +246,7 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
         </section>
 
         <section className="mt-5">
-          <p className="text-[18px] font-medium text-[#374151]">Jordan Wilson — 11th Grade</p>
+          <p className="text-[18px] font-medium text-[#374151]">{overviewHeading}</p>
 
           <div className="mt-3 grid gap-3 lg:grid-cols-3">
             {data.summaryCards.map((card) => (
@@ -256,7 +257,7 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
 
         <section className="mt-5">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-[17px] font-bold text-[#20242b]">Jordan&apos;s Upcoming Sessions</h2>
+            <h2 className="text-[17px] font-bold text-[#20242b]">{sessionsHeading}</h2>
             <Link href={PARENT_SCHEDULE_ROUTE} className="text-[13px] font-semibold text-[#d61c3f]">
               View full schedule &#8594;
             </Link>
@@ -275,41 +276,47 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {data.upcomingSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="grid gap-4 px-4 py-4 md:grid-cols-[1.5fr_0.9fr_0.7fr_0.9fr_0.7fr_0.7fr_0.8fr_0.8fr] md:items-center"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
-                      {session.tutorInitials}
-                    </span>
-                    <p className="text-[14px] font-medium text-[#374151]">{session.tutorName}</p>
+              {data.upcomingSessions.length > 0 ? (
+                data.upcomingSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="grid gap-4 px-4 py-4 md:grid-cols-[1.5fr_0.9fr_0.7fr_0.9fr_0.7fr_0.7fr_0.8fr_0.8fr] md:items-center"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
+                        {session.tutorInitials}
+                      </span>
+                      <p className="text-[14px] font-medium text-[#374151]">{session.tutorName}</p>
+                    </div>
+                    <div className="text-[14px] text-[#4b5563]">{session.date}</div>
+                    <div className="text-[14px] text-[#4b5563]">{session.time}</div>
+                    <div className="text-[14px] text-[#4b5563]">{session.subject}</div>
+                    <div className="text-[14px] text-[#4b5563]">{session.duration}</div>
+                    <div>
+                      <span className="inline-flex rounded-full bg-[#ffecef] px-2.5 py-1 text-[11px] font-medium text-[#d94a62]">
+                        {session.type}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="inline-flex rounded-full bg-[#fff6de] px-2.5 py-1 text-[11px] font-medium text-[#b58112]">
+                        {session.status}
+                      </span>
+                    </div>
+                    <div>
+                      <Link
+                        href={PARENT_SCHEDULE_ROUTE}
+                        className="inline-flex rounded-full border border-[#d61c3f] px-4 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
+                      >
+                        View
+                      </Link>
+                    </div>
                   </div>
-                  <div className="text-[14px] text-[#4b5563]">{session.date}</div>
-                  <div className="text-[14px] text-[#4b5563]">{session.time}</div>
-                  <div className="text-[14px] text-[#4b5563]">{session.subject}</div>
-                  <div className="text-[14px] text-[#4b5563]">{session.duration}</div>
-                  <div>
-                    <span className="inline-flex rounded-full bg-[#ffecef] px-2.5 py-1 text-[11px] font-medium text-[#d94a62]">
-                      {session.type}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="inline-flex rounded-full bg-[#fff6de] px-2.5 py-1 text-[11px] font-medium text-[#b58112]">
-                      {session.status}
-                    </span>
-                  </div>
-                  <div>
-                    <Link
-                      href={PARENT_SCHEDULE_ROUTE}
-                      className="inline-flex rounded-full border border-[#d61c3f] px-4 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
-                    >
-                      View
-                    </Link>
-                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-5 text-[14px] text-[#6b7280]">
+                  No upcoming sessions yet. Book a tutor to see sessions here.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </section>
@@ -344,9 +351,7 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
 export function ParentDashboardPage({ initialData }: { initialData: ParentDashboardOverview }) {
   return (
     <ParentShell>
-      <div className="w-full">
-        {initialData.state === "empty" ? <EmptyDashboard /> : <ActiveDashboard data={initialData} />}
-      </div>
+      <div className="w-full">{initialData.state === "empty" ? <EmptyDashboard /> : <ActiveDashboard data={initialData} />}</div>
     </ParentShell>
   );
 }

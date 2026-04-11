@@ -1,158 +1,271 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ParentShell } from "@/components/parent/parent-shell";
-import { parentStudentsData, type ParentStudentRecord } from "@/lib/parent/students-data";
+import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
+import {
+  getParentStudents,
+  inviteParentStudent,
+  searchParentStudents,
+  type ParentStudentListItem,
+  type ParentStudentSearchItem,
+} from "@/lib/api/parent-students-api";
 
-type StudentFormState = {
-  firstName: string;
-  lastName: string;
-  grade: string;
-  school: string;
-  focusNotes: string;
-};
+function InviteStudentModal({
+  open,
+  searchValue,
+  onSearchValueChange,
+  inviteMessage,
+  onInviteMessageChange,
+  results,
+  searching,
+  actionError,
+  invitingEmail,
+  onClose,
+  onInvite,
+}: {
+  open: boolean;
+  searchValue: string;
+  onSearchValueChange: (value: string) => void;
+  inviteMessage: string;
+  onInviteMessageChange: (value: string) => void;
+  results: ParentStudentSearchItem[];
+  searching: boolean;
+  actionError: string;
+  invitingEmail: string;
+  onClose: () => void;
+  onInvite: (email: string) => void;
+}) {
+  if (!open) return null;
 
-const emptyForm: StudentFormState = {
-  firstName: "",
-  lastName: "",
-  grade: "",
-  school: "",
-  focusNotes: "",
-};
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/45 px-4">
+      <div className="w-full max-w-[980px] rounded-[20px] bg-white p-5 shadow-[0_22px_70px_rgba(15,23,42,0.28)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-[20px] font-bold text-[#20242b]">Invite a Student</h2>
+            <p className="mt-1 text-[14px] text-[#6b7280]">
+              Search by student username or email, then send an invitation from the parent dashboard.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 items-center rounded-full border border-[#d1d5db] px-4 text-[14px] font-semibold text-[#4b5563] transition hover:bg-[#f9fafb]"
+          >
+            Close
+          </button>
+        </div>
 
-function toInitials(firstName: string, lastName: string) {
-  return `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.toUpperCase();
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1.45fr_0.95fr]">
+          <div className="rounded-[16px] border border-[#e5e7eb] bg-[#fcfcfd] p-4">
+            <label className="mb-2 block text-[13px] font-semibold text-[#374151]">Search student</label>
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(event) => onSearchValueChange(event.target.value)}
+              placeholder="Search by username or email"
+              className="h-11 w-full rounded-xl border border-[#e5e7eb] bg-white px-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
+            />
+
+            <div className="mt-4 overflow-hidden rounded-[14px] border border-[#eceef2] bg-white">
+              <div className="hidden grid-cols-[1.6fr_0.9fr_1fr_0.9fr] gap-3 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280] md:grid">
+                <span>Student</span>
+                <span>Grade</span>
+                <span>School</span>
+                <span>Action</span>
+              </div>
+
+              <div className="divide-y divide-[#eceef2]">
+                {searching ? (
+                  <div className="px-4 py-5 text-[14px] text-[#6b7280]">Searching students...</div>
+                ) : results.length > 0 ? (
+                  results.map((student) => {
+                    const disabled = student.already_linked || student.has_pending_invite || invitingEmail === student.email;
+                    let label = "Invite";
+                    if (invitingEmail === student.email) label = "Sending...";
+                    if (student.already_linked) label = "Added";
+                    if (student.has_pending_invite) label = "Pending";
+
+                    return (
+                      <div
+                        key={student.email}
+                        className="grid gap-3 px-4 py-3 md:grid-cols-[1.6fr_0.9fr_1fr_0.9fr] md:items-center"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d94a62]">
+                            {student.initials}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-[14px] font-semibold text-[#20242b]">{student.name}</p>
+                            <p className="truncate text-[12px] text-[#6b7280]">{student.email}</p>
+                          </div>
+                        </div>
+                        <div className="text-[14px] text-[#4b5563]">{student.grade}</div>
+                        <div className="text-[14px] text-[#4b5563]">{student.school}</div>
+                        <div>
+                          <button
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => onInvite(student.email)}
+                            className={`inline-flex h-9 items-center rounded-full px-4 text-[13px] font-semibold transition ${
+                              disabled
+                                ? "cursor-not-allowed bg-[#f3f4f6] text-[#9ca3af]"
+                                : "bg-[#d61c3f] text-white hover:bg-[#be1837]"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-5 text-[14px] text-[#6b7280]">
+                    {searchValue.trim().length < 2
+                      ? "Type at least 2 characters to search students."
+                      : "No matching students found."}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[16px] border border-[#e5e7eb] bg-[#fff8f9] p-4">
+            <label className="mb-2 block text-[13px] font-semibold text-[#374151]">Parent message</label>
+            <textarea
+              value={inviteMessage}
+              onChange={(event) => onInviteMessageChange(event.target.value)}
+              placeholder="Hi, I'd like to connect your student account to my parent dashboard."
+              className="min-h-[220px] w-full rounded-xl border border-[#f1d7db] bg-white px-4 py-3 text-[14px] leading-6 outline-none placeholder:text-[#9ca3af]"
+            />
+            <p className="mt-3 text-[12px] leading-5 text-[#6b7280]">
+              The student will see this message inside their notifications page and can accept or decline it.
+            </p>
+            {actionError ? (
+              <div className="mt-4 rounded-xl border border-[#f1c2c7] bg-[#fff4f6] px-4 py-3 text-[13px] text-[#b91c1c]">
+                {actionError}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ParentStudentsPage() {
-  const [students, setStudents] = useState<ParentStudentRecord[]>(parentStudentsData);
+  const [students, setStudents] = useState<ParentStudentListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<StudentFormState>(emptyForm);
+  const [searchValue, setSearchValue] = useState("");
+  const [inviteMessage, setInviteMessage] = useState(
+    "Hi, I'd like to add you to my parent dashboard so I can manage your tutoring schedule and progress.",
+  );
+  const [searchResults, setSearchResults] = useState<ParentStudentSearchItem[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [invitingEmail, setInvitingEmail] = useState("");
 
-  function closeModal() {
-    setShowModal(false);
-    setForm(emptyForm);
-  }
+  useEffect(() => {
+    async function loadStudents() {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const response = await getParentStudents();
+        setStudents(response.items || []);
+      } catch (error) {
+        setStudents([]);
+        setLoadError(error instanceof Error ? error.message : "Unable to load students.");
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  function handleAddStudent() {
-    const firstName = form.firstName.trim();
-    const lastName = form.lastName.trim();
-    const grade = form.grade.trim();
-    const school = form.school.trim();
-    const focus = form.focusNotes.trim();
+    void loadStudents();
+    const refresh = () => void loadStudents();
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, refresh);
+    return () => window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, refresh);
+  }, []);
 
-    if (!firstName || !lastName || !grade || !school) {
+  useEffect(() => {
+    if (!showModal) return;
+    if (searchValue.trim().length < 2) {
+      setSearchResults([]);
+      setSearching(false);
       return;
     }
 
-    const newStudent: ParentStudentRecord = {
-      id: `stu${students.length + 1}`,
-      initials: toInitials(firstName, lastName),
-      name: `${firstName} ${lastName}`,
-      addedLabel: "Added just now",
-      grade,
-      school,
-      focusAreas: focus ? [focus] : ["General Support"],
-      activeTutorInitials: "--",
-      activeTutorName: "Not assigned",
-      sessionsTotal: 0,
-    };
+    const timeoutId = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const response = await searchParentStudents(searchValue.trim());
+        setSearchResults(response.items || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
 
-    setStudents((current) => [newStudent, ...current]);
-    closeModal();
+    return () => window.clearTimeout(timeoutId);
+  }, [searchValue, showModal]);
+
+  function closeModal() {
+    setShowModal(false);
+    setSearchValue("");
+    setSearchResults([]);
+    setActionError("");
+    setInvitingEmail("");
+  }
+
+  async function handleInvite(studentEmail: string) {
+    setInvitingEmail(studentEmail);
+    setActionError("");
+    try {
+      await inviteParentStudent({
+        student_email: studentEmail,
+        message: inviteMessage.trim(),
+      });
+      window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT));
+      const refreshed = await getParentStudents();
+      setStudents(refreshed.items || []);
+      setSearchResults((current) =>
+        current.map((item) => (item.email === studentEmail ? { ...item, has_pending_invite: true } : item)),
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Unable to send invitation.");
+    } finally {
+      setInvitingEmail("");
+    }
   }
 
   return (
     <ParentShell>
+      <InviteStudentModal
+        open={showModal}
+        searchValue={searchValue}
+        onSearchValueChange={setSearchValue}
+        inviteMessage={inviteMessage}
+        onInviteMessageChange={setInviteMessage}
+        results={searchResults}
+        searching={searching}
+        actionError={actionError}
+        invitingEmail={invitingEmail}
+        onClose={closeModal}
+        onInvite={(email) => void handleInvite(email)}
+      />
+
       <div className="w-full">
-        {showModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/45 px-4">
-            <div className="w-full max-w-[760px] rounded-[18px] bg-white p-5 shadow-[0_22px_70px_rgba(15,23,42,0.28)]">
-              <h2 className="text-[18px] font-bold text-[#20242b]">Add a Student</h2>
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-[14px] font-medium text-[#374151]">First Name</label>
-                  <input
-                    type="text"
-                    value={form.firstName}
-                    onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
-                    placeholder="First name"
-                    className="h-11 w-full rounded-xl border border-[#e5e7eb] px-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-[14px] font-medium text-[#374151]">Last Name</label>
-                  <input
-                    type="text"
-                    value={form.lastName}
-                    onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
-                    placeholder="Last name"
-                    className="h-11 w-full rounded-xl border border-[#e5e7eb] px-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-[14px] font-medium text-[#374151]">Grade</label>
-                  <input
-                    type="text"
-                    value={form.grade}
-                    onChange={(event) => setForm((current) => ({ ...current, grade: event.target.value }))}
-                    placeholder="Grade"
-                    className="h-11 w-full rounded-xl border border-[#e5e7eb] px-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-[14px] font-medium text-[#374151]">School Name</label>
-                  <input
-                    type="text"
-                    value={form.school}
-                    onChange={(event) => setForm((current) => ({ ...current, school: event.target.value }))}
-                    placeholder="e.g. Parkway North High"
-                    className="h-11 w-full rounded-xl border border-[#e5e7eb] px-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <label className="mb-2 block text-[14px] font-medium text-[#374151]">
-                  Focus Areas / Notes (optional)
-                </label>
-                <input
-                  type="text"
-                  value={form.focusNotes}
-                  onChange={(event) => setForm((current) => ({ ...current, focusNotes: event.target.value }))}
-                  placeholder="e.g. Needs help with algebra and test prep"
-                  className="h-11 w-full rounded-xl border border-[#e5e7eb] px-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
-                />
-              </div>
-
-              <div className="mt-5 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="inline-flex h-10 items-center rounded-full border border-[#d61c3f] px-5 text-[14px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddStudent}
-                  className="inline-flex h-10 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
-                >
-                  Add Student
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
         <div className="flex items-center justify-between gap-4 border-b border-[#eceef2] bg-white px-4 py-4 sm:px-5 lg:px-6">
-          <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Students</h1>
+          <div>
+            <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Students</h1>
+            <p className="mt-1 text-[13px] text-[#6b7280]">
+              Manage linked students and send invitations from the parent dashboard.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => setShowModal(true)}
@@ -163,76 +276,71 @@ export function ParentStudentsPage() {
         </div>
 
         <div className="bg-white px-4 py-5 sm:px-5 lg:px-6">
+          {loadError ? (
+            <div className="mb-4 rounded-xl border border-[#f1c2c7] bg-[#fff4f6] px-4 py-3 text-[13px] text-[#b91c1c]">
+              {loadError}
+            </div>
+          ) : null}
+
           <section className="overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            <div className="hidden grid-cols-[1.65fr_0.9fr_1.35fr_1.65fr_1fr_0.7fr_1fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280] md:grid">
+            <div className="hidden grid-cols-[1.7fr_0.9fr_1.1fr_0.95fr_1.1fr_0.7fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280] md:grid">
               <span>Name</span>
               <span>Grade</span>
               <span>School</span>
-              <span>Focus Areas</span>
+              <span>Status</span>
               <span>Active Tutor</span>
               <span>Sessions</span>
-              <span>Actions</span>
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {students.map((student) => (
-                <div
-                  key={student.id}
-                  className="grid gap-4 px-4 py-3.5 md:grid-cols-[1.65fr_0.9fr_1.35fr_1.65fr_1fr_0.7fr_1fr] md:items-center"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d94a62]">
-                      {student.initials}
-                    </span>
-                    <div>
-                      <p className="text-[15px] font-semibold leading-5 text-[#20242b]">{student.name}</p>
-                      <p className="text-[12px] leading-5 text-[#6b7280]">{student.addedLabel}</p>
+              {loading ? (
+                <div className="px-4 py-5 text-[14px] text-[#6b7280]">Loading students...</div>
+              ) : students.length > 0 ? (
+                students.map((student) => (
+                  <div
+                    key={student.id}
+                    className="grid gap-4 px-4 py-3.5 md:grid-cols-[1.7fr_0.9fr_1.1fr_0.95fr_1.1fr_0.7fr] md:items-center"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[14px] font-bold text-[#d94a62]">
+                        {student.initials}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-semibold leading-5 text-[#20242b]">{student.name}</p>
+                        <p className="truncate text-[12px] leading-5 text-[#6b7280]">
+                          {student.email} | {student.added_label}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="text-[15px] text-[#4b5563]">{student.grade}</div>
-                  <div className="text-[15px] text-[#4b5563]">{student.school}</div>
+                    <div className="text-[15px] text-[#4b5563]">{student.grade}</div>
+                    <div className="text-[15px] text-[#4b5563]">{student.school}</div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {student.focusAreas.map((focus, index) => (
+                    <div>
                       <span
-                        key={focus}
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium ${
-                          index === 0
-                            ? "bg-[#ffecef] text-[#d94a62]"
-                            : "bg-[#f0f1f3] text-[#6b7280]"
+                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          student.status === "active"
+                            ? "bg-[#ebf7ef] text-[#239157]"
+                            : "bg-[#fff1f4] text-[#d61c3f]"
                         }`}
                       >
-                        {focus}
+                        {student.status === "active" ? "Linked" : "Pending"}
                       </span>
-                    ))}
-                  </div>
+                    </div>
 
-                  <div className="flex items-center gap-2 text-[15px] text-[#4b5563]">
-                    <span className="text-[10px] font-bold text-[#d94a62]">{student.activeTutorInitials}</span>
-                    <span>{student.activeTutorName}</span>
-                  </div>
+                    <div className="flex items-center gap-2 text-[15px] text-[#4b5563]">
+                      <span className="text-[10px] font-bold text-[#d94a62]">{student.active_tutor_initials}</span>
+                      <span>{student.active_tutor_name}</span>
+                    </div>
 
-                  <div className="text-[15px] font-semibold text-[#4b5563]">
-                    {student.sessionsTotal} <span className="text-[12px] font-medium text-[#6b7280]">total</span>
+                    <div className="text-[15px] font-semibold text-[#4b5563]">{student.sessions_total}</div>
                   </div>
-
-                  <div className="flex items-center gap-2.5">
-                    <Link
-                      href={`/parent-dashboard/students/${student.id}/schedule`}
-                      className="inline-flex h-8 items-center rounded-full border border-[#d61c3f] px-4 text-[13px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
-                    >
-                      Schedule
-                    </Link>
-                    <Link
-                      href={`/parent-dashboard/students/${student.id}/edit`}
-                      className="inline-flex h-8 items-center rounded-full border border-[#d61c3f] px-4 text-[13px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
-                    >
-                      Edit
-                    </Link>
-                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-5 text-[14px] text-[#6b7280]">
+                  No students linked yet. Use the add student button to send an invitation.
                 </div>
-              ))}
+              )}
             </div>
           </section>
         </div>
