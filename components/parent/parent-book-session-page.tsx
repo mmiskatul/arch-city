@@ -1,20 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FiCheck, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
 import type { ParentTutorCard } from "@/lib/parent/find-tutors-data";
+import { getParentStudents, type ParentStudentListItem } from "@/lib/api/parent-students-api";
 import { PARENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
 
 export type ParentBookingStep = "student" | "session" | "schedule" | "confirm";
-
-const students = [
-  { key: "jordan", initials: "JW", name: "Jordan Wilson", grade: "11th Grade" },
-  { key: "maya", initials: "MW", name: "Maya Wilson", grade: "8th Grade" },
-];
 
 const dates = [
   { value: "1" },
@@ -102,11 +98,12 @@ export function ParentBookSessionPage({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [students, setStudents] = useState<ParentStudentListItem[]>([]);
 
   const subjectOptions = tutor.subjects.filter(
     (subject) => !["Math", "Science", "English", "History"].includes(subject),
   );
-  const selectedStudent = searchParams.get("student") ?? "jordan";
+  const selectedStudent = searchParams.get("student") ?? searchParams.get("bookingFor") ?? "";
   const selectedSubject = searchParams.get("subject") ?? subjectOptions[0] ?? tutor.subjects[0];
   const selectedSessionType =
     searchParams.get("type") ?? (tutor.sessionTypes.includes("Virtual") ? "Virtual" : tutor.sessionTypes[0]);
@@ -115,8 +112,7 @@ export function ParentBookSessionPage({
   const selectedTime = searchParams.get("time") ?? "4:00 PM";
   const notes = searchParams.get("notes") ?? "";
   const confirmed = searchParams.get("confirmed") === "1";
-  const selectedStudentData =
-    students.find((student) => student.key === selectedStudent) ?? students[0];
+  const selectedStudentData = students.find((student) => student.email === selectedStudent) ?? students[0] ?? null;
   const totalDue =
     selectedSessionType === "In-Person"
       ? selectedDuration === "45"
@@ -127,6 +123,28 @@ export function ParentBookSessionPage({
         : tutor.price60;
   const nextStep = getNextStep(step);
   const previousStep = getPreviousStep(step);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadStudents() {
+      try {
+        const response = await getParentStudents();
+        if (!mounted) return;
+        const activeStudents = (response.items || []).filter((student) => student.status === "active");
+        setStudents(activeStudents);
+      } catch {
+        if (mounted) {
+          setStudents([]);
+        }
+      }
+    }
+
+    void loadStudents();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function withParams(
     targetStep: ParentBookingStep,
@@ -161,6 +179,11 @@ export function ParentBookSessionPage({
     router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
   }
 
+  function getTutorProfileHref() {
+    const query = searchParams.toString();
+    return `${PARENT_FIND_TUTORS_ROUTE}/${tutor.id}${query ? `?${query}` : ""}`;
+  }
+
   function handleConfirmBooking() {
     setShowConfirmModal(true);
   }
@@ -178,7 +201,7 @@ export function ParentBookSessionPage({
             <div className="w-full max-w-[440px] rounded-[20px] bg-white p-6 shadow-[0_20px_70px_rgba(15,23,42,0.25)]">
               <h2 className="text-[22px] font-bold text-[#20242b]">Confirm Booking</h2>
               <p className="mt-3 text-[14px] leading-6 text-[#4b5563]">
-                Confirm booking for {selectedStudentData.name} with {tutor.name} on {selectedDate} at{" "}
+                Confirm booking for {selectedStudentData?.name || "the selected student"} with {tutor.name} on {selectedDate} at{" "}
                 {selectedTime}?
               </p>
 
@@ -207,7 +230,7 @@ export function ParentBookSessionPage({
             href={
               previousStep
                 ? withParams(previousStep)
-                : `${PARENT_FIND_TUTORS_ROUTE}/${tutor.id}`
+                : getTutorProfileHref()
             }
             className="inline-flex items-center gap-2 text-[14px] font-medium text-[#6b7280]"
           >
@@ -258,16 +281,16 @@ export function ParentBookSessionPage({
             <div className="mt-6">
               {step === "student" ? (
                 <section className="rounded-[16px] bg-[#f9fafb] p-4">
-                  <h2 className="text-[17px] font-bold text-[#20242b]">Step 1 — Select Student</h2>
+                  <h2 className="text-[17px] font-bold text-[#20242b]">Step 1 - Select Student</h2>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {students.map((student) => {
-                      const selected = student.key === selectedStudent;
+                      {students.map((student) => {
+                      const selected = student.email === selectedStudent;
 
                       return (
                         <button
-                          key={student.key}
+                          key={student.email}
                           type="button"
-                          onClick={() => updateCurrentStep({ student: student.key })}
+                          onClick={() => updateCurrentStep({ student: student.email, bookingFor: student.email, bookingForLabel: student.name })}
                           className={`flex items-center justify-between rounded-[12px] border px-4 py-4 text-left transition ${
                             selected ? "border-[#ef6b7a] bg-[#fff0f3]" : "border-[#e5e7eb] bg-white"
                           }`}
@@ -285,13 +308,18 @@ export function ParentBookSessionPage({
                         </button>
                       );
                     })}
+                    {students.length === 0 ? (
+                      <div className="rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-4 text-[14px] text-[#6b7280]">
+                        No linked students available for booking yet.
+                      </div>
+                    ) : null}
                   </div>
                 </section>
               ) : null}
 
               {step === "session" ? (
                 <section className="rounded-[16px] bg-[#f9fafb] p-4">
-                  <h2 className="text-[17px] font-bold text-[#20242b]">Step 2 — Session Details</h2>
+                  <h2 className="text-[17px] font-bold text-[#20242b]">Step 2 - Session Details</h2>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="mb-2 block text-[14px] font-medium text-[#4b5563]">Subject</label>
@@ -351,7 +379,7 @@ export function ParentBookSessionPage({
 
               {step === "schedule" ? (
                 <section className="rounded-[16px] bg-[#f9fafb] p-4">
-                  <h2 className="text-[17px] font-bold text-[#20242b]">Step 3 — Choose a Date & Time</h2>
+                  <h2 className="text-[17px] font-bold text-[#20242b]">Step 3 - Choose a Date & Time</h2>
                   <div className="mt-4 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
                     <div>
                       <div className="flex items-center justify-between">
@@ -400,7 +428,7 @@ export function ParentBookSessionPage({
 
                     <div>
                       <p className="text-[16px] font-semibold text-[#374151]">
-                        Available Times — {selectedDate}
+                        Available Times - {selectedDate}
                       </p>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2">
                         {availableTimes.map((time) => (
@@ -425,12 +453,12 @@ export function ParentBookSessionPage({
 
               {step === "confirm" ? (
                 <section className="rounded-[16px] bg-[#f9fafb] p-4">
-                  <h2 className="text-[17px] font-bold text-[#20242b]">Step 4 — Confirm Booking</h2>
+                  <h2 className="text-[17px] font-bold text-[#20242b]">Step 4 - Confirm Booking</h2>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div className="rounded-[12px] border border-[#e5e7eb] bg-white p-4">
                       <p className="text-[12px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Student</p>
-                      <p className="mt-2 text-[16px] font-semibold text-[#20242b]">{selectedStudentData.name}</p>
-                      <p className="text-[13px] text-[#6b7280]">{selectedStudentData.grade}</p>
+                      <p className="mt-2 text-[16px] font-semibold text-[#20242b]">{selectedStudentData?.name || "None selected"}</p>
+                      <p className="text-[13px] text-[#6b7280]">{selectedStudentData?.grade || "Grade not set"}</p>
                     </div>
                     <div className="rounded-[12px] border border-[#e5e7eb] bg-white p-4">
                       <p className="text-[12px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Tutor</p>
@@ -441,7 +469,7 @@ export function ParentBookSessionPage({
                       <p className="text-[12px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Session</p>
                       <p className="mt-2 text-[16px] font-semibold text-[#20242b]">{selectedSubject}</p>
                       <p className="text-[13px] text-[#6b7280]">
-                        {selectedSessionType} · {selectedDuration} minutes
+                        {selectedSessionType} | {selectedDuration} minutes
                       </p>
                     </div>
                     <div className="rounded-[12px] border border-[#e5e7eb] bg-white p-4">
@@ -460,7 +488,7 @@ export function ParentBookSessionPage({
 
                   {confirmed ? (
                     <div className="mt-4 rounded-[12px] border border-[#cde8da] bg-[#edf8f1] px-4 py-3 text-[14px] font-medium text-[#2e8b61]">
-                      Booking confirmed for {selectedStudentData.name}.
+                      Booking confirmed for {selectedStudentData?.name || "the selected student"}.
                     </div>
                   ) : null}
                 </section>
@@ -484,7 +512,7 @@ export function ParentBookSessionPage({
                   href={withParams(nextStep)}
                   className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-6 text-[15px] font-semibold text-white transition hover:bg-[#be1837]"
                 >
-                  Continue to {stepMeta.find((item) => item.key === nextStep)?.label} →
+                  Continue to {stepMeta.find((item) => item.key === nextStep)?.label} {"->"}
                 </Link>
               ) : (
                 <button
@@ -514,7 +542,7 @@ export function ParentBookSessionPage({
             </div>
 
             <div className="mt-4 border-t border-[#eceef2] pt-4 text-[14px] text-[#4b5563]">
-              <div className="flex items-center justify-between py-1"><span>Student</span><span className="font-medium text-[#20242b]">{selectedStudentData.name}</span></div>
+              <div className="flex items-center justify-between py-1"><span>Student</span><span className="font-medium text-[#20242b]">{selectedStudentData?.name || "None selected"}</span></div>
               <div className="flex items-center justify-between py-1"><span>Subject</span><span className="font-medium text-[#20242b]">{selectedSubject}</span></div>
               <div className="flex items-center justify-between py-1"><span>Date</span><span className="font-medium text-[#20242b]">{selectedDate}</span></div>
               <div className="flex items-center justify-between py-1"><span>Time</span><span className="font-medium text-[#20242b]">{selectedTime}</span></div>

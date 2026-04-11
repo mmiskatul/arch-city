@@ -19,28 +19,6 @@ type FilterState = {
   search: string;
 };
 
-function FilterOption({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`block text-left text-[14px] transition ${
-        active ? "font-semibold text-[#374151]" : "text-[#4b5563] hover:text-[#20242b]"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
 function RatingStars({ rating }: { rating: number }) {
   const normalized = Math.max(0, Math.min(5, rating));
   return (
@@ -72,6 +50,64 @@ function normalizeGrade(value: string) {
   return value.trim().toLowerCase();
 }
 
+function normalizeText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function extractGradeNumbers(value: string) {
+  return Array.from(value.matchAll(/\d+/g), (match) => Number(match[0])).filter((number) => !Number.isNaN(number));
+}
+
+function matchesSubjectFilter(tutor: ParentTutorCard, filterSubject: string) {
+  if (!filterSubject) return true;
+
+  const normalizedFilter = normalizeText(filterSubject);
+  return tutor.subjects.some((subject) => {
+    const normalizedSubject = normalizeText(subject);
+    return normalizedSubject === normalizedFilter || normalizedSubject.includes(normalizedFilter);
+  });
+}
+
+function matchesGradeFilter(tutor: ParentTutorCard, filterGrade: string) {
+  if (!filterGrade) return true;
+
+  const normalizedFilter = normalizeGrade(filterGrade);
+  const filterNumbers = extractGradeNumbers(filterGrade);
+
+  return tutor.gradeLevels.some((grade) => {
+    const normalizedGrade = normalizeGrade(grade);
+    if (normalizedGrade === normalizedFilter || normalizedGrade.includes(normalizedFilter)) {
+      return true;
+    }
+
+    const gradeNumbers = extractGradeNumbers(grade);
+    if (filterNumbers.length === 0 || gradeNumbers.length === 0) {
+      return false;
+    }
+
+    if (gradeNumbers.length === 1) {
+      return gradeNumbers[0] === filterNumbers[0];
+    }
+
+    const filterValue = filterNumbers[0];
+    const minGrade = Math.min(...gradeNumbers);
+    const maxGrade = Math.max(...gradeNumbers);
+    return filterValue >= minGrade && filterValue <= maxGrade;
+  });
+}
+
+function getTutorRatesForFilter(tutor: ParentTutorCard, sessionType: string) {
+  if (sessionType === "Virtual") {
+    return [tutor.price45, tutor.price60].filter((rate) => rate > 0);
+  }
+
+  if (sessionType === "In-Person") {
+    return [tutor.inPerson45, tutor.inPerson60].filter((rate) => rate > 0);
+  }
+
+  return [tutor.price45, tutor.price60, tutor.inPerson45, tutor.inPerson60].filter((rate) => rate > 0);
+}
+
 function sortText(values: string[]) {
   return [...values].sort((a, b) => a.localeCompare(b));
 }
@@ -91,15 +127,7 @@ function buildInitialFilters(students: ParentStudentListItem[], tutors: ParentTu
 }
 
 export function ParentFindTutorsPage() {
-  const [draftFilters, setDraftFilters] = useState<FilterState>({
-    bookingFor: "",
-    subject: "",
-    gradeLevel: "",
-    sessionType: "",
-    maxRate: 100,
-    search: "",
-  });
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>({
+  const [filters, setFilters] = useState<FilterState>({
     bookingFor: "",
     subject: "",
     gradeLevel: "",
@@ -130,15 +158,13 @@ export function ParentFindTutorsPage() {
 
         setTutors(nextTutors);
         setStudents(activeStudents);
-        setDraftFilters(nextFilters);
-        setAppliedFilters(nextFilters);
+        setFilters(nextFilters);
       } catch (error) {
         if (!mounted) return;
         setTutors(parentTutorResults);
         setStudents([]);
         const nextFilters = buildInitialFilters([], parentTutorResults);
-        setDraftFilters(nextFilters);
-        setAppliedFilters(nextFilters);
+        setFilters(nextFilters);
         setLoadError(error instanceof Error ? error.message : "Unable to load live tutor data.");
       } finally {
         if (mounted) {
@@ -155,8 +181,8 @@ export function ParentFindTutorsPage() {
   }, []);
 
   const selectedStudent = useMemo(
-    () => students.find((student) => student.email === appliedFilters.bookingFor) ?? null,
-    [students, appliedFilters.bookingFor],
+    () => students.find((student) => student.email === filters.bookingFor) ?? null,
+    [students, filters.bookingFor],
   );
 
   const subjectOptions = useMemo(() => {
@@ -199,58 +225,64 @@ export function ParentFindTutorsPage() {
   }, [tutors]);
 
   const filteredTutors = useMemo(() => {
-    const search = appliedFilters.search.trim().toLowerCase();
-    const effectiveGrade = appliedFilters.gradeLevel;
+    const search = normalizeText(filters.search);
 
     return tutors.filter((tutor) => {
-      const matchesSubject =
-        !appliedFilters.subject ||
-        tutor.subjects.some((subject) => subject.toLowerCase() === appliedFilters.subject.toLowerCase());
-      const matchesGrade =
-        !effectiveGrade ||
-        tutor.gradeLevels.some((grade) => normalizeGrade(grade) === normalizeGrade(effectiveGrade));
+      const matchesSubject = matchesSubjectFilter(tutor, filters.subject);
+      const matchesGrade = matchesGradeFilter(tutor, filters.gradeLevel);
       const matchesSessionType =
-        !appliedFilters.sessionType ||
-        tutor.sessionTypes.includes(appliedFilters.sessionType as "Virtual" | "In-Person");
-      const maxComparableRate =
-        appliedFilters.sessionType === "In-Person"
-          ? tutor.inPerson60 || tutor.price60
-          : appliedFilters.sessionType === "Virtual"
-            ? tutor.price60
-            : Math.min(
-                tutor.price60 || Number.POSITIVE_INFINITY,
-                tutor.inPerson60 || tutor.price60 || Number.POSITIVE_INFINITY,
-              );
-      const matchesRate = Number.isFinite(maxComparableRate) ? maxComparableRate <= appliedFilters.maxRate : false;
+        !filters.sessionType ||
+        tutor.sessionTypes.includes(filters.sessionType as "Virtual" | "In-Person");
+      const comparableRates = getTutorRatesForFilter(tutor, filters.sessionType);
+      const matchesRate = comparableRates.length > 0 && comparableRates.some((rate) => rate <= filters.maxRate);
       const matchesSearch =
         search.length === 0 ||
-        tutor.name.toLowerCase().includes(search) ||
-        tutor.title.toLowerCase().includes(search) ||
-        tutor.subjects.some((subject) => subject.toLowerCase().includes(search)) ||
-        tutor.location.toLowerCase().includes(search);
+        normalizeText(tutor.name).includes(search) ||
+        normalizeText(tutor.title).includes(search) ||
+        tutor.subjects.some((subject) => normalizeText(subject).includes(search)) ||
+        tutor.gradeLevels.some((grade) => normalizeText(grade).includes(search)) ||
+        tutor.sessionTypes.some((type) => normalizeText(type).includes(search)) ||
+        normalizeText(tutor.location).includes(search);
 
       return matchesSubject && matchesGrade && matchesSessionType && matchesRate && matchesSearch;
     });
-  }, [appliedFilters, tutors]);
-
-  function applyFilters() {
-    setAppliedFilters({
-      ...draftFilters,
-      maxRate: Math.min(Math.max(draftFilters.maxRate, rateBounds.min), rateBounds.max),
-    });
-  }
+  }, [filters, tutors]);
 
   function resetFilters() {
     const nextFilters = buildInitialFilters(students, tutors);
-    setDraftFilters(nextFilters);
-    setAppliedFilters(nextFilters);
+    setFilters(nextFilters);
   }
 
   function handleBookingForChange(value: string) {
-    setDraftFilters((current) => ({
+    setFilters((current) => ({
       ...current,
       bookingFor: value,
     }));
+  }
+
+  function buildTutorHref(tutorId: string) {
+    const params = new URLSearchParams();
+    if (filters.bookingFor) {
+      params.set("bookingFor", filters.bookingFor);
+    }
+    if (selectedStudent?.name) {
+      params.set("bookingForLabel", selectedStudent.name);
+    }
+    if (filters.subject) {
+      params.set("subject", filters.subject);
+    }
+    if (filters.gradeLevel) {
+      params.set("gradeLevel", filters.gradeLevel);
+    }
+    if (filters.sessionType) {
+      params.set("sessionType", filters.sessionType);
+    }
+    if (filters.search) {
+      params.set("search", filters.search);
+    }
+    params.set("maxRate", String(filters.maxRate));
+    const query = params.toString();
+    return `${PARENT_FIND_TUTORS_ROUTE}/${tutorId}${query ? `?${query}` : ""}`;
   }
 
   return (
@@ -267,7 +299,7 @@ export function ParentFindTutorsPage() {
             <div className="mt-4 border-b border-[#eceef2] pb-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Booking For</p>
               <select
-                value={draftFilters.bookingFor}
+                value={filters.bookingFor}
                 onChange={(event) => handleBookingForChange(event.target.value)}
                 className="mt-3 h-10 w-full rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 text-[13px] text-[#4b5563] outline-none"
               >
@@ -278,42 +310,37 @@ export function ParentFindTutorsPage() {
                   </option>
                 ))}
               </select>
-              {students.length > 0 && draftFilters.bookingFor ? (
+              {students.length > 0 && filters.bookingFor ? (
                 <p className="mt-2 text-[12px] text-[#6b7280]">
-                  Student grade: {students.find((student) => student.email === draftFilters.bookingFor)?.grade || "Not set"}
+                  Student grade: {students.find((student) => student.email === filters.bookingFor)?.grade || "Not set"}
                 </p>
               ) : null}
             </div>
 
             <div className="border-b border-[#eceef2] py-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Subject</p>
-              <div className="mt-3 space-y-2">
-                {subjectOptions.length > 0 ? (
-                  subjectOptions.map((item) => (
-                    <FilterOption
-                      key={item}
-                      label={item}
-                      active={draftFilters.subject === item}
-                      onClick={() =>
-                        setDraftFilters((current) => ({
-                          ...current,
-                          subject: current.subject === item ? "" : item,
-                        }))
-                      }
-                    />
-                  ))
-                ) : (
-                  <p className="text-[13px] text-[#6b7280]">No subjects available.</p>
-                )}
-              </div>
+              <select
+                value={filters.subject}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, subject: event.target.value }))
+                }
+                className="mt-3 h-10 w-full rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 text-[13px] text-[#4b5563] outline-none"
+              >
+                <option value="">All subjects</option>
+                {subjectOptions.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="border-b border-[#eceef2] py-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Grade Level</p>
               <select
-                value={draftFilters.gradeLevel}
+                value={filters.gradeLevel}
                 onChange={(event) =>
-                  setDraftFilters((current) => ({ ...current, gradeLevel: event.target.value }))
+                  setFilters((current) => ({ ...current, gradeLevel: event.target.value }))
                 }
                 className="mt-3 h-10 w-full rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 text-[13px] text-[#4b5563] outline-none"
               >
@@ -328,21 +355,20 @@ export function ParentFindTutorsPage() {
 
             <div className="border-b border-[#eceef2] py-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Session Type</p>
-              <div className="mt-3 space-y-2">
+              <select
+                value={filters.sessionType}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, sessionType: event.target.value }))
+                }
+                className="mt-3 h-10 w-full rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 text-[13px] text-[#4b5563] outline-none"
+              >
+                <option value="">All session types</option>
                 {sessionTypeOptions.map((item) => (
-                  <FilterOption
-                    key={item}
-                    label={item}
-                    active={draftFilters.sessionType === item}
-                    onClick={() =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        sessionType: current.sessionType === item ? "" : item,
-                      }))
-                    }
-                  />
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
 
             <div className="py-4">
@@ -352,9 +378,9 @@ export function ParentFindTutorsPage() {
                 min={rateBounds.min}
                 max={rateBounds.max}
                 step={5}
-                value={Math.min(Math.max(draftFilters.maxRate, rateBounds.min), rateBounds.max)}
+                value={Math.min(Math.max(filters.maxRate, rateBounds.min), rateBounds.max)}
                 onChange={(event) =>
-                  setDraftFilters((current) => ({
+                  setFilters((current) => ({
                     ...current,
                     maxRate: Number(event.target.value),
                   }))
@@ -363,20 +389,13 @@ export function ParentFindTutorsPage() {
               />
               <div className="mt-1 flex items-center justify-between text-[12px] font-semibold text-[#6b7280]">
                 <span>${rateBounds.min}</span>
-                <span>${draftFilters.maxRate}</span>
+                <span>${filters.maxRate}</span>
                 <span>${rateBounds.max}</span>
               </div>
               <button
                 type="button"
-                onClick={applyFilters}
-                className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
-              >
-                Apply Filters
-              </button>
-              <button
-                type="button"
                 onClick={resetFilters}
-                className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-full border border-[#d61c3f] px-4 text-[13px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
+                className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-full border border-[#d61c3f] px-4 text-[13px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
               >
                 Reset Filters
               </button>
@@ -390,22 +409,17 @@ export function ParentFindTutorsPage() {
                   {isLoading ? "Loading tutors..." : `${filteredTutors.length} tutor${filteredTutors.length === 1 ? "" : "s"} found`}
                 </span>{" "}
                 {selectedStudent ? `for ${selectedStudent.name}` : "across all available tutors"}
-                {appliedFilters.subject ? ` - ${appliedFilters.subject}` : ""}
+                {filters.subject ? ` - ${filters.subject}` : ""}
               </p>
 
               <div className="relative w-full max-w-[220px]">
                 <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
                 <input
                   type="text"
-                  value={draftFilters.search}
+                  value={filters.search}
                   onChange={(event) =>
-                    setDraftFilters((current) => ({ ...current, search: event.target.value }))
+                    setFilters((current) => ({ ...current, search: event.target.value }))
                   }
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      applyFilters();
-                    }
-                  }}
                   placeholder="Search tutors..."
                   className="h-11 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] pl-11 pr-4 text-[14px] outline-none placeholder:text-[#9ca3af]"
                 />
@@ -469,7 +483,7 @@ export function ParentFindTutorsPage() {
                   </div>
 
                   <Link
-                    href={`${PARENT_FIND_TUTORS_ROUTE}/${tutor.id}`}
+                    href={buildTutorHref(tutor.id)}
                     className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
                   >
                     View Profile
