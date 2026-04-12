@@ -8,7 +8,7 @@ export type StudentScheduleItem = {
   time: string;
   duration: string;
   type: "Virtual" | "In-Person";
-  status: "Upcoming" | "Completion Requested" | "Completed" | "Cancelled";
+  status: "Upcoming" | "Expired" | "Completion Requested" | "Completed" | "Cancelled";
   fullDate: string;
   sessionRate: number;
   chat: Array<{

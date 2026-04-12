@@ -11,6 +11,7 @@ import { type TutorScheduleItem, type TutorScheduleStatus } from "@/lib/tutor/sc
 
 const tabs: Array<{ key: TutorScheduleStatus; label: string }> = [
   { key: "Upcoming", label: "Upcoming" },
+  { key: "Expired", label: "Expired" },
   { key: "Completion Requested", label: "Requested" },
   { key: "Completed", label: "Completed" },
   { key: "Cancelled", label: "Cancelled" },
@@ -33,6 +34,10 @@ function statusClass(status: TutorScheduleStatus) {
 
   if (status === "Cancelled") {
     return "bg-[#f1f1f1] text-[#6b7280]";
+  }
+
+  if (status === "Expired") {
+    return "bg-[#fff1f2] text-[#b42318]";
   }
 
   return "bg-[#fff6de] text-[#b58112]";
@@ -110,7 +115,7 @@ export function TutorSchedulePage() {
   const counts = useMemo(
     () =>
       isPending
-        ? { Upcoming: 0, "Completion Requested": 0, Completed: 0, Cancelled: 0 }
+        ? { Upcoming: 0, Expired: 0, "Completion Requested": 0, Completed: 0, Cancelled: 0 }
         : sessions.reduce<Record<TutorScheduleStatus, number>>(
             (acc, item) => {
               acc[item.status] += 1;
@@ -118,6 +123,7 @@ export function TutorSchedulePage() {
             },
             {
               Upcoming: 0,
+              Expired: 0,
               "Completion Requested": 0,
               Completed: 0,
               Cancelled: 0,
@@ -141,6 +147,8 @@ export function TutorSchedulePage() {
                 const badgeClass =
                   tab.key === "Upcoming"
                     ? "bg-[#d61c3f] text-white"
+                    : tab.key === "Expired"
+                      ? "bg-[#b42318] text-white"
                     : tab.key === "Completed"
                       ? "bg-[#1b8a5a] text-white"
                       : "bg-[#e5e7eb] text-[#6b7280]";

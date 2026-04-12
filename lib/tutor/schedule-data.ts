@@ -1,4 +1,4 @@
-export type TutorScheduleStatus = "Upcoming" | "Completion Requested" | "Completed" | "Cancelled";
+export type TutorScheduleStatus = "Upcoming" | "Expired" | "Completion Requested" | "Completed" | "Cancelled";
 
 export type TutorScheduleItem = {
   id: string;
@@ -194,6 +194,7 @@ export function getTutorScheduleCounts(): Record<TutorScheduleStatus, number> {
     },
     {
       Upcoming: 0,
+      Expired: 0,
       "Completion Requested": 0,
       Completed: 0,
       Cancelled: 0,

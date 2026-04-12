@@ -27,7 +27,7 @@ export type AdminScheduleApiRow = {
 
 export type AdminScheduleApiDetail = {
   session_id: string;
-  status: "Upcoming" | "Completed" | "Cancelled";
+  status: "Upcoming" | "Expired" | "Completion Requested" | "Completed" | "Cancelled";
   subject: string;
   date_label: string;
   time_range: string;
@@ -214,6 +214,8 @@ export function mapAdminScheduleRows(data: AdminSchedulesListResponse): AdminSch
           ? "Completed"
           : String(row.status).toLowerCase() === "cancelled"
             ? "Cancelled"
+            : String(row.status).toLowerCase() === "expired"
+              ? "Expired"
             : "Upcoming",
     fee: row.amount,
   }));

@@ -3,43 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { FiCheck, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiCheck, FiChevronLeft } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
 import type { ParentTutorCard } from "@/lib/parent/find-tutors-data";
 import { getParentStudents, type ParentStudentListItem } from "@/lib/api/parent-students-api";
-import { PARENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
+import { createParentSessionBooking } from "@/lib/api/parent-session-booking-api";
+import { PARENT_DASHBOARD_ROUTE, PARENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
 
 export type ParentBookingStep = "student" | "session" | "schedule" | "confirm";
-
-const dates = [
-  { value: "1" },
-  { value: "2" },
-  { value: "3" },
-  { value: "4" },
-  { value: "5" },
-  { value: "6" },
-  { value: "7" },
-  { value: "8" },
-  { value: "9" },
-  { value: "10" },
-  { value: "11" },
-  { value: "12" },
-  { value: "13" },
-  { value: "14" },
-];
-
-const scheduleDates = [
-  "Sun, Mar 1",
-  "Mon, Mar 2",
-  "Tue, Mar 3",
-  "Wed, Mar 4",
-  "Thu, Mar 5",
-  "Fri, Mar 6",
-  "Sat, Mar 7",
-];
-
-const availableTimes = ["3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM"];
 
 const stepMeta: {
   key: ParentBookingStep;
@@ -82,9 +54,23 @@ function getPreviousStep(step: ParentBookingStep): ParentBookingStep | null {
   }
 }
 
-function formatMonthLabel(dateValue: string) {
-  const [, month] = dateValue.split(", ");
-  return month ? month.replace(/\s+\d+$/, "") + " 2026" : "March 2026";
+function parseAvailabilitySlot(value: string) {
+  const label = String(value || "").trim();
+  if (!label) {
+    return { dateLabel: "Availability pending", timeLabel: "" };
+  }
+
+  const match = label.match(/^(.*?)(?=\s\d{1,2}:\d{2}\s*[AP]M\b)/i);
+  if (!match) {
+    return { dateLabel: label, timeLabel: "" };
+  }
+
+  const dateLabel = match[1].replace(/\s*-\s*$/, "").trim();
+  const timeLabel = label.slice(match[1].length).trim().replace(/^\-\s*/, "");
+  return {
+    dateLabel: dateLabel || label,
+    timeLabel,
+  };
 }
 
 export function ParentBookSessionPage({
@@ -99,17 +85,28 @@ export function ParentBookSessionPage({
   const searchParams = useSearchParams();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [students, setStudents] = useState<ParentStudentListItem[]>([]);
+  const [bookingError, setBookingError] = useState("");
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const availabilitySlots = tutor.availability.map((slot) => {
+    const parsed = parseAvailabilitySlot(slot);
+    return {
+      value: slot,
+      dateLabel: parsed.dateLabel,
+      timeLabel: parsed.timeLabel,
+    };
+  });
 
   const subjectOptions = tutor.subjects.filter(
     (subject) => !["Math", "Science", "English", "History"].includes(subject),
   );
+  const defaultAvailabilitySlot = availabilitySlots[0];
   const selectedStudent = searchParams.get("student") ?? searchParams.get("bookingFor") ?? "";
   const selectedSubject = searchParams.get("subject") ?? subjectOptions[0] ?? tutor.subjects[0];
   const selectedSessionType =
     searchParams.get("type") ?? (tutor.sessionTypes.includes("Virtual") ? "Virtual" : tutor.sessionTypes[0]);
   const selectedDuration = searchParams.get("duration") ?? "60";
-  const selectedDate = searchParams.get("date") ?? "Mon, Mar 2";
-  const selectedTime = searchParams.get("time") ?? "4:00 PM";
+  const selectedDate = searchParams.get("date") ?? defaultAvailabilitySlot?.dateLabel ?? "Availability pending";
+  const selectedTime = searchParams.get("time") ?? defaultAvailabilitySlot?.timeLabel ?? "";
   const notes = searchParams.get("notes") ?? "";
   const confirmed = searchParams.get("confirmed") === "1";
   const selectedStudentData = students.find((student) => student.email === selectedStudent) ?? students[0] ?? null;
@@ -185,12 +182,48 @@ export function ParentBookSessionPage({
   }
 
   function handleConfirmBooking() {
+    setBookingError("");
     setShowConfirmModal(true);
   }
 
-  function handleApproveBooking() {
-    setShowConfirmModal(false);
-    updateCurrentStep({ confirmed: "1" });
+  async function handleApproveBooking() {
+    if (!selectedStudentData?.email) {
+      setBookingError("Select a linked student before confirming this booking.");
+      return;
+    }
+
+    setBookingSubmitting(true);
+    setBookingError("");
+
+    try {
+      await createParentSessionBooking({
+        studentEmail: selectedStudentData.email,
+        paymentEmail: "",
+        cardholderName: "",
+        saveInformation: false,
+        tutorId: tutor.id,
+        tutorName: tutor.name,
+        subject: selectedSubject,
+        sessionDate: selectedDate,
+        sessionTime: selectedTime || "To be confirmed",
+        sessionType: selectedSessionType,
+        durationMinutes: Number(selectedDuration) || 60,
+        sessionRate: String(totalDue),
+        schedulingFee: "0",
+        totalAmount: String(totalDue),
+        currency: "USD",
+        meetingLocation: selectedSessionType === "In-Person" ? tutor.location : "",
+        sessionNotes: notes,
+      });
+
+      setShowConfirmModal(false);
+      updateCurrentStep({ confirmed: "1" });
+      router.push(PARENT_DASHBOARD_ROUTE);
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : "Unable to create booking.");
+    } finally {
+      setBookingSubmitting(false);
+    }
   }
 
   return (
@@ -208,6 +241,7 @@ export function ParentBookSessionPage({
               <div className="mt-6 flex items-center justify-end gap-3">
                 <button
                   type="button"
+                  disabled={bookingSubmitting}
                   onClick={() => setShowConfirmModal(false)}
                   className="inline-flex h-11 items-center rounded-full border border-[#d61c3f] px-5 text-[14px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
                 >
@@ -216,11 +250,13 @@ export function ParentBookSessionPage({
                 <button
                   type="button"
                   onClick={handleApproveBooking}
+                  disabled={bookingSubmitting}
                   className="inline-flex h-11 items-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
                 >
-                  Confirm
+                  {bookingSubmitting ? "Saving..." : "Confirm"}
                 </button>
               </div>
+              {bookingError ? <p className="mt-3 text-[13px] text-[#d61c3f]">{bookingError}</p> : null}
             </div>
           </div>
         ) : null}
@@ -380,73 +416,49 @@ export function ParentBookSessionPage({
               {step === "schedule" ? (
                 <section className="rounded-[16px] bg-[#f9fafb] p-4">
                   <h2 className="text-[17px] font-bold text-[#20242b]">Step 3 - Choose a Date & Time</h2>
-                  <div className="mt-4 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <button
-                          type="button"
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-white"
-                        >
-                          <FiChevronLeft className="h-4 w-4" />
-                        </button>
-                        <span className="text-[18px] font-bold text-[#374151]">
-                          {formatMonthLabel(selectedDate)}
-                        </span>
-                        <button
-                          type="button"
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-[#6b7280] transition hover:bg-white"
-                        >
-                          <FiChevronRight className="h-4 w-4" />
-                        </button>
-                      </div>
+                  <div className="mt-4">
+                    <p className="text-[16px] font-semibold text-[#374151]">Tutor Availability</p>
+                    <p className="mt-1 text-[13px] text-[#6b7280]">
+                      Select one of the available time windows shared by {tutor.name}.
+                    </p>
 
-                      <div className="mt-4 grid grid-cols-7 gap-2 text-center text-[12px] font-medium text-[#6b7280]">
-                        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                          <span key={day}>{day}</span>
-                        ))}
-                        {dates.map((date, index) => {
-                          const dateValue = scheduleDates[index] ?? selectedDate;
-                          const selected = selectedDate === dateValue;
+                    {availabilitySlots.length > 0 ? (
+                      <div className="mt-4 grid gap-3">
+                        {availabilitySlots.map((slot) => {
+                          const selected =
+                            selectedDate === slot.dateLabel &&
+                            selectedTime === slot.timeLabel;
 
                           return (
                             <button
-                              key={`${date.value}-${index}`}
+                              key={slot.value}
                               type="button"
-                              onClick={() => updateCurrentStep({ date: dateValue })}
-                              className={`flex h-8 items-center justify-center rounded-lg text-[13px] ${
-                                selected
-                                  ? "bg-[#ffecef] font-semibold text-[#d61c3f]"
-                                  : "text-[#9ca3af] hover:bg-white"
+                              onClick={() =>
+                                updateCurrentStep({
+                                  date: slot.dateLabel,
+                                  time: slot.timeLabel || null,
+                                })
+                              }
+                              className={`flex items-center justify-between rounded-[12px] border px-4 py-4 text-left transition ${
+                                selected ? "border-[#ef6b7a] bg-[#fff0f3]" : "border-[#e5e7eb] bg-white"
                               }`}
                             >
-                              {date.value}
+                              <span>
+                                <span className="block text-[15px] font-semibold text-[#20242b]">{slot.dateLabel}</span>
+                                <span className="mt-1 block text-[13px] text-[#6b7280]">
+                                  {slot.timeLabel || "Time details will be confirmed with the tutor."}
+                                </span>
+                              </span>
+                              {selected ? <FiCheck className="h-5 w-5 text-[#d61c3f]" /> : null}
                             </button>
                           );
                         })}
                       </div>
-                    </div>
-
-                    <div>
-                      <p className="text-[16px] font-semibold text-[#374151]">
-                        Available Times - {selectedDate}
-                      </p>
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        {availableTimes.map((time) => (
-                          <button
-                            key={time}
-                            type="button"
-                            onClick={() => updateCurrentStep({ time })}
-                            className={`inline-flex h-10 items-center justify-center rounded-lg border text-[14px] font-semibold transition ${
-                              selectedTime === time
-                                ? "border-[#d61c3f] bg-[#d61c3f] text-white"
-                                : "border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d1d5db]"
-                            }`}
-                          >
-                            {time}
-                          </button>
-                        ))}
+                    ) : (
+                      <div className="mt-4 rounded-[12px] border border-[#e5e7eb] bg-white px-4 py-4 text-[14px] text-[#6b7280]">
+                        No tutor availability has been added yet.
                       </div>
-                    </div>
+                    )}
                   </div>
                 </section>
               ) : null}

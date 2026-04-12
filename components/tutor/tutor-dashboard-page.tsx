@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { IconType } from "react-icons";
-import { FiCalendar, FiCheckCircle, FiDollarSign, FiPlusCircle } from "react-icons/fi";
+import { FiCalendar, FiCheckCircle, FiDollarSign, FiPlusCircle, FiSlash } from "react-icons/fi";
 
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
@@ -73,6 +73,18 @@ function isCompletedSession(session: TutorScheduleItem) {
 
 function isUpcomingSession(session: TutorScheduleItem) {
   return session.status === "Upcoming" || session.status === "Completion Requested";
+}
+
+function isExpiredSession(session: TutorScheduleItem) {
+  return session.status === "Expired";
+}
+
+function getStatusClassName(status: TutorScheduleItem["status"]) {
+  if (status === "Completed") return "bg-[#e2f5ea] text-[#41a16f]";
+  if (status === "Expired") return "bg-[#fff1f2] text-[#b42318]";
+  if (status === "Completion Requested") return "bg-[#eff6ff] text-[#2563eb]";
+  if (status === "Cancelled") return "bg-[#f1f1f1] text-[#6b7280]";
+  return "bg-[#fff6de] text-[#b58112]";
 }
 
 export function TutorDashboardPage() {
@@ -170,14 +182,17 @@ export function TutorDashboardPage() {
 
   const dashboardMetrics = useMemo(() => {
     const upcoming = scheduleItems.filter(isUpcomingSession);
+    const expired = scheduleItems.filter(isExpiredSession);
     const completed = scheduleItems.filter(isCompletedSession);
     const totalEarnings = completed.reduce((sum, item) => sum + parseCurrency(item.rate), 0);
 
     return {
       upcomingCount: upcoming.length,
+      expiredCount: expired.length,
       completedCount: completed.length,
       totalEarnings: formatCurrency(totalEarnings),
       upcomingSessions: upcoming.slice(0, 5),
+      expiredSessions: expired.slice(0, 4),
       completedSessions: completed.slice(0, 4),
     };
   }, [scheduleItems]);
@@ -191,6 +206,16 @@ export function TutorDashboardPage() {
       view: "schedule",
       icon: FiCalendar,
       iconClassName: "bg-[#fff6de] text-[#b58112]",
+    },
+    {
+      title: "Expired Sessions",
+      value: String(dashboardMetrics.expiredCount),
+      subtitle: "Past due sessions",
+      action: "View expired",
+      view: "schedule",
+      icon: FiSlash,
+      iconClassName: "bg-[#fff1f2] text-[#b42318]",
+      valueClassName: "text-[#b42318]",
     },
     {
       title: "Completed Sessions",
@@ -285,7 +310,7 @@ export function TutorDashboardPage() {
                     {session.type}
                   </span>
                   <span className="font-semibold text-[#374151]">{session.rate}</span>
-                  <span className="inline-flex w-fit rounded-full bg-[#fff6de] px-2.5 py-1 text-[11px] font-medium text-[#b58112]">
+                  <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClassName(session.status)}`}>
                     {session.status}
                   </span>
                 </div>
@@ -420,7 +445,7 @@ export function TutorDashboardPage() {
 
         {showApplicationState ? null : (
           <>
-            <section className="mt-4 grid gap-3 lg:grid-cols-3">
+            <section className="mt-4 grid gap-3 lg:grid-cols-4">
               {summaryCards.map((card) => (
                 <SummaryCardView key={card.title} card={card} onView={setActiveView} />
               ))}

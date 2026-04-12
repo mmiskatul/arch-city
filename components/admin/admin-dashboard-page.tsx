@@ -134,6 +134,7 @@ function getModeClassName(mode: string) {
 
 function getStatusClassName(status: string) {
   if (status === "Completed") return "bg-[#ebf7ef] text-[#239157]";
+  if (status === "Expired") return "bg-[#fff1f2] text-[#b42318]";
   if (status === "Cancelled") return "bg-[#ffecef] text-[#d94a62]";
   return "bg-[#fff6de] text-[#b58112]";
 }
@@ -191,7 +192,7 @@ function SummaryCardView({ card }: { card: SummaryCard }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">{card.title}</p>
-          <p className="mt-3 text-[44px] font-bold leading-none text-[#20242b]">{card.value}</p>
+          <p className="mt-3 text-[34px] font-bold leading-none text-[#20242b] sm:text-[40px] xl:text-[44px]">{card.value}</p>
           <p className="mt-2 text-[13px] text-[#6b7280]">{card.subtitle}</p>
           <Link href={card.action_route} className="mt-2 inline-flex text-[13px] font-semibold text-[#d61c3f] transition hover:text-[#b81636]">
             {card.action} &#8594;
@@ -317,7 +318,7 @@ export function AdminDashboardPage({
     <AdminShell>
       <div className="w-full">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h1 className="text-[38px] font-bold leading-none text-[#20242b]">Dashboard</h1>
+          <h1 className="text-[30px] font-bold leading-none text-[#20242b] sm:text-[34px] xl:text-[38px]">Dashboard</h1>
           <p className="text-[14px] text-[#6b7280]">Today &#8212; {data.today_label}</p>
         </div>
 
@@ -325,7 +326,7 @@ export function AdminDashboardPage({
           <p className="mt-2 rounded-md border border-[#ffecef] bg-[#fff5f7] px-3 py-2 text-[12px] text-[#d61c3f]">{errorMessage}</p>
         ) : null}
 
-        <section className="mt-5 grid gap-4 xl:grid-cols-4">
+        <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
             <SummaryCardView key={card.title} card={card} />
           ))}

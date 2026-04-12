@@ -266,6 +266,7 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
 
   const completionRequested = currentSession.status === "Completion Requested";
   const completed = currentSession.status === "Completed";
+  const chatLocked = currentSession.status === "Expired";
 
   async function handleSubmitRating() {
     if (!selectedRating || ratingSubmitted || ratingSubmitting) return;
@@ -479,7 +480,7 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
                 <p className="font-semibold text-[#20242b]">{currentSession.tutorName}</p>
                 <div className="flex items-center gap-1.5 text-[12px] text-[#1b8a5a]">
                   <span className="h-2 w-2 rounded-full bg-[#1b8a5a]" />
-                  <span>{connected ? "Online" : "Connecting..."}</span>
+                  <span>{chatLocked ? "Chat closed" : connected ? "Online" : "Connecting..."}</span>
                 </div>
               </div>
             </div>
@@ -532,24 +533,28 @@ export function StudentSessionDetailPage({ session }: { session: StudentSchedule
                     setDraft(event.target.value);
                     if (error) clearError();
                   }}
+                  disabled={chatLocked}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
                       handleSendMessage();
                     }
                   }}
-                  placeholder="Type a message..."
-                  className="flex-1 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#374151] outline-none placeholder:text-[#9ca3af]"
+                  placeholder={chatLocked ? "Chat is closed for expired sessions." : "Type a message..."}
+                  className="flex-1 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 text-[14px] text-[#374151] outline-none placeholder:text-[#9ca3af] disabled:cursor-not-allowed disabled:opacity-60"
                 />
                 <button
                   type="button"
                   onClick={handleSendMessage}
-                  disabled={!draft.trim() || !connected || isSending}
+                  disabled={chatLocked || !draft.trim() || !connected || isSending}
                   className="inline-flex h-10 items-center justify-center rounded-full bg-[#d61c3f] px-5 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSending ? "Sending..." : "Send"}
                 </button>
               </div>
+              {chatLocked ? (
+                <p className="mt-2 text-[12px] text-[#b42318]">This session is expired, so chat is now closed.</p>
+              ) : null}
               {error ? <p className="mt-2 text-[12px] text-[#d61c3f]">{error}</p> : null}
             </div>
           </section>

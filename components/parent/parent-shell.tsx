@@ -69,7 +69,7 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
-      className={`flex items-center justify-between rounded-xl px-4 py-3 text-[14px] font-medium transition ${
+      className={`flex shrink-0 items-center justify-between rounded-xl px-4 py-3 text-[14px] font-medium transition xl:w-full ${
         active
           ? "bg-[#ffe9ec] text-[#d61c3f]"
           : "text-[#4b5563] hover:bg-[#f7f7f8]"
@@ -119,6 +119,7 @@ export function ParentShell({
   const pathname = usePathname();
   const { tokenPresent, isAuthenticated } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
@@ -128,6 +129,7 @@ export function ParentShell({
     phone: "",
   });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const topUserMenuRef = useRef<HTMLDivElement | null>(null);
   useNotificationsSocket(tokenPresent && isAuthenticated);
 
   useEffect(() => {
@@ -201,8 +203,12 @@ export function ParentShell({
     function onMouseDown(event: MouseEvent) {
       const target = event.target as Node;
       const inSidebarMenu = userMenuRef.current?.contains(target) ?? false;
+      const inTopMenu = topUserMenuRef.current?.contains(target) ?? false;
       if (!inSidebarMenu) {
         setUserMenuOpen(false);
+      }
+      if (!inTopMenu) {
+        setTopUserMenuOpen(false);
       }
     }
 
@@ -233,6 +239,7 @@ export function ParentShell({
     }
 
     setUserMenuOpen(false);
+    setTopUserMenuOpen(false);
     redirectToLogin();
   }
 
@@ -275,7 +282,7 @@ export function ParentShell({
             className="flex flex-col justify-between px-3 py-4 xl:h-[calc(100vh-73px)]"
             style={hiddenScrollbarStyle}
           >
-            <nav className="space-y-1">
+            <nav className="flex gap-2 overflow-x-auto pb-1 xl:block xl:space-y-1 xl:overflow-visible xl:pb-0">
               {resolvedMenuItems.map((item) => (
                 <SidebarLink
                   key={item.label}
@@ -288,7 +295,7 @@ export function ParentShell({
               ))}
             </nav>
 
-            <div className="relative mt-8 border-t border-[#eceef2] px-2 pt-4" ref={userMenuRef}>
+            <div className="relative mt-8 hidden border-t border-[#eceef2] px-2 pt-4 xl:block" ref={userMenuRef}>
               <button
                 type="button"
                 onClick={() => setUserMenuOpen((open) => !open)}
@@ -332,15 +339,54 @@ export function ParentShell({
         </aside>
 
         <section className="min-w-0 xl:min-h-screen">
-          <div className="flex items-center justify-end px-4 py-4 sm:px-5 lg:px-6 xl:sticky xl:top-0 xl:z-20 xl:bg-white">
+          <div className="flex items-center justify-end gap-3 px-4 py-4 sm:px-5 lg:px-6 xl:sticky xl:top-0 xl:z-20 xl:bg-white">
             <NotificationBellMenu
               role="parent"
               viewAllHref={PARENT_NOTIFICATIONS_ROUTE}
               badgeCount={notificationsUnreadCount}
-              onBeforeOpen={() => setUserMenuOpen(false)}
+              onBeforeOpen={() => {
+                setUserMenuOpen(false);
+                setTopUserMenuOpen(false);
+              }}
             />
+            <div className="relative xl:hidden" ref={topUserMenuRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  setTopUserMenuOpen((open) => !open);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffd9df] text-[11px] font-semibold text-[#d61c3f] transition hover:opacity-90"
+                aria-label="Open profile menu"
+              >
+                {userProfile.initials}
+              </button>
+
+              {topUserMenuOpen ? (
+                <div className="absolute right-0 top-full z-30 mt-2 w-44 rounded-xl border border-[#e8eaef] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.12)]">
+                  <Link
+                    href={PARENT_PROFILE_ROUTE}
+                    onClick={() => setTopUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-[#374151] transition hover:bg-[#f7f7f8]"
+                  >
+                    <FiUser className="h-4 w-4 text-[#6b7280]" />
+                    <span>Profile</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] font-medium text-[#d61c3f] transition hover:bg-[#fff1f3] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <FiLogOut className="h-4 w-4" />
+                    <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
-          <div className="py-5 xl:max-w-[calc(100vw-172px)]">{children}</div>
+          <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-5 lg:px-6 2xl:px-8">{children}</div>
         </section>
       </div>
     </main>

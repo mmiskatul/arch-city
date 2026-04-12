@@ -459,9 +459,9 @@ export function ParentFindTutorsPage() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {tutor.subjects.slice(0, 3).map((subject, index) => (
+                    {tutor.subjects.map((subject, index) => (
                       <span
-                        key={subject}
+                        key={`${tutor.id}-${subject}`}
                         className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
                           index === 0 ? "bg-[#ffecef] text-[#d94a62]" : "bg-[#f0f1f3] text-[#6b7280]"
                         }`}
@@ -471,16 +471,46 @@ export function ParentFindTutorsPage() {
                     ))}
                   </div>
 
-                  <p className="mt-4 text-[13px] text-[#6b7280]">
-                    {tutor.sessionTypes.join(" | ")} | {tutor.location}
-                  </p>
-
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <p className="text-[14px] font-bold text-[#20242b]">${tutor.price60} / 60 min</p>
-                    <span className="inline-flex rounded-full bg-[#daf2e8] px-2.5 py-1 text-[11px] font-semibold text-[#33976d]">
-                      Available
-                    </span>
+                  <div className="mt-4 space-y-2 text-[13px] text-[#6b7280]">
+                    <p>{tutor.sessionTypes.join(" | ")} | {tutor.location || "Location not provided"}</p>
+                    <p>
+                      Grades:{" "}
+                      <span className="font-medium text-[#374151]">
+                        {tutor.gradeLevels.length > 0 ? tutor.gradeLevels.join(", ") : "Not provided"}
+                      </span>
+                    </p>
+                    <p>
+                      Availability:{" "}
+                      <span className="font-medium text-[#374151]">
+                        {tutor.availability.length > 0 ? tutor.availability.join(", ") : "No availability added"}
+                      </span>
+                    </p>
                   </div>
+
+                  <div className="mt-4 rounded-[12px] border border-[#eceef2] bg-white px-3 py-3 text-[13px] text-[#4b5563]">
+                    <div className="flex items-center justify-between py-1">
+                      <span>Virtual 45 min</span>
+                      <span className="font-semibold text-[#20242b]">${tutor.price45}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span>Virtual 60 min</span>
+                      <span className="font-semibold text-[#20242b]">${tutor.price60}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span>In-Person 45 min</span>
+                      <span className="font-semibold text-[#20242b]">
+                        {tutor.inPerson45 > 0 ? `$${tutor.inPerson45}` : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span>In-Person 60 min</span>
+                      <span className="font-semibold text-[#20242b]">
+                        {tutor.inPerson60 > 0 ? `$${tutor.inPerson60}` : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-[13px] leading-6 text-[#4b5563]">{tutor.about}</p>
 
                   <Link
                     href={buildTutorHref(tutor.id)}

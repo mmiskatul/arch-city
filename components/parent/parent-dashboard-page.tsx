@@ -248,7 +248,7 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
         <section className="mt-5">
           <p className="text-[18px] font-medium text-[#374151]">{overviewHeading}</p>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-3">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {data.summaryCards.map((card) => (
               <SummaryCardView key={card.title} card={card} />
             ))}
@@ -263,8 +263,9 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
             </Link>
           </div>
 
-          <div className="mt-3 overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            <div className="hidden grid-cols-[1.5fr_0.9fr_0.7fr_0.9fr_0.7fr_0.7fr_0.8fr_0.8fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280] md:grid">
+          <div className="mt-3 overflow-x-auto rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="min-w-[900px]">
+            <div className="grid grid-cols-[1.5fr_0.9fr_0.7fr_0.9fr_0.7fr_0.7fr_0.8fr_0.8fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
               <span>Tutor</span>
               <span>Date</span>
               <span>Time</span>
@@ -280,7 +281,7 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
                 data.upcomingSessions.map((session) => (
                   <div
                     key={session.id}
-                    className="grid gap-4 px-4 py-4 md:grid-cols-[1.5fr_0.9fr_0.7fr_0.9fr_0.7fr_0.7fr_0.8fr_0.8fr] md:items-center"
+                    className="grid grid-cols-[1.5fr_0.9fr_0.7fr_0.9fr_0.7fr_0.7fr_0.8fr_0.8fr] items-center gap-4 px-4 py-4"
                   >
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
@@ -317,6 +318,7 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
                   No upcoming sessions yet. Book a tutor to see sessions here.
                 </div>
               )}
+            </div>
             </div>
           </div>
         </section>

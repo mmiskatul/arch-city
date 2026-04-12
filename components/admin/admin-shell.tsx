@@ -65,7 +65,7 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
-      className={`flex items-center justify-between rounded-xl px-4 py-3 text-[14px] font-medium transition ${
+      className={`flex shrink-0 items-center justify-between rounded-xl px-4 py-3 text-[14px] font-medium transition xl:w-full ${
         active ? "bg-[#ffe9ec] text-[#d61c3f]" : "text-[#4b5563] hover:bg-[#f7f7f8]"
       }`}
       aria-label={item.label}
@@ -210,6 +210,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     }
 
     setUserMenuOpen(false);
+    setTopUserMenuOpen(false);
     redirectToLogin();
   }
 
@@ -222,8 +223,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
         : "Search students, tutors, sessions...";
   const isMessagesRoute = pathname.startsWith(ADMIN_MESSAGES_ROUTE);
   const contentWrapperClassName = isMessagesRoute
-    ? "px-0 py-0 xl:max-w-[calc(100vw-206px)]"
-    : "px-4 py-5 sm:px-5 lg:px-6 xl:max-w-[calc(100vw-206px)]";
+    ? "mx-auto w-full max-w-[1760px] px-0 py-0"
+    : "mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-5 lg:px-6 2xl:px-8";
 
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-[#1f2937]">
@@ -242,7 +243,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             className="flex flex-col justify-between px-3 py-4 xl:h-[calc(100vh-84px)]"
             style={hiddenScrollbarStyle}
           >
-            <nav className="space-y-1">
+            <nav className="flex gap-2 overflow-x-auto pb-1 xl:block xl:space-y-1 xl:overflow-visible xl:pb-0">
               {sidebarItems.map((item) => (
                 <SidebarLink
                   key={item.label}
@@ -256,7 +257,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               ))}
             </nav>
 
-            <div className="relative mt-8 border-t border-[#e8eaef] px-2 pt-4" ref={userMenuRef}>
+            <div className="relative mt-8 hidden border-t border-[#e8eaef] px-2 pt-4 xl:block" ref={userMenuRef}>
               <button
                 type="button"
                 onClick={() => {

@@ -6,6 +6,7 @@ import {
   FiCheckCircle,
   FiClock,
   FiSearch,
+  FiSlash,
   FiXCircle,
 } from "react-icons/fi";
 
@@ -83,6 +84,7 @@ function toSessionRow(item: StudentScheduleItem): SessionRow {
 function buildSummaryCards(stats: {
   total: number;
   upcoming: number;
+  expired: number;
   completed: number;
   cancelled: number;
 }): SummaryCard[] {
@@ -106,6 +108,16 @@ function buildSummaryCards(stats: {
       iconClassName: "bg-[#fff6de] text-[#b58112]",
     },
     {
+      title: "Expired",
+      value: String(stats.expired),
+      subtitle: "Past due sessions",
+      action: "View expired",
+      href: STUDENT_SCHEDULE_ROUTE,
+      icon: FiSlash,
+      iconClassName: "bg-[#fff1f2] text-[#b42318]",
+      valueClassName: "text-[#b42318]",
+    },
+    {
       title: "Completed",
       value: String(stats.completed),
       subtitle: "Completed sessions",
@@ -126,6 +138,14 @@ function buildSummaryCards(stats: {
       valueClassName: "text-[#d94a62]",
     },
   ];
+}
+
+function getStatusClassName(status: StudentScheduleItem["status"]) {
+  if (status === "Completed") return "bg-[#ebf7ef] text-[#1b8a5a]";
+  if (status === "Cancelled") return "bg-[#ffecef] text-[#d94a62]";
+  if (status === "Expired") return "bg-[#fff1f2] text-[#b42318]";
+  if (status === "Completion Requested") return "bg-[#eff6ff] text-[#2563eb]";
+  return "bg-[#fff6de] text-[#b58112]";
 }
 
 function SummaryCardView({ card }: { card: SummaryCard }) {
@@ -170,11 +190,13 @@ export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboar
   );
 
   const upcomingItems = orderedScheduleItems.filter((item) => item.status === "Upcoming");
+  const expiredItems = orderedScheduleItems.filter((item) => item.status === "Expired");
   const completedItems = orderedScheduleItems.filter((item) => item.status === "Completed");
   const cancelledItems = orderedScheduleItems.filter((item) => item.status === "Cancelled");
   const summaryCards = buildSummaryCards({
     total: orderedScheduleItems.length,
     upcoming: upcomingItems.length,
+    expired: expiredItems.length,
     completed: completedItems.length,
     cancelled: cancelledItems.length,
   });
@@ -208,7 +230,7 @@ export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboar
           <p>Spring tutoring sessions are now available! Book early to secure your preferred tutor and time slot.</p>
         </div>
 
-        <section className="mt-4 grid gap-3 lg:grid-cols-4">
+        <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {summaryCards.map((card) => (
             <SummaryCardView key={card.title} card={card} />
           ))}
@@ -222,8 +244,9 @@ export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboar
             </Link>
           </div>
 
-          <div className="mt-3 overflow-hidden rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            <div className="hidden grid-cols-[1.6fr_0.9fr_0.7fr_0.7fr_0.8fr_0.9fr_1fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280] md:grid">
+          <div className="mt-3 overflow-x-auto rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="min-w-[820px]">
+            <div className="grid grid-cols-[1.6fr_0.9fr_0.7fr_0.7fr_0.8fr_0.9fr_1fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
               <span>Tutor</span>
               <span>Date</span>
               <span>Time</span>
@@ -238,7 +261,7 @@ export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboar
                 sessionRows.map((row) => (
                   <div
                     key={row.id}
-                    className="grid gap-4 px-4 py-4 md:grid-cols-[1.6fr_0.9fr_0.7fr_0.7fr_0.8fr_0.9fr_1fr] md:items-center"
+                    className="grid grid-cols-[1.6fr_0.9fr_0.7fr_0.7fr_0.8fr_0.9fr_1fr] items-center gap-4 px-4 py-4"
                   >
                     <div className="flex items-center gap-3">
                       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${row.initialsClassName}`}>
@@ -261,7 +284,7 @@ export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboar
                     </div>
 
                     <div>
-                      <span className="inline-flex rounded-full bg-[#fff6de] px-2.5 py-1 text-[11px] font-medium text-[#b58112]">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClassName(row.status as StudentScheduleItem["status"])}`}>
                         {row.status}
                       </span>
                     </div>
@@ -290,6 +313,7 @@ export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboar
                   </p>
                 </div>
               )}
+            </div>
             </div>
           </div>
         </section>

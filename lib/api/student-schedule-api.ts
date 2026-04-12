@@ -99,6 +99,8 @@ function mapStudentScheduleItem(item: StudentScheduleApiItem): StudentScheduleIt
         ? "Completed"
         : String(item.status).toLowerCase() === "cancelled"
           ? "Cancelled"
+          : String(item.status).toLowerCase() === "expired"
+            ? "Expired"
           : "Upcoming",
     fullDate: fullDateLabel(item.session_date),
     sessionRate: sessionRateFromDetails(item),

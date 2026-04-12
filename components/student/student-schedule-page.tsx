@@ -8,10 +8,11 @@ import { cancelStudentScheduleItemById } from "@/lib/api/student-schedule-cancel
 import { STUDENT_FIND_TUTORS_ROUTE, STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
 import { studentScheduleItems, type StudentScheduleItem } from "@/lib/student/schedule-data";
 
-type ScheduleTab = "Upcoming" | "Completion Requested" | "Completed" | "Cancelled";
+type ScheduleTab = "Upcoming" | "Expired" | "Completion Requested" | "Completed" | "Cancelled";
 
 const tabs: Array<{ key: ScheduleTab; label: string }> = [
   { key: "Upcoming", label: "Upcoming" },
+  { key: "Expired", label: "Expired" },
   { key: "Completion Requested", label: "Requested" },
   { key: "Completed", label: "Completed" },
   { key: "Cancelled", label: "Cancelled" },
@@ -36,6 +37,10 @@ function statusClass(status: StudentScheduleItem["status"]) {
     return "bg-[#f8ecef] text-[#c05b6d]";
   }
 
+  if (status === "Expired") {
+    return "bg-[#fff1f2] text-[#b42318]";
+  }
+
   return "bg-[#fff6de] text-[#b58112]";
 }
 
@@ -54,6 +59,7 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
   const counts = useMemo(
     () => ({
       Upcoming: sessions.filter((item) => item.status === "Upcoming").length,
+      Expired: sessions.filter((item) => item.status === "Expired").length,
       "Completion Requested": sessions.filter((item) => item.status === "Completion Requested").length,
       Completed: sessions.filter((item) => item.status === "Completed").length,
       Cancelled: sessions.filter((item) => item.status === "Cancelled").length,
@@ -111,6 +117,8 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
                       className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] ${
                         tab.key === "Completed"
                           ? "bg-[#1b8a5a] text-white"
+                          : tab.key === "Expired"
+                            ? "bg-[#b42318] text-white"
                           : tab.key === "Upcoming"
                             ? "bg-[#d61c3f] text-white"
                             : "bg-[#e5e7eb] text-[#6b7280]"

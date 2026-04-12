@@ -96,6 +96,8 @@ function mapScheduleItem(api: TutorScheduleApiItem): TutorScheduleItem {
         ? "Completion Requested"
         : api.status === "Completed"
         ? "Completed"
+        : api.status === "Expired"
+          ? "Expired"
         : api.status === "Cancelled"
           ? "Cancelled"
           : "Upcoming",

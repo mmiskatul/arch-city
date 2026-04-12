@@ -92,8 +92,12 @@ function mapScheduleItem(api: TutorScheduleApiItem): TutorScheduleItem {
     type: api.session_type === "In-Person" ? "In-Person" : "Virtual",
     rate: api.amount,
     status:
-      api.status === "Completed"
+      api.status === "Completion Requested"
+        ? "Completion Requested"
+        : api.status === "Completed"
         ? "Completed"
+        : api.status === "Expired"
+          ? "Expired"
         : api.status === "Cancelled"
           ? "Cancelled"
           : "Upcoming",

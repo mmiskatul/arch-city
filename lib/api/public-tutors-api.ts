@@ -55,6 +55,29 @@ type PublicTutorsResponse = {
   items: PublicTutorItem[];
 };
 
+function hasCompleteTutorCardData(item: PublicTutorItem) {
+  const name = String(item.name || "").trim();
+  const grades = String(item.grades || item.grade_group || "").trim();
+  const location = String(item.location || "").trim();
+  const about = String(item.about || "").trim();
+  const subjects = Array.isArray(item.subjects) ? item.subjects.filter((entry) => String(entry || "").trim()) : [];
+  const availability = Array.isArray(item.availability) ? item.availability.filter(Boolean) : [];
+
+  if (!item.id || !name || name === "Tutor") return false;
+  if (subjects.length === 0) return false;
+  if (!grades || grades === "Grades not provided") return false;
+  if (availability.length === 0) return false;
+  if (!location) return false;
+  if (!about || about === "Tutor profile is being updated.") return false;
+
+  const hasVirtualRates = Number(item.price45 || 0) > 0 && Number(item.price60 || 0) > 0;
+  const hasInPersonRates = Number(item.in_person_price45 || 0) > 0 && Number(item.in_person_price60 || 0) > 0;
+
+  if (item.mode === "Virtual") return hasVirtualRates;
+  if (item.mode === "In-Person") return hasInPersonRates;
+  return hasVirtualRates && hasInPersonRates;
+}
+
 function normalizeGradeGroup(value?: string, grades?: string): StudentTutor["gradeGroup"] {
   const source = `${value ?? ""} ${grades ?? ""}`.toLowerCase();
 
@@ -205,7 +228,7 @@ export async function fetchAvailableStudentTutors(): Promise<StudentTutor[]> {
     withCredentials: false,
   });
 
-  const items = Array.isArray(data.items) ? data.items : [];
+  const items = Array.isArray(data.items) ? data.items.filter(hasCompleteTutorCardData) : [];
   return items.map(mapTutor);
 }
 
@@ -227,7 +250,7 @@ export async function fetchAvailableParentTutors(): Promise<ParentTutorCard[]> {
     withCredentials: false,
   });
 
-  const items = Array.isArray(data.items) ? data.items : [];
+  const items = Array.isArray(data.items) ? data.items.filter(hasCompleteTutorCardData) : [];
   return items.map(mapTutorToParentCard);
 }
 
