@@ -268,7 +268,8 @@ export function TutorDashboardPage() {
             </div>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[12px] border border-[#e7e7eb]">
+          <div className="mt-4 overflow-x-auto rounded-[12px] border border-[#e7e7eb]">
+            <div className="min-w-[960px]">
             <div className="grid grid-cols-[1.6fr_1fr_1fr_0.9fr_0.9fr_0.8fr_0.7fr_0.8fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
               <span>Student</span>
               <span>Grade</span>
@@ -316,6 +317,7 @@ export function TutorDashboardPage() {
                 </div>
               ))}
             </div>
+            </div>
           </div>
         </section>
       );
@@ -350,7 +352,7 @@ export function TutorDashboardPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <article className="rounded-[12px] border border-[#eceef2] bg-[#fafafb] p-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">This Month</p>
               <p className="mt-3 text-[22px] font-bold text-[#d61c3f]">{dashboardMetrics.totalEarnings}</p>
@@ -368,7 +370,8 @@ export function TutorDashboardPage() {
             </article>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[12px] border border-[#e7e7eb]">
+          <div className="mt-4 overflow-x-auto rounded-[12px] border border-[#e7e7eb]">
+            <div className="min-w-[840px]">
             <div className="grid grid-cols-[1.5fr_1fr_1fr_0.8fr_0.8fr_0.7fr_0.7fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
               <span>Student</span>
               <span>Date</span>
@@ -402,6 +405,7 @@ export function TutorDashboardPage() {
                   No completed sessions yet. Earnings will appear after a tutor and student mark the session as completed.
                 </div>
               ) : null}
+            </div>
             </div>
           </div>
         </section>
@@ -445,7 +449,7 @@ export function TutorDashboardPage() {
 
         {showApplicationState ? null : (
           <>
-            <section className="mt-4 grid gap-3 lg:grid-cols-4">
+            <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {summaryCards.map((card) => (
                 <SummaryCardView key={card.title} card={card} onView={setActiveView} />
               ))}
@@ -465,8 +469,9 @@ export function TutorDashboardPage() {
                 </button>
               </div>
 
-              <div className="mt-3 overflow-hidden rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                <div className="hidden grid-cols-[1.6fr_1fr_1fr_0.9fr_0.9fr_0.8fr_0.7fr_0.8fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280] md:grid">
+              <div className="mt-3 overflow-x-auto rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                <div className="min-w-[960px]">
+                <div className="grid grid-cols-[1.6fr_1fr_1fr_0.9fr_0.9fr_0.8fr_0.7fr_0.8fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
                   <span>Student</span>
                   <span>Grade</span>
                   <span>Date</span>
@@ -485,7 +490,7 @@ export function TutorDashboardPage() {
                     <div className="px-4 py-6 text-center text-[14px] text-[#b4233b]">{scheduleError}</div>
                   ) : null}
                   {!loadingSchedule && !scheduleError && dashboardMetrics.upcomingSessions.map((session) => (
-                    <div key={session.id} className="grid gap-4 px-4 py-4 md:grid-cols-[1.6fr_1fr_1fr_0.9fr_0.9fr_0.8fr_0.7fr_0.8fr] md:items-center">
+                    <div key={session.id} className="grid grid-cols-[1.6fr_1fr_1fr_0.9fr_0.9fr_0.8fr_0.7fr_0.8fr] items-center gap-4 px-4 py-4">
                       <div className="flex items-center gap-3">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
                           {session.studentInitials}
@@ -512,10 +517,11 @@ export function TutorDashboardPage() {
                     </div>
                   ))}
                 </div>
+                </div>
               </div>
             </section>
 
-            <section className={`mt-4 grid gap-3 lg:grid-cols-2 ${activeView !== "overview" ? "hidden" : ""}`}>
+            <section className={`mt-4 grid gap-3 xl:grid-cols-2 ${activeView !== "overview" ? "hidden" : ""}`}>
               <div className="flex items-center justify-between rounded-[12px] bg-[#ffe8ed] px-4 py-4">
                 <div>
                   <h3 className="text-[16px] font-bold text-[#20242b]">Update Availability</h3>

@@ -85,7 +85,7 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
   return (
     <StudentShell>
       <div className="w-full">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Schedule</h1>
 
           <Link
@@ -97,7 +97,7 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
         </div>
 
         <div className="mt-5 flex flex-col gap-4 rounded-[12px] border border-[#e7e7eb] bg-white p-0 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-          <div className="flex flex-col gap-4 border-b border-[#eceef2] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-4 border-b border-[#eceef2] px-4 py-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap items-center gap-6">
               {tabs.map((tab) => {
                 const active = activeTab === tab.key;
@@ -145,13 +145,13 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
           <div className="overflow-x-auto">
             <div className="min-w-[920px]">
               <div className="grid grid-cols-[1.15fr_1.65fr_1.15fr_0.8fr_0.9fr_0.9fr_1fr_1.2fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
-                <span>Date ↕</span>
-                <span>Tutor ↕</span>
+                <span>Date</span>
+                <span>Tutor</span>
                 <span>Subject</span>
-                <span>Time ↕</span>
+                <span>Time</span>
                 <span>Duration</span>
                 <span>Type</span>
-                <span>Status ↕</span>
+                <span>Status</span>
                 <span>Actions</span>
               </div>
 

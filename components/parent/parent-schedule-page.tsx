@@ -45,7 +45,7 @@ export function ParentSchedulePage() {
         </div>
 
         <div className="bg-white px-4 py-5 sm:px-5 lg:px-6">
-          <section className="grid gap-3 lg:grid-cols-3">
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <SummaryCard
               title="Total Sessions"
               value={String(parentScheduleSummary.totalSessions)}
@@ -69,17 +69,18 @@ export function ParentSchedulePage() {
             />
           </section>
 
-          <section className="mt-5 flex items-center justify-between gap-4">
+          <section className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="h-8 w-full max-w-[170px] rounded-lg border border-[#e5e7eb] bg-[#fafafa]" />
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 self-start sm:self-auto">
               <div className="h-8 w-[128px] rounded-lg border border-[#e5e7eb] bg-[#fafafa]" />
               <span className="text-[14px] font-medium text-[#6b7280]">to</span>
               <div className="h-8 w-[128px] rounded-lg border border-[#e5e7eb] bg-[#fafafa]" />
             </div>
           </section>
 
-          <section className="mt-3 overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            <div className="hidden grid-cols-[1fr_1fr_0.9fr_1.1fr_0.8fr_0.8fr_0.8fr_0.9fr_0.7fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280] md:grid">
+          <section className="mt-3 overflow-x-auto rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="min-w-[980px]">
+            <div className="grid grid-cols-[1fr_1fr_0.9fr_1.1fr_0.8fr_0.8fr_0.8fr_0.9fr_0.7fr] gap-4 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
               <span>Student</span>
               <span>Tutor</span>
               <span>Date</span>
@@ -95,7 +96,7 @@ export function ParentSchedulePage() {
               {parentSessionHistoryItems.map((session) => (
                 <div
                   key={session.id}
-                  className="grid gap-4 px-4 py-4 md:grid-cols-[1fr_1fr_0.9fr_1.1fr_0.8fr_0.8fr_0.8fr_0.9fr_0.7fr] md:items-center"
+                  className="grid grid-cols-[1fr_1fr_0.9fr_1.1fr_0.8fr_0.8fr_0.8fr_0.9fr_0.7fr] items-center gap-4 px-4 py-4"
                 >
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ffe7eb] text-[10px] font-bold text-[#d94a62]">
@@ -128,6 +129,7 @@ export function ParentSchedulePage() {
                   </div>
                 </div>
               ))}
+            </div>
             </div>
           </section>
         </div>

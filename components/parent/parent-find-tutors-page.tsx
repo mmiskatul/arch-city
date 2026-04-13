@@ -292,11 +292,12 @@ export function ParentFindTutorsPage() {
           <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">Find Tutors</h1>
         </div>
 
-        <div className="grid bg-white lg:grid-cols-[220px_minmax(0,1fr)]">
-          <aside className="border-r border-[#eceef2] px-4 py-4 sm:px-5 lg:px-4">
+        <div className="grid bg-white xl:grid-cols-[260px_minmax(0,1fr)]">
+          <aside className="border-b border-[#eceef2] px-4 py-4 sm:px-5 xl:border-b-0 xl:border-r xl:px-5">
             <h2 className="text-[16px] font-bold text-[#20242b]">Filters</h2>
 
-            <div className="mt-4 border-b border-[#eceef2] pb-4">
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+              <div className="border-b border-[#eceef2] pb-4 md:border-b-0 md:pb-0 xl:border-b xl:pb-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Booking For</p>
               <select
                 value={filters.bookingFor}
@@ -315,9 +316,9 @@ export function ParentFindTutorsPage() {
                   Student grade: {students.find((student) => student.email === filters.bookingFor)?.grade || "Not set"}
                 </p>
               ) : null}
-            </div>
+              </div>
 
-            <div className="border-b border-[#eceef2] py-4">
+              <div className="border-b border-[#eceef2] py-4 md:border-b-0 md:py-0 xl:border-b xl:py-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Subject</p>
               <select
                 value={filters.subject}
@@ -333,9 +334,9 @@ export function ParentFindTutorsPage() {
                   </option>
                 ))}
               </select>
-            </div>
+              </div>
 
-            <div className="border-b border-[#eceef2] py-4">
+              <div className="border-b border-[#eceef2] py-4 md:border-b-0 md:py-0 xl:border-b xl:py-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Grade Level</p>
               <select
                 value={filters.gradeLevel}
@@ -351,9 +352,9 @@ export function ParentFindTutorsPage() {
                   </option>
                 ))}
               </select>
-            </div>
+              </div>
 
-            <div className="border-b border-[#eceef2] py-4">
+              <div className="border-b border-[#eceef2] py-4 md:border-b-0 md:py-0 xl:border-b xl:py-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Session Type</p>
               <select
                 value={filters.sessionType}
@@ -369,9 +370,9 @@ export function ParentFindTutorsPage() {
                   </option>
                 ))}
               </select>
-            </div>
+              </div>
 
-            <div className="py-4">
+              <div className="py-4 md:col-span-2 xl:col-span-1">
               <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Max Rate (Per Session)</p>
               <input
                 type="range"
@@ -399,11 +400,12 @@ export function ParentFindTutorsPage() {
               >
                 Reset Filters
               </button>
+              </div>
             </div>
           </aside>
 
-          <section className="px-4 py-4 sm:px-5 lg:px-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <section className="px-4 py-4 sm:px-5 xl:px-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <p className="text-[18px] font-medium text-[#4b5563]">
                 <span className="font-bold text-[#20242b]">
                   {isLoading ? "Loading tutors..." : `${filteredTutors.length} tutor${filteredTutors.length === 1 ? "" : "s"} found`}
@@ -412,7 +414,7 @@ export function ParentFindTutorsPage() {
                 {filters.subject ? ` - ${filters.subject}` : ""}
               </p>
 
-              <div className="relative w-full max-w-[220px]">
+              <div className="relative w-full xl:max-w-[260px]">
                 <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
                 <input
                   type="text"
@@ -437,7 +439,7 @@ export function ParentFindTutorsPage() {
               </div>
             ) : null}
 
-            <div className="mt-4 grid gap-4 xl:grid-cols-3">
+            <div className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
               {filteredTutors.map((tutor) => (
                 <article
                   key={tutor.id}

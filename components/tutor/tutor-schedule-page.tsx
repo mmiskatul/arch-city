@@ -139,8 +139,8 @@ export function TutorSchedulePage() {
       <div className="w-full">
         <h1 className="text-[18px] font-bold text-[#20242b] sm:text-[22px]">My Schedule</h1>
 
-        <div className="mt-5 overflow-hidden rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-          <div className="flex flex-col gap-4 border-b border-[#eceef2] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-5 rounded-[12px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <div className="flex flex-col gap-4 border-b border-[#eceef2] px-4 py-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap items-center gap-6">
               {tabs.map((tab) => {
                 const active = activeTab === tab.key;

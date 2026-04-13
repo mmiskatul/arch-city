@@ -264,7 +264,7 @@ function SchedulePageSkeleton() {
         </div>
       </div>
 
-      <section className="mt-4 grid gap-3 lg:grid-cols-4">
+      <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <article key={`schedule-summary-skeleton-${index}`} className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
             <div className="h-4 w-24 rounded bg-[#eef1f4] animate-pulse" />
@@ -290,7 +290,7 @@ function SchedulePageSkeleton() {
         </div>
       </div>
 
-      <section className="mt-3 overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <section className="mt-3 rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div className="overflow-x-auto">
           <div className="min-w-[1120px]">
             <div className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
@@ -442,7 +442,7 @@ export function AdminSchedulesPage({
       ) : (
         <div className="w-full">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-[38px] font-bold leading-none text-[#20242b]">Schedules</h1>
+            <h1 className="text-[30px] font-bold leading-none text-[#20242b] sm:text-[34px] xl:text-[38px]">Schedules</h1>
 
             <div className="inline-flex rounded-xl border border-[#e5e7eb] bg-white p-0.5">
               {(["All", "Today", "Week", "Month"] as const).map((item) => (
@@ -467,23 +467,23 @@ export function AdminSchedulesPage({
             </div>
           </div>
 
-          <section className="mt-4 grid gap-3 lg:grid-cols-4">
+          <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
-              <p className="text-[44px] font-bold leading-none text-[#20242b]">{sessionsToday}</p>
-              <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">{rangeSummary.title}</p>
+              <p className="text-[34px] font-bold leading-none text-[#20242b] sm:text-[40px] xl:text-[44px]">{sessionsToday}</p>
+              <p className="mt-1 text-[20px] font-semibold text-[#6b7280] xl:text-[24px]">{rangeSummary.title}</p>
               <p className="mt-1 text-[13px] text-[#9ca3af]">{rangeSummary.subtitle}</p>
             </article>
             <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
-              <p className="text-[44px] font-bold leading-none text-[#239157]">{upcomingCount}</p>
-              <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">Upcoming</p>
+              <p className="text-[34px] font-bold leading-none text-[#239157] sm:text-[40px] xl:text-[44px]">{upcomingCount}</p>
+              <p className="mt-1 text-[20px] font-semibold text-[#6b7280] xl:text-[24px]">Upcoming</p>
             </article>
             <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
-              <p className="text-[44px] font-bold leading-none text-[#20242b]">{completedCount}</p>
-              <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">Completed</p>
+              <p className="text-[34px] font-bold leading-none text-[#20242b] sm:text-[40px] xl:text-[44px]">{completedCount}</p>
+              <p className="mt-1 text-[20px] font-semibold text-[#6b7280] xl:text-[24px]">Completed</p>
             </article>
             <article className="rounded-[14px] border border-[#e7e7eb] bg-white p-4">
-              <p className="text-[44px] font-bold leading-none text-[#d94a62]">{cancelledCount}</p>
-              <p className="mt-1 text-[24px] font-semibold text-[#6b7280]">Cancelled</p>
+              <p className="text-[34px] font-bold leading-none text-[#d94a62] sm:text-[40px] xl:text-[44px]">{cancelledCount}</p>
+              <p className="mt-1 text-[20px] font-semibold text-[#6b7280] xl:text-[24px]">Cancelled</p>
             </article>
           </section>
 
@@ -530,7 +530,7 @@ export function AdminSchedulesPage({
             </div>
           </div>
 
-          <section className="mt-3 overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <section className="mt-3 rounded-[14px] border border-[#e7e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <div className="overflow-x-auto">
               <div className="min-w-[1120px]">
                 <div className="grid grid-cols-[0.95fr_1.5fr_1.2fr_1fr_1.2fr_0.9fr_0.8fr_0.9fr_0.7fr_0.6fr] gap-3 border-b border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
