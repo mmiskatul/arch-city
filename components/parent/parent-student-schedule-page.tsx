@@ -2,19 +2,17 @@ import Link from "next/link";
 import { FiChevronLeft } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
-import { parentSessionHistoryItems } from "@/lib/parent/schedule-data";
+import type { ParentSessionHistoryItem } from "@/lib/api/parent-schedule-api";
 import type { ParentStudentRecord } from "@/lib/parent/students-data";
 import { PARENT_SCHEDULE_ROUTE, PARENT_STUDENTS_ROUTE } from "@/lib/routes";
 
 export function ParentStudentSchedulePage({
   student,
+  sessions,
 }: {
   student: ParentStudentRecord;
+  sessions: ParentSessionHistoryItem[];
 }) {
-  const sessions = parentSessionHistoryItems.filter((session) =>
-    session.studentFullName === student.name,
-  );
-
   return (
     <ParentShell>
       <div className="w-full">
@@ -34,7 +32,7 @@ export function ParentStudentSchedulePage({
             <p className="text-[12px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Student</p>
             <p className="mt-2 text-[18px] font-bold text-[#20242b]">{student.name}</p>
             <p className="mt-1 text-[14px] text-[#6b7280]">
-              {student.grade} · {student.school}
+              {student.grade} - {student.school}
             </p>
           </div>
 
@@ -55,7 +53,7 @@ export function ParentStudentSchedulePage({
                   key={session.id}
                   className="grid gap-4 px-4 py-4 md:grid-cols-[1fr_0.95fr_0.8fr_1fr_0.8fr_0.8fr_0.7fr] md:items-center"
                 >
-                  <div className="text-[14px] font-medium text-[#374151]">{session.tutorFullName}</div>
+                  <div className="text-[14px] font-medium text-[#374151]">{session.tutorName}</div>
                   <div className="text-[14px] text-[#4b5563]">{session.date}</div>
                   <div className="text-[14px] text-[#4b5563]">{session.time}</div>
                   <div className="text-[14px] text-[#4b5563]">{session.subject}</div>
@@ -65,7 +63,9 @@ export function ParentStudentSchedulePage({
                       className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
                         session.status === "Upcoming"
                           ? "bg-[#fff6de] text-[#b58112]"
-                          : "bg-[#daf2e8] text-[#33976d]"
+                          : session.status === "Completed"
+                            ? "bg-[#daf2e8] text-[#33976d]"
+                            : "bg-[#f3f4f6] text-[#6b7280]"
                       }`}
                     >
                       {session.status}
@@ -81,6 +81,11 @@ export function ParentStudentSchedulePage({
                   </div>
                 </div>
               ))}
+              {sessions.length === 0 ? (
+                <div className="px-4 py-6 text-[14px] text-[#6b7280]">
+                  No sessions found for this student yet.
+                </div>
+              ) : null}
             </div>
           </section>
         </div>

@@ -46,6 +46,64 @@ function RatingStars({ rating }: { rating: number }) {
   );
 }
 
+function TutorCardSkeleton() {
+  return (
+    <div className="rounded-[16px] bg-[#f9fafb] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="animate-pulse">
+        <div className="flex items-start gap-3">
+          <div className="h-11 w-11 rounded-full bg-[#eef1f4]" />
+          <div className="min-w-0 flex-1">
+            <div className="h-4 w-32 rounded bg-[#eef1f4]" />
+            <div className="mt-2 h-3 w-28 rounded bg-[#eef1f4]" />
+            <div className="mt-2 h-3 w-24 rounded bg-[#eef1f4]" />
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <div className="h-6 w-16 rounded-full bg-[#eef1f4]" />
+          <div className="h-6 w-20 rounded-full bg-[#eef1f4]" />
+          <div className="h-6 w-24 rounded-full bg-[#eef1f4]" />
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <div className="h-3 w-3/4 rounded bg-[#eef1f4]" />
+          <div className="h-3 w-2/3 rounded bg-[#eef1f4]" />
+          <div className="h-3 w-4/5 rounded bg-[#eef1f4]" />
+        </div>
+
+        <div className="mt-4 rounded-[12px] border border-[#eceef2] bg-white px-3 py-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="h-3 w-24 rounded bg-[#eef1f4]" />
+              <div className="h-3 w-12 rounded bg-[#eef1f4]" />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="h-3 w-24 rounded bg-[#eef1f4]" />
+              <div className="h-3 w-12 rounded bg-[#eef1f4]" />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="h-3 w-28 rounded bg-[#eef1f4]" />
+              <div className="h-3 w-12 rounded bg-[#eef1f4]" />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="h-3 w-28 rounded bg-[#eef1f4]" />
+              <div className="h-3 w-12 rounded bg-[#eef1f4]" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <div className="h-3 w-full rounded bg-[#eef1f4]" />
+          <div className="h-3 w-full rounded bg-[#eef1f4]" />
+          <div className="h-3 w-5/6 rounded bg-[#eef1f4]" />
+        </div>
+
+        <div className="mt-4 h-11 w-full rounded-full bg-[#eef1f4]" />
+      </div>
+    </div>
+  );
+}
+
 function normalizeGrade(value: string) {
   return value.trim().toLowerCase();
 }
@@ -135,7 +193,7 @@ export function ParentFindTutorsPage() {
     maxRate: 100,
     search: "",
   });
-  const [tutors, setTutors] = useState<ParentTutorCard[]>(parentTutorResults);
+  const [tutors, setTutors] = useState<ParentTutorCard[]>([]);
   const [students, setStudents] = useState<ParentStudentListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -439,90 +497,98 @@ export function ParentFindTutorsPage() {
               </div>
             ) : null}
 
-            <div className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-              {filteredTutors.map((tutor) => (
-                <article
-                  key={tutor.id}
-                  className="rounded-[16px] bg-[#f9fafb] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#ffe7eb] text-[18px] font-bold text-[#d94a62]">
-                      {tutor.initials}
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="text-[14px] font-bold text-[#20242b]">{tutor.name}</h3>
-                      <p className="text-[13px] text-[#6b7280]">{tutor.title}</p>
-                      <div className="mt-1 flex items-center gap-1 text-[13px] font-semibold text-[#b58112]">
-                        <RatingStars rating={tutor.rating} />
-                        <span>{tutor.rating.toFixed(1)}</span>
-                        <span className="text-[#8a7a38]">| {tutor.sessions} sessions</span>
+            {isLoading ? (
+              <div className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <TutorCardSkeleton key={`parent-tutor-skeleton-${index}`} />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                {filteredTutors.map((tutor) => (
+                  <article
+                    key={tutor.id}
+                    className="rounded-[16px] bg-[#f9fafb] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#ffe7eb] text-[18px] font-bold text-[#d94a62]">
+                        {tutor.initials}
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="text-[14px] font-bold text-[#20242b]">{tutor.name}</h3>
+                        <p className="text-[13px] text-[#6b7280]">{tutor.title}</p>
+                        <div className="mt-1 flex items-center gap-1 text-[13px] font-semibold text-[#b58112]">
+                          <RatingStars rating={tutor.rating} />
+                          <span>{tutor.rating.toFixed(1)}</span>
+                          <span className="text-[#8a7a38]">| {tutor.sessions} sessions</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {tutor.subjects.map((subject, index) => (
-                      <span
-                        key={`${tutor.id}-${subject}`}
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                          index === 0 ? "bg-[#ffecef] text-[#d94a62]" : "bg-[#f0f1f3] text-[#6b7280]"
-                        }`}
-                      >
-                        {subject}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 space-y-2 text-[13px] text-[#6b7280]">
-                    <p>{tutor.sessionTypes.join(" | ")} | {tutor.location || "Location not provided"}</p>
-                    <p>
-                      Grades:{" "}
-                      <span className="font-medium text-[#374151]">
-                        {tutor.gradeLevels.length > 0 ? tutor.gradeLevels.join(", ") : "Not provided"}
-                      </span>
-                    </p>
-                    <p>
-                      Availability:{" "}
-                      <span className="font-medium text-[#374151]">
-                        {tutor.availability.length > 0 ? tutor.availability.join(", ") : "No availability added"}
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="mt-4 rounded-[12px] border border-[#eceef2] bg-white px-3 py-3 text-[13px] text-[#4b5563]">
-                    <div className="flex items-center justify-between py-1">
-                      <span>Virtual 45 min</span>
-                      <span className="font-semibold text-[#20242b]">${tutor.price45}</span>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {tutor.subjects.map((subject, index) => (
+                        <span
+                          key={`${tutor.id}-${subject}`}
+                          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                            index === 0 ? "bg-[#ffecef] text-[#d94a62]" : "bg-[#f0f1f3] text-[#6b7280]"
+                          }`}
+                        >
+                          {subject}
+                        </span>
+                      ))}
                     </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span>Virtual 60 min</span>
-                      <span className="font-semibold text-[#20242b]">${tutor.price60}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span>In-Person 45 min</span>
-                      <span className="font-semibold text-[#20242b]">
-                        {tutor.inPerson45 > 0 ? `$${tutor.inPerson45}` : "N/A"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span>In-Person 60 min</span>
-                      <span className="font-semibold text-[#20242b]">
-                        {tutor.inPerson60 > 0 ? `$${tutor.inPerson60}` : "N/A"}
-                      </span>
-                    </div>
-                  </div>
 
-                  <p className="mt-4 text-[13px] leading-6 text-[#4b5563]">{tutor.about}</p>
+                    <div className="mt-4 space-y-2 text-[13px] text-[#6b7280]">
+                      <p>{tutor.sessionTypes.join(" | ")} | {tutor.location || "Location not provided"}</p>
+                      <p>
+                        Grades:{" "}
+                        <span className="font-medium text-[#374151]">
+                          {tutor.gradeLevels.length > 0 ? tutor.gradeLevels.join(", ") : "Not provided"}
+                        </span>
+                      </p>
+                      <p>
+                        Availability:{" "}
+                        <span className="font-medium text-[#374151]">
+                          {tutor.availability.length > 0 ? tutor.availability.join(", ") : "No availability added"}
+                        </span>
+                      </p>
+                    </div>
 
-                  <Link
-                    href={buildTutorHref(tutor.id)}
-                    className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
-                  >
-                    View Profile
-                  </Link>
-                </article>
-              ))}
-            </div>
+                    <div className="mt-4 rounded-[12px] border border-[#eceef2] bg-white px-3 py-3 text-[13px] text-[#4b5563]">
+                      <div className="flex items-center justify-between py-1">
+                        <span>Virtual 45 min</span>
+                        <span className="font-semibold text-[#20242b]">${tutor.price45}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span>Virtual 60 min</span>
+                        <span className="font-semibold text-[#20242b]">${tutor.price60}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span>In-Person 45 min</span>
+                        <span className="font-semibold text-[#20242b]">
+                          {tutor.inPerson45 > 0 ? `$${tutor.inPerson45}` : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span>In-Person 60 min</span>
+                        <span className="font-semibold text-[#20242b]">
+                          {tutor.inPerson60 > 0 ? `$${tutor.inPerson60}` : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="mt-4 text-[13px] leading-6 text-[#4b5563]">{tutor.about}</p>
+
+                    <Link
+                      href={buildTutorHref(tutor.id)}
+                      className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[14px] font-semibold text-white transition hover:bg-[#be1837]"
+                    >
+                      View Profile
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            )}
 
             {loadError ? <p className="mt-4 text-[12px] text-[#8a5b00]">{loadError}</p> : null}
 

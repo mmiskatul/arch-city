@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ParentSessionDetailPage } from "@/components/parent/parent-session-detail-page";
-import { getParentSessionById } from "@/lib/parent/schedule-data";
+import { fetchParentScheduleItemById } from "@/lib/api/parent-schedule-api";
 
 export default async function ParentSessionDetailRoute({
   params,
@@ -9,7 +9,7 @@ export default async function ParentSessionDetailRoute({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = getParentSessionById(id);
+  const session = await fetchParentScheduleItemById(id);
 
   if (!session) {
     notFound();

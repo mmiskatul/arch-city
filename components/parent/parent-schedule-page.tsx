@@ -1,10 +1,7 @@
 import Link from "next/link";
 
 import { ParentShell } from "@/components/parent/parent-shell";
-import {
-  parentScheduleSummary,
-  parentSessionHistoryItems,
-} from "@/lib/parent/schedule-data";
+import type { ParentSessionHistoryResponse, ParentScheduleSummaryCard } from "@/lib/api/parent-schedule-api";
 import { PARENT_SCHEDULE_ROUTE } from "@/lib/routes";
 
 function SummaryCard({
@@ -36,7 +33,7 @@ function SummaryCard({
   );
 }
 
-export function ParentSchedulePage() {
+export function ParentSchedulePage({ data }: { data: ParentSessionHistoryResponse }) {
   return (
     <ParentShell>
       <div className="w-full">
@@ -46,27 +43,16 @@ export function ParentSchedulePage() {
 
         <div className="bg-white px-4 py-5 sm:px-5 lg:px-6">
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <SummaryCard
-              title="Total Sessions"
-              value={String(parentScheduleSummary.totalSessions)}
-              subtitle="All time"
-              badge=""
-              iconClassName="bg-[#ffecef] text-[#d61c3f]"
-            />
-            <SummaryCard
-              title="Jordan's Sessions"
-              value={String(parentScheduleSummary.jordanSessions)}
-              subtitle="With Marcus T."
-              badge="JW"
-              iconClassName="bg-[#ebf7ef] text-[#d61c3f]"
-            />
-            <SummaryCard
-              title="Maya's Sessions"
-              value={String(parentScheduleSummary.mayaSessions)}
-              subtitle="With Dr. Patel"
-              badge="MW"
-              iconClassName="bg-[#fff5d9] text-[#d61c3f]"
-            />
+            {data.summaryCards.map((card) => (
+              <SummaryCard
+                key={`${card.title}-${card.badge}`}
+                title={card.title}
+                value={card.value}
+                subtitle={card.subtitle}
+                badge={card.badge}
+                iconClassName={summaryToneClassName(card)}
+              />
+            ))}
           </section>
 
           <section className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -93,7 +79,7 @@ export function ParentSchedulePage() {
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {parentSessionHistoryItems.map((session) => (
+              {data.items.map((session) => (
                 <div
                   key={session.id}
                   className="grid grid-cols-[1fr_1fr_0.9fr_1.1fr_0.8fr_0.8fr_0.8fr_0.9fr_0.7fr] items-center gap-4 px-4 py-4"
@@ -115,7 +101,7 @@ export function ParentSchedulePage() {
                   </div>
                   <div className="text-[16px] font-bold text-[#1b8a5a]">{session.rate}</div>
                   <div>
-                    <span className="inline-flex rounded-full bg-[#daf2e8] px-2.5 py-1 text-[11px] font-medium text-[#33976d]">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${statusClassName(session.status)}`}>
                       {session.status}
                     </span>
                   </div>
@@ -129,6 +115,11 @@ export function ParentSchedulePage() {
                   </div>
                 </div>
               ))}
+              {data.items.length === 0 ? (
+                <div className="px-4 py-6 text-[14px] text-[#6b7280]">
+                  No session history yet. Book a session to see it here.
+                </div>
+              ) : null}
             </div>
             </div>
           </section>
@@ -136,4 +127,27 @@ export function ParentSchedulePage() {
       </div>
     </ParentShell>
   );
+}
+
+function summaryToneClassName(card: ParentScheduleSummaryCard) {
+  if (card.tone === "green") {
+    return "bg-[#ebf7ef] text-[#1b8a5a]";
+  }
+  if (card.tone === "gold") {
+    return "bg-[#fff5d9] text-[#a68010]";
+  }
+  return "bg-[#ffecef] text-[#d61c3f]";
+}
+
+function statusClassName(status: string) {
+  if (status === "Completed") {
+    return "bg-[#daf2e8] text-[#33976d]";
+  }
+  if (status === "Cancelled" || status === "Expired") {
+    return "bg-[#f3f4f6] text-[#6b7280]";
+  }
+  if (status === "Completion Requested") {
+    return "bg-[#eef2ff] text-[#4f46e5]";
+  }
+  return "bg-[#fff6de] text-[#b58112]";
 }

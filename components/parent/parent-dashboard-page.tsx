@@ -305,7 +305,7 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
                     </div>
                     <div>
                       <Link
-                        href={PARENT_SCHEDULE_ROUTE}
+                        href={`${PARENT_SCHEDULE_ROUTE}/${session.id}`}
                         className="inline-flex rounded-full border border-[#d61c3f] px-4 py-1.5 text-[12px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
                       >
                         View

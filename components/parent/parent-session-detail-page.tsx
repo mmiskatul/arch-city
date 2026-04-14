@@ -2,8 +2,8 @@ import Link from "next/link";
 import { FiCalendar, FiChevronLeft, FiClock, FiDollarSign, FiMessageSquare, FiMonitor } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
-import type { ParentSessionHistoryItem } from "@/lib/parent/schedule-data";
-import { PARENT_SCHEDULE_ROUTE } from "@/lib/routes";
+import type { ParentSessionHistoryItem } from "@/lib/api/parent-schedule-api";
+import { PARENT_MESSAGES_ROUTE, PARENT_SCHEDULE_ROUTE } from "@/lib/routes";
 
 export function ParentSessionDetailPage({
   session,
@@ -31,9 +31,9 @@ export function ParentSessionDetailPage({
                 {session.studentInitials}
               </span>
               <div>
-                <h2 className="text-[18px] font-bold text-[#20242b]">{session.studentFullName}</h2>
-                <p className="text-[14px] text-[#6b7280]">{session.studentGrade} · Your Student</p>
-                <span className="mt-2 inline-flex rounded-full bg-[#fff6de] px-2.5 py-1 text-[11px] font-medium text-[#b58112]">
+                <h2 className="text-[18px] font-bold text-[#20242b]">{session.studentName}</h2>
+                <p className="text-[14px] text-[#6b7280]">{session.studentGrade} - Your Student</p>
+                <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${statusClassName(session.status)}`}>
                   {session.status}
                 </span>
               </div>
@@ -46,15 +46,12 @@ export function ParentSessionDetailPage({
                     {session.tutorInitials}
                   </span>
                   <div>
-                    <p className="text-[15px] font-semibold text-[#20242b]">{session.tutorFullName}</p>
-                    <p className="text-[13px] text-[#6b7280]">{session.tutorTitle} · ★ {session.tutorRating}</p>
+                    <p className="text-[15px] font-semibold text-[#20242b]">{session.tutorName}</p>
+                    <p className="text-[13px] text-[#6b7280]">{session.subject} tutor</p>
                   </div>
                 </div>
-                <Link
-                  href={`${PARENT_SCHEDULE_ROUTE}/${session.id}`}
-                  className="text-[13px] font-semibold text-[#d61c3f]"
-                >
-                  View
+                <Link href={PARENT_MESSAGES_ROUTE} className="text-[13px] font-semibold text-[#d61c3f]">
+                  Messages
                 </Link>
               </div>
             </div>
@@ -87,25 +84,22 @@ export function ParentSessionDetailPage({
                 <FiDollarSign className="mt-0.5 h-4 w-4 text-[#6b7280]" />
                 <div>
                   <p className="text-[13px] text-[#6b7280]">Rate</p>
-                  <p className="font-medium text-[#20242b]">{session.rate} — paid after session</p>
+                  <p className="font-medium text-[#20242b]">{session.rate} - paid after session</p>
                 </div>
               </div>
             </div>
 
-            <button
-              type="button"
+            <Link
+              href={PARENT_MESSAGES_ROUTE}
               className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#d61c3f] px-4 text-[15px] font-semibold text-[#d61c3f] transition hover:bg-[#fff4f6]"
             >
               <FiMessageSquare className="h-4 w-4" />
               Message Tutor
-            </button>
+            </Link>
 
-            <button
-              type="button"
-              className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#d61c3f] px-4 text-[15px] font-semibold text-white transition hover:bg-[#be1837]"
-            >
-              Cancel Session
-            </button>
+            <div className="mt-3 rounded-[14px] border border-[#eceef2] bg-[#fafafb] px-4 py-3 text-[13px] leading-6 text-[#6b7280]">
+              This page is read-only for parents. Any schedule changes should be handled through the student or tutor conversation.
+            </div>
           </aside>
 
           <section className="flex min-h-[680px] flex-col">
@@ -115,9 +109,9 @@ export function ParentSessionDetailPage({
                   {session.tutorInitials}
                 </span>
                 <div>
-                  <p className="text-[16px] font-semibold text-[#20242b]">{session.tutorFullName}</p>
+                  <p className="text-[16px] font-semibold text-[#20242b]">{session.tutorName}</p>
                   <p className="text-[13px] text-[#6b7280]">
-                    {session.subject} · {session.date} · {session.time}
+                    {session.subject} - {session.date} - {session.time}
                   </p>
                 </div>
               </div>
@@ -128,12 +122,12 @@ export function ParentSessionDetailPage({
 
             <div className="flex-1 bg-[#fbfbfc] px-4 py-4 sm:px-5 lg:px-6">
               <div className="mx-auto w-fit rounded-full bg-[#eef0f2] px-4 py-1 text-[12px] text-[#6b7280]">
-                Session created — {session.fullDate}
+                Session created - {session.fullDate}
               </div>
 
               <div className="mt-6 space-y-6">
                 {session.messages.map((message, index) => (
-                  <div key={`${message.time}-${index}`}>
+                  <div key={`${message.id}-${index}`}>
                     <div className={message.sender === "tutor" ? "flex justify-end" : "flex justify-start"}>
                       <div
                         className={`max-w-[720px] rounded-[16px] px-5 py-4 text-[15px] leading-6 ${
@@ -142,7 +136,7 @@ export function ParentSessionDetailPage({
                             : "bg-transparent text-[#20242b]"
                         }`}
                       >
-                        {message.text}
+                        {message.message}
                       </div>
                     </div>
                     <p
@@ -150,10 +144,15 @@ export function ParentSessionDetailPage({
                         message.sender === "tutor" ? "text-right" : "text-left"
                       }`}
                     >
-                      {message.time} · {message.senderLabel}
+                      {message.timeLabel} - {message.senderLabel}
                     </p>
                   </div>
                 ))}
+                {session.messages.length === 0 ? (
+                  <div className="rounded-[16px] border border-dashed border-[#d7dce3] bg-white px-5 py-8 text-center text-[14px] text-[#6b7280]">
+                    No session messages yet.
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -165,4 +164,17 @@ export function ParentSessionDetailPage({
       </div>
     </ParentShell>
   );
+}
+
+function statusClassName(status: ParentSessionHistoryItem["status"]) {
+  if (status === "Completed") {
+    return "bg-[#daf2e8] text-[#33976d]";
+  }
+  if (status === "Cancelled" || status === "Expired") {
+    return "bg-[#f3f4f6] text-[#6b7280]";
+  }
+  if (status === "Completion Requested") {
+    return "bg-[#eef2ff] text-[#4f46e5]";
+  }
+  return "bg-[#fff6de] text-[#b58112]";
 }
