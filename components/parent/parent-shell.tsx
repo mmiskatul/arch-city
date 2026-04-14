@@ -29,8 +29,8 @@ import {
 } from "@/lib/routes";
 import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
-import { parentMessagesUnreadCount } from "@/lib/parent/messages-data";
 import { getNotificationCount } from "@/lib/api/notifications-api";
+import { getParentMessageCount } from "@/lib/api/session-messages-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
@@ -56,7 +56,6 @@ const menuItems: NavItem[] = [
     label: "Messages",
     href: PARENT_MESSAGES_ROUTE,
     icon: FiMessageSquare,
-    badge: parentMessagesUnreadCount > 0 ? String(parentMessagesUnreadCount) : undefined,
   },
   { label: "Notifications", href: PARENT_NOTIFICATIONS_ROUTE, icon: FiBell },
   { label: "Profile", href: PARENT_PROFILE_ROUTE, icon: FiUser },
@@ -122,6 +121,7 @@ export function ParentShell({
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
+  const [messagesUnreadCount, setMessagesUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
     initials: "PA",
     name: "Parent",
@@ -169,6 +169,15 @@ export function ParentShell({
       }
     }
 
+    async function loadMessagesCount() {
+      try {
+        const payload = await getParentMessageCount();
+        setMessagesUnreadCount(payload.unread_count || 0);
+      } catch {
+        setMessagesUnreadCount(0);
+      }
+    }
+
     function onProfileUpdated(event: Event) {
       const customEvent = event as CustomEvent<{
         role?: string;
@@ -191,6 +200,7 @@ export function ParentShell({
 
     loadProfile();
     void loadNotificationsCount();
+    void loadMessagesCount();
     window.addEventListener("arch-profile-updated", onProfileUpdated as EventListener);
     window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, loadNotificationsCount);
 
@@ -244,7 +254,7 @@ export function ParentShell({
   }
 
   const resolvedMessagesUnreadCount =
-    messagesUnreadCountOverride ?? parentMessagesUnreadCount;
+    messagesUnreadCountOverride ?? messagesUnreadCount;
   const resolvedMenuItems: NavItem[] = menuItems.map((item) =>
     item.href === PARENT_MESSAGES_ROUTE
       ? {

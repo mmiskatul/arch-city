@@ -36,6 +36,7 @@ export type SessionMessageThreadSummary = {
   unread_count_student: number;
   unread_count_tutor: number;
   unread_count_admin: number;
+  unread_count_parent: number;
 };
 
 export type SessionMessageThreadListResponse = {
@@ -67,6 +68,10 @@ function studentPath(path = "") {
 
 function tutorPath(path = "") {
   return `${baseUrl()}/tutor/messages${path}`;
+}
+
+function parentPath(path = "") {
+  return `${baseUrl()}/parent/messages${path}`;
 }
 
 export async function getStudentMessageThreads() {
@@ -115,6 +120,31 @@ export async function getTutorMessageCount() {
 export async function markTutorMessageThreadRead(bookingId: string) {
   return browserApiRequest<SessionMessageThreadSummary>({
     url: tutorPath(`/${bookingId}/read`),
+    method: "PUT",
+  });
+}
+
+export async function getParentMessageThreads() {
+  return browserApiRequest<SessionMessageThreadListResponse>({ url: parentPath(), method: "GET" });
+}
+
+export async function getParentMessageThread(bookingId: string) {
+  return browserApiRequest<SessionMessageThreadDetailResponse>({
+    url: parentPath(`/${bookingId}`),
+    method: "GET",
+  });
+}
+
+export async function getParentMessageCount() {
+  return browserApiRequest<SessionMessageThreadCountResponse>({
+    url: parentPath("/count"),
+    method: "GET",
+  });
+}
+
+export async function markParentMessageThreadRead(bookingId: string) {
+  return browserApiRequest<SessionMessageThreadSummary>({
+    url: parentPath(`/${bookingId}/read`),
     method: "PUT",
   });
 }
