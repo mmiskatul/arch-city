@@ -3,17 +3,26 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { DashboardAuthProvider } from "@/components/auth/dashboard-auth-context";
+import { ADMIN_PREVIEW_ROLE_COOKIE, ADMIN_PREVIEW_TARGET_COOKIE, isDashboardAccessibleForRole } from "@/lib/admin-preview";
 
 export default async function StudentDashboardLayout({ children }: { children: ReactNode }) {
   const cookieStore = await cookies();
   const tokenPresent = Boolean(cookieStore.get("arch_access_token")?.value);
   const role = cookieStore.get("arch_user_role")?.value ?? null;
-  if (!tokenPresent || role !== "student") {
+  const previewRole = cookieStore.get(ADMIN_PREVIEW_ROLE_COOKIE)?.value ?? null;
+  const previewTargetId = cookieStore.get(ADMIN_PREVIEW_TARGET_COOKIE)?.value ?? null;
+  if (!tokenPresent || !isDashboardAccessibleForRole("student", role, previewRole)) {
     redirect("/login?redirect=/student-dashboard");
   }
 
   return (
-    <DashboardAuthProvider dashboard="student" initialRole={role} initialTokenPresent={tokenPresent}>
+    <DashboardAuthProvider
+      dashboard="student"
+      initialRole={role}
+      initialPreviewRole={previewRole}
+      initialPreviewTargetId={previewTargetId}
+      initialTokenPresent={tokenPresent}
+    >
       {children}
     </DashboardAuthProvider>
   );

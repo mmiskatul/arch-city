@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { FiCheck, FiEdit2, FiMail, FiPhone } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { getParentScheduleItems } from "@/lib/api/parent-schedule-browser-api";
 import type { ParentSessionHistoryItem } from "@/lib/api/parent-schedule-types";
@@ -13,6 +14,7 @@ import {
   parentPlanOptions,
   parentProfile,
 } from "@/lib/parent/profile-data";
+import { getAdminPreviewParentHistory, getAdminPreviewParentProfile, getAdminPreviewParentStudents } from "@/lib/admin-preview-data";
 import { PARENT_STUDENTS_ROUTE } from "@/lib/routes";
 
 type ParentProfileTab = "Personal Info" | "Plan & Billing" | "History";
@@ -498,6 +500,8 @@ function HistorySection({
 }
 
 export function ParentProfilePage() {
+  const { isPreviewSession, previewTargetId } = useDashboardAuth();
+  const resolvedPreviewTargetId = previewTargetId ?? undefined;
   const [activeTab, setActiveTab] = useState<ParentProfileTab>("Personal Info");
   const [currentProfile, setCurrentProfile] = useState<ParentProfileData>(parentProfile);
   const [formValues, setFormValues] = useState<ParentProfileForm>(parentProfile);
@@ -510,6 +514,22 @@ export function ParentProfilePage() {
   const currentPlan = deriveCurrentPlan(linkedStudents);
 
   useEffect(() => {
+    if (isPreviewSession) {
+      const previewProfile = getAdminPreviewParentProfile(resolvedPreviewTargetId);
+      setCurrentProfile(previewProfile);
+      setFormValues({
+        firstName: previewProfile.firstName,
+        lastName: previewProfile.lastName,
+        email: previewProfile.email,
+        phone: previewProfile.phone,
+        streetAddress: previewProfile.streetAddress,
+        city: previewProfile.city,
+        state: previewProfile.state,
+        zipCode: previewProfile.zipCode,
+      });
+      return;
+    }
+
     getParentProfile()
       .then((profileData) => {
         setCurrentProfile(profileData);
@@ -527,9 +547,15 @@ export function ParentProfilePage() {
       .catch(() => {
         // Keep existing fallback data.
       });
-  }, []);
+  }, [isPreviewSession, resolvedPreviewTargetId]);
 
   useEffect(() => {
+    if (isPreviewSession) {
+      setLinkedStudents(getAdminPreviewParentStudents(resolvedPreviewTargetId));
+      setHistoryItems(getAdminPreviewParentHistory(resolvedPreviewTargetId));
+      return;
+    }
+
     getParentStudents()
       .then((response) => {
         setLinkedStudents(response.items || []);
@@ -545,7 +571,7 @@ export function ParentProfilePage() {
       .catch(() => {
         setHistoryItems([]);
       });
-  }, []);
+  }, [isPreviewSession, resolvedPreviewTargetId]);
 
   const handleFormChange = (field: keyof ParentProfileForm, value: string) => {
     setFormValues((previous) => ({ ...previous, [field]: value }));

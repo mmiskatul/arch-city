@@ -6,12 +6,14 @@ import { useSearchParams } from "next/navigation";
 import type { IconType } from "react-icons";
 import { FiCalendar, FiCheckCircle, FiDollarSign, FiPlusCircle, FiSlash } from "react-icons/fi";
 
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { fetchTutorScheduleItemsClient } from "@/lib/api/tutor-schedule-browser-api";
 import { TUTOR_APPLY_ROUTE, TUTOR_AVAILABILITY_ROUTE, TUTOR_EARNINGS_ROUTE, TUTOR_PROFILE_ROUTE, TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
 import { tutorPendingBanner } from "@/lib/tutor/dashboard-data";
-import type { TutorScheduleItem } from "@/lib/tutor/schedule-data";
+import { getAdminPreviewTutorProfile, getAdminPreviewTutorSchedule } from "@/lib/admin-preview-data";
+import { type TutorScheduleItem } from "@/lib/tutor/schedule-data";
 import { useTutorApplicationStatus } from "@/lib/tutor/use-tutor-application-status";
 
 type DashboardView = "overview" | "schedule" | "earnings";
@@ -88,6 +90,8 @@ function getStatusClassName(status: TutorScheduleItem["status"]) {
 }
 
 export function TutorDashboardPage() {
+  const { isPreviewSession, previewTargetId } = useDashboardAuth();
+  const resolvedPreviewTargetId = previewTargetId ?? undefined;
   const searchParams = useSearchParams();
   const [activeView, setActiveView] = useState<DashboardView>("overview");
   const [scheduleItems, setScheduleItems] = useState<TutorScheduleItem[]>([]);
@@ -95,7 +99,7 @@ export function TutorDashboardPage() {
   const [scheduleError, setScheduleError] = useState("");
   const [firstName, setFirstName] = useState("Tutor");
   const { status, isApproved, isPendingApplication, isNotSubmitted } = useTutorApplicationStatus();
-  const showApplicationState = !isApproved;
+  const showApplicationState = !isPreviewSession && !isApproved;
   const showSubmittedMessage = searchParams.get("application") === "submitted";
   const applicationLabel =
     isPendingApplication
@@ -125,12 +129,12 @@ export function TutorDashboardPage() {
       setScheduleError("");
 
       try {
-        const items = await fetchTutorScheduleItemsClient();
+        const items = isPreviewSession ? getAdminPreviewTutorSchedule(resolvedPreviewTargetId) : await fetchTutorScheduleItemsClient();
         if (!active) return;
         setScheduleItems(items);
       } catch (error) {
         if (!active) return;
-        setScheduleItems([]);
+        setScheduleItems(getAdminPreviewTutorSchedule(resolvedPreviewTargetId));
         setScheduleError(error instanceof Error ? error.message : "Failed to load tutor schedule.");
       } finally {
         if (active) {
@@ -144,12 +148,19 @@ export function TutorDashboardPage() {
     return () => {
       active = false;
     };
-  }, [showApplicationState]);
+  }, [isPreviewSession, resolvedPreviewTargetId, showApplicationState]);
 
   useEffect(() => {
     let active = true;
 
     async function loadTutorProfile() {
+      if (isPreviewSession) {
+        if (active) {
+          setFirstName(getAdminPreviewTutorProfile(resolvedPreviewTargetId).firstName || "Tutor");
+        }
+        return;
+      }
+
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/$/, "");
       if (!baseUrl) return;
 
@@ -178,7 +189,7 @@ export function TutorDashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isPreviewSession, resolvedPreviewTargetId]);
 
   const dashboardMetrics = useMemo(() => {
     const upcoming = scheduleItems.filter(isUpcomingSession);
