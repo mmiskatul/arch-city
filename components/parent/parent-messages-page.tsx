@@ -120,10 +120,13 @@ export function ParentMessagesPage() {
   }, []);
 
   useEffect(() => {
-    if (!activeThread?.booking_id) {
+    const bookingId = activeThread?.booking_id;
+
+    if (!bookingId) {
       setMessages([]);
       return;
     }
+    const resolvedBookingId = bookingId;
 
     let cancelled = false;
 
@@ -131,14 +134,14 @@ export function ParentMessagesPage() {
       try {
         setLoadingMessages(true);
         const [detail] = await Promise.all([
-          getParentMessageThread(activeThread.booking_id),
-          markParentMessageThreadRead(activeThread.booking_id).catch(() => null),
+          getParentMessageThread(resolvedBookingId),
+          markParentMessageThreadRead(resolvedBookingId).catch(() => null),
         ]);
         if (cancelled) return;
         setMessages(sortMessages(detail.messages || []));
         setThreads((current) =>
           current.map((thread) =>
-            thread.booking_id === activeThread.booking_id
+            thread.booking_id === resolvedBookingId
               ? { ...thread, unread_count_parent: 0 }
               : thread,
           ),
@@ -311,7 +314,7 @@ export function ParentMessagesPage() {
                               message.sender === "student" ? "text-right" : "text-left"
                             }`}
                           >
-                            {formatTimestamp(message.timestamp)} - {message.sender_name || message.sender}
+                            {formatTimestamp(message.timestamp)} - {message.senderName || message.sender}
                           </p>
                         </div>
                       ))}

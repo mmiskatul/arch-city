@@ -36,6 +36,8 @@ import { getNotificationCount } from "@/lib/api/notifications-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
+import { AdminPreviewBanner } from "@/components/shared/admin-preview-banner";
+import { clearAdminPreviewRoleCookie } from "@/lib/admin-preview";
 
 type NavItem = {
   label: string;
@@ -90,6 +92,7 @@ function clearAuthCookies() {
   document.cookie = `arch_access_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_refresh_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_user_role=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+  clearAdminPreviewRoleCookie();
 }
 
 function redirectToLogin() {
@@ -112,7 +115,7 @@ export function TutorShell({
   messagesUnreadCountOverride?: number;
 }) {
   const pathname = usePathname();
-  const { tokenPresent, isAuthenticated } = useDashboardAuth();
+  const { tokenPresent, isAuthenticated, isPreviewSession } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -253,6 +256,7 @@ export function TutorShell({
 
   const useCompactHeader =
     pathname.startsWith(`${TUTOR_SCHEDULE_ROUTE}/`) ||
+    pathname.startsWith(`${TUTOR_SETTINGS_ROUTE}/`) ||
     [
       TUTOR_SCHEDULE_ROUTE,
       TUTOR_AVAILABILITY_ROUTE,
@@ -431,7 +435,10 @@ export function TutorShell({
             </div>
           </header>
 
-          <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-5 lg:px-6 2xl:px-8">{children}</div>
+          <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-5 lg:px-6 2xl:px-8">
+            {isPreviewSession ? <AdminPreviewBanner label="tutor" /> : null}
+            {children}
+          </div>
         </section>
       </div>
     </main>

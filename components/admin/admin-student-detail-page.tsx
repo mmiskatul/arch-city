@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FiBell, FiChevronLeft } from "react-icons/fi";
 
+import { AdminPreviewAction } from "@/components/admin/admin-preview-action";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { AdminStudentDetail } from "@/lib/admin/students-data";
@@ -99,19 +100,33 @@ export function AdminStudentDetailPage({ student }: { student: AdminStudentDetai
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActionState(isSuspended ? "unsuspend" : "suspend");
-                setShowSuspendConfirm(true);
-              }}
-              disabled={isUpdating}
-              className={`inline-flex h-8 items-center rounded-lg px-3 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 ${
-                isSuspended ? "bg-[#239157] hover:bg-[#1d7b49]" : "bg-[#d94a62] hover:bg-[#bf3d53]"
-              }`}
-            >
-              {isSuspended ? "Unsuspend" : "Suspend"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <AdminPreviewAction
+                role="student"
+                targetId={student.id}
+                label="Preview Student"
+                className="inline-flex h-8 items-center rounded-lg border border-[#d61c3f] bg-[#fff4f6] px-3 text-[12px] font-semibold text-[#d61c3f]"
+              />
+              <AdminPreviewAction
+                role="parent"
+                targetId={student.id}
+                label="Preview Parent"
+                className="inline-flex h-8 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-[12px] font-semibold text-[#4b5563]"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setActionState(isSuspended ? "unsuspend" : "suspend");
+                  setShowSuspendConfirm(true);
+                }}
+                disabled={isUpdating}
+                className={`inline-flex h-8 items-center rounded-lg px-3 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isSuspended ? "bg-[#239157] hover:bg-[#1d7b49]" : "bg-[#d94a62] hover:bg-[#bf3d53]"
+                }`}
+              >
+                {isSuspended ? "Unsuspend" : "Suspend"}
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
