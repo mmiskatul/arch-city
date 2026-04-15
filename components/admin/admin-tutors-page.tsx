@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { FiDownload, FiStar } from "react-icons/fi";
 
+import { AdminPreviewAction } from "@/components/admin/admin-preview-action";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { AdminTutorStatus, AdminTutorRow } from "@/lib/admin/tutors-data";
-import { ADMIN_TUTOR_APPLICATIONS_ROUTE, ADMIN_TUTORS_ROUTE } from "@/lib/routes";
+import { ADMIN_TUTORS_ROUTE } from "@/lib/routes";
 
 type TutorFilter = "All Tutors" | "Approved" | "Unverified" | "Suspended";
 
@@ -338,14 +339,17 @@ export function AdminTutorsPage() {
                           {tutor.status}
                         </span>
                       </div>
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-end gap-2">
                         {tutor.status === "Approved" ? (
-                          <Link
-                            href={`${ADMIN_TUTORS_ROUTE}/${encodeURIComponent(tutor.id)}`}
-                            className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
-                          >
-                            View
-                          </Link>
+                          <>
+                            <Link
+                              href={`${ADMIN_TUTORS_ROUTE}/${encodeURIComponent(tutor.id)}`}
+                              className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
+                            >
+                              View
+                            </Link>
+                            <AdminPreviewAction role="tutor" targetId={tutor.id} />
+                          </>
                         ) : (
                           <span className="text-[12px] text-[#9ca3af]">-</span>
                         )}

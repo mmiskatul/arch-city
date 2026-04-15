@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { TutorShell } from "@/components/tutor/tutor-shell";
 import { TUTOR_SCHEDULE_ROUTE } from "@/lib/routes";
 import { fetchTutorScheduleItemsClient } from "@/lib/api/tutor-schedule-browser-api";
+import { getAdminPreviewTutorSchedule } from "@/lib/admin-preview-data";
 import { useTutorApplicationStatus } from "@/lib/tutor/use-tutor-application-status";
 import { type TutorScheduleItem, type TutorScheduleStatus } from "@/lib/tutor/schedule-data";
 
@@ -70,11 +72,14 @@ function ScheduleTableSkeleton() {
 }
 
 export function TutorSchedulePage() {
+  const { isPreviewSession, previewTargetId } = useDashboardAuth();
+  const resolvedPreviewTargetId = previewTargetId ?? undefined;
   const [activeTab, setActiveTab] = useState<TutorScheduleStatus>("Upcoming");
   const [sessions, setSessions] = useState<TutorScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const { isBlocked: isPending } = useTutorApplicationStatus();
+  const isScheduleBlocked = !isPreviewSession && isPending;
 
   useEffect(() => {
     let mounted = true;
@@ -82,13 +87,13 @@ export function TutorSchedulePage() {
     async function loadSchedule() {
       try {
         setLoadError(null);
-        const liveSessions = await fetchTutorScheduleItemsClient();
+        const liveSessions = isPreviewSession ? getAdminPreviewTutorSchedule(resolvedPreviewTargetId) : await fetchTutorScheduleItemsClient();
         if (mounted) {
           setSessions(liveSessions);
         }
       } catch (error) {
         if (mounted) {
-          setSessions([]);
+          setSessions(getAdminPreviewTutorSchedule(resolvedPreviewTargetId));
           setLoadError(error instanceof Error ? error.message : "Unable to load schedule.");
         }
       } finally {
@@ -103,18 +108,18 @@ export function TutorSchedulePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isPreviewSession, resolvedPreviewTargetId]);
 
   const filteredSessions = useMemo(
     () =>
-      isPending
+      isScheduleBlocked
         ? []
         : sessions.filter((item) => item.status === activeTab),
-    [activeTab, isPending, sessions],
+    [activeTab, isScheduleBlocked, sessions],
   );
   const counts = useMemo(
     () =>
-      isPending
+      isScheduleBlocked
         ? { Upcoming: 0, Expired: 0, "Completion Requested": 0, Completed: 0, Cancelled: 0 }
         : sessions.reduce<Record<TutorScheduleStatus, number>>(
             (acc, item) => {
@@ -129,10 +134,10 @@ export function TutorSchedulePage() {
               Cancelled: 0,
             },
           ),
-    [isPending, sessions],
+    [isScheduleBlocked, sessions],
   );
 
-  const isTableLoading = loading || isPending;
+  const isTableLoading = loading || isScheduleBlocked;
 
   return (
     <TutorShell>

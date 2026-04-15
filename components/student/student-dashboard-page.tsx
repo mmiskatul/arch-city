@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import type { IconType } from "react-icons";
 import {
   FiAlertTriangle,
@@ -11,6 +14,7 @@ import {
 } from "react-icons/fi";
 
 import { StudentShell } from "@/components/student/student-shell";
+import { fetchStudentScheduleItemsBrowser } from "@/lib/api/student-schedule-browser-api";
 import { STUDENT_FIND_TUTORS_ROUTE, STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
 import type { StudentScheduleItem } from "@/lib/student/schedule-data";
 
@@ -177,7 +181,41 @@ function SummaryCardView({ card }: { card: SummaryCard }) {
   );
 }
 
+function UpcomingSessionsTableSkeleton() {
+  return (
+    <div className="divide-y divide-[#eceef2]">
+      {Array.from({ length: 3 }).map((_, rowIndex) => (
+        <div
+          key={`student-dashboard-session-skeleton-${rowIndex}`}
+          className="grid grid-cols-[1.6fr_0.9fr_0.7fr_0.7fr_0.8fr_0.9fr_1fr] items-center gap-4 px-4 py-4"
+        >
+          <div className="contents animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-[#eef1f4]" />
+              <div className="space-y-2">
+                <div className="h-4 w-28 rounded bg-[#eef1f4]" />
+                <div className="h-3 w-20 rounded bg-[#eef1f4]" />
+              </div>
+            </div>
+            <div className="h-4 w-20 rounded bg-[#eef1f4]" />
+            <div className="h-4 w-16 rounded bg-[#eef1f4]" />
+            <div className="h-4 w-14 rounded bg-[#eef1f4]" />
+            <div className="h-6 w-16 rounded-full bg-[#eef1f4]" />
+            <div className="h-6 w-[76px] rounded-full bg-[#eef1f4]" />
+            <div className="flex items-center gap-4">
+              <div className="h-8 w-16 rounded-full bg-[#eef1f4]" />
+              <div className="h-4 w-12 rounded bg-[#eef1f4]" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboardPageProps) {
+  const [scheduleData, setScheduleData] = useState(scheduleItems);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
   const todayLabel = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
@@ -185,9 +223,36 @@ export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboar
     year: "numeric",
   }).format(new Date());
 
-  const orderedScheduleItems = [...scheduleItems].sort(
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSchedule() {
+      try {
+        setLoadingSchedule(true);
+        const nextItems = await fetchStudentScheduleItemsBrowser();
+        if (cancelled) return;
+        startTransition(() => {
+          setScheduleData(nextItems);
+        });
+      } catch {
+        if (cancelled) return;
+      } finally {
+        if (!cancelled) {
+          setLoadingSchedule(false);
+        }
+      }
+    }
+
+    void loadSchedule();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const orderedScheduleItems = useMemo(() => [...scheduleData].sort(
     (left, right) => normalizeDateTime(left.date, left.time) - normalizeDateTime(right.date, right.time),
-  );
+  ), [scheduleData]);
 
   const upcomingItems = orderedScheduleItems.filter((item) => item.status === "Upcoming");
   const expiredItems = orderedScheduleItems.filter((item) => item.status === "Expired");
@@ -257,7 +322,9 @@ export function StudentDashboardPage({ profile, scheduleItems }: StudentDashboar
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {sessionRows.length > 0 ? (
+              {loadingSchedule ? (
+                <UpcomingSessionsTableSkeleton />
+              ) : sessionRows.length > 0 ? (
                 sessionRows.map((row) => (
                   <div
                     key={row.id}

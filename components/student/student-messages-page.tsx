@@ -170,6 +170,7 @@ export function StudentMessagesPage() {
       updated_at: "",
       created_at: "",
       unread_count_student: thread.unreadCount,
+      unread_count_parent: 0,
       unread_count_tutor: 0,
       unread_count_admin: 0,
       })),
@@ -180,6 +181,7 @@ export function StudentMessagesPage() {
   const [activeMessages, setActiveMessages] = useState<SessionMessage[]>(
     sortMessagesChronologically(studentMessageFallbackThreads[0]?.messages ?? []),
   );
+  const [loadingThreads, setLoadingThreads] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -226,6 +228,7 @@ export function StudentMessagesPage() {
 
     async function loadThreads() {
       try {
+        setLoadingThreads(true);
         const data = await getStudentMessageThreads();
         if (cancelled) return;
 
@@ -235,7 +238,7 @@ export function StudentMessagesPage() {
           if (current && nextThreads.some((thread) => thread.booking_id === current)) {
             return current;
           }
-          return nextThreads[0]?.booking_id || "";
+            return nextThreads[0]?.booking_id || "";
         });
       } catch {
         if (!cancelled) {
@@ -261,11 +264,16 @@ export function StudentMessagesPage() {
             updated_at: "",
             created_at: "",
             unread_count_student: thread.unreadCount,
+            unread_count_parent: 0,
             unread_count_tutor: 0,
             unread_count_admin: 0,
             })),
             fallbackOrder,
           ));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingThreads(false);
         }
       }
     }
@@ -363,7 +371,23 @@ export function StudentMessagesPage() {
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {threads.map((thread) => {
+              {loadingThreads ? (
+                <div className="space-y-3 px-4 py-4">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={`student-thread-skeleton-${index}`} className="animate-pulse rounded-xl border border-[#eef1f4] px-3 py-4">
+                      <div className="flex gap-3">
+                        <div className="h-10 w-10 rounded-full bg-[#eef1f4]" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="h-4 w-32 rounded bg-[#eef1f4]" />
+                          <div className="h-3 w-40 rounded bg-[#eef1f4]" />
+                          <div className="h-3 w-24 rounded bg-[#eef1f4]" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {!loadingThreads ? threads.map((thread) => {
                 const active = thread.booking_id === activeThread?.booking_id;
 
                 return (
@@ -406,7 +430,7 @@ export function StudentMessagesPage() {
                     ) : null}
                   </button>
                 );
-              })}
+              }) : null}
             </div>
           </aside>
 
@@ -444,7 +468,11 @@ export function StudentMessagesPage() {
                 className="max-h-[calc(100vh-340px)] space-y-8 overflow-y-auto bg-[#fcfcfd] px-4 py-6"
               >
                 {showLoadingMessages ? (
-                  <p className="text-[13px] text-[#6b7280]">Loading messages...</p>
+                  <>
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <div key={`student-message-skeleton-${index}`} className="h-16 rounded-[18px] bg-[#eef1f4] animate-pulse" />
+                    ))}
+                  </>
                 ) : null}
                 {threadMessages.error ? (
                   <p className="text-[13px] text-[#b91c1c]">{threadMessages.error}</p>

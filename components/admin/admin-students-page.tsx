@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { AdminPreviewAction } from "@/components/admin/admin-preview-action";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { ADMIN_STUDENTS_ROUTE } from "@/lib/routes";
@@ -325,13 +326,14 @@ export function AdminStudentsPage() {
                           {student.status}
                         </span>
                       </div>
-                      <div>
+                      <div className="flex items-center gap-2">
                         <Link
                           href={`${ADMIN_STUDENTS_ROUTE}/${encodeURIComponent(student.id)}`}
                           className="inline-flex h-7 items-center rounded-lg border border-[#e5e7eb] bg-[#f7f7f8] px-3 text-[12px] font-semibold text-[#4b5563]"
                         >
                           View
                         </Link>
+                        <AdminPreviewAction role="student" targetId={student.id} />
                       </div>
                     </div>
                   ))}

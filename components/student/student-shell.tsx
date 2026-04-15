@@ -32,6 +32,8 @@ import { getNotificationCount } from "@/lib/api/notifications-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
+import { AdminPreviewBanner } from "@/components/shared/admin-preview-banner";
+import { clearAdminPreviewRoleCookie } from "@/lib/admin-preview";
 
 type NavItem = {
   label: string;
@@ -91,6 +93,7 @@ function clearAuthCookies() {
   document.cookie = `arch_access_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_refresh_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_user_role=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+  clearAdminPreviewRoleCookie();
 }
 
 function redirectToLogin() {
@@ -109,10 +112,11 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { tokenPresent, isAuthenticated } = useDashboardAuth();
+  const { tokenPresent, isAuthenticated, isPreviewSession } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [messagesUnreadCount, setMessagesUnreadCount] = useState(0);
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<ShellUserProfile>({
@@ -122,6 +126,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
   });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const topUserMenuRef = useRef<HTMLDivElement | null>(null);
+  const routeLoadingTimeoutRef = useRef<number | null>(null);
   useNotificationsSocket(tokenPresent && isAuthenticated);
 
   useEffect(() => {
@@ -226,6 +231,14 @@ export function StudentShell({ children }: { children: ReactNode }) {
     redirectToLogin();
   }, [isAuthenticated, tokenPresent]);
 
+  useEffect(() => {
+    return () => {
+      if (routeLoadingTimeoutRef.current) {
+        window.clearTimeout(routeLoadingTimeoutRef.current);
+      }
+    };
+  }, []);
+
   async function handleLogout() {
     if (isLoggingOut) return;
 
@@ -246,6 +259,21 @@ export function StudentShell({ children }: { children: ReactNode }) {
     setUserMenuOpen(false);
     setTopUserMenuOpen(false);
     redirectToLogin();
+  }
+
+  function startRouteLoading() {
+    setUserMenuOpen(false);
+    setTopUserMenuOpen(false);
+    setIsRouteLoading(true);
+
+    if (routeLoadingTimeoutRef.current) {
+      window.clearTimeout(routeLoadingTimeoutRef.current);
+    }
+
+    routeLoadingTimeoutRef.current = window.setTimeout(() => {
+      setIsRouteLoading(false);
+      routeLoadingTimeoutRef.current = null;
+    }, 1600);
   }
 
   const hideTopSearch =
@@ -276,8 +304,48 @@ export function StudentShell({ children }: { children: ReactNode }) {
     });
   };
 
+  const handleStudentRouteClickCapture = (event: React.MouseEvent<HTMLElement>) => {
+    if (event.defaultPrevented) return;
+
+    const target = event.target as HTMLElement | null;
+    const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+
+    if (!anchor) return;
+    if (anchor.target && anchor.target !== "_self") return;
+    if (anchor.hasAttribute("download")) return;
+
+    const href = anchor.getAttribute("href");
+    if (!href || href.startsWith("#")) return;
+
+    try {
+      const destination = new URL(anchor.href, window.location.href);
+      if (destination.origin !== window.location.origin) return;
+      if (!destination.pathname.startsWith("/student-dashboard")) return;
+
+      const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+      const nextUrl = `${destination.pathname}${destination.search}`;
+
+      if (nextUrl !== currentUrl) {
+        startRouteLoading();
+      }
+    } catch {
+      // Ignore malformed URLs and let navigation continue normally.
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-[#fbfbfc] text-[#1f2937]">
+    <main
+      className="relative min-h-screen bg-[#fbfbfc] text-[#1f2937]"
+      onClickCapture={handleStudentRouteClickCapture}
+    >
+      {isRouteLoading ? (
+        <div className="pointer-events-none fixed inset-0 z-[80] flex items-center justify-center bg-white/55 backdrop-blur-[1px]">
+          <div className="flex items-center gap-3 rounded-full border border-[#eceef2] bg-white px-5 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#f3c8d0] border-t-[#d61c3f]" />
+            <span className="text-[14px] font-semibold text-[#20242b]">Loading...</span>
+          </div>
+        </div>
+      ) : null}
       <div className="min-h-screen xl:pl-[172px]">
         <aside className="w-full border-b border-[#eceef2] bg-white xl:fixed xl:inset-y-0 xl:left-0 xl:z-30 xl:w-[172px] xl:border-r xl:border-b-0">
           <div className="border-b border-[#eceef2] px-4 py-5">
@@ -485,6 +553,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
           )}
 
           <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-5 lg:px-6 2xl:px-8">
+            {isPreviewSession ? <AdminPreviewBanner label="student" /> : null}
             {children}
           </div>
         </section>

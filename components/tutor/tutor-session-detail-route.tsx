@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
+import { getAdminPreviewTutorSession } from "@/lib/admin-preview-data";
 import { fetchTutorScheduleItemByIdClient } from "@/lib/api/tutor-schedule-browser-api";
 import { TutorSessionDetailPage } from "@/components/tutor/tutor-session-detail-page";
-import type { TutorScheduleItem } from "@/lib/tutor/schedule-data";
+import { type TutorScheduleItem } from "@/lib/tutor/schedule-data";
 
 function SessionDetailSkeleton() {
   return (
@@ -49,6 +51,8 @@ function SessionDetailSkeleton() {
 }
 
 export function TutorSessionDetailRoute({ id }: { id: string }) {
+  const { isPreviewSession, previewTargetId } = useDashboardAuth();
+  const resolvedPreviewTargetId = previewTargetId ?? undefined;
   const [session, setSession] = useState<TutorScheduleItem | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,10 +60,17 @@ export function TutorSessionDetailRoute({ id }: { id: string }) {
     let active = true;
 
     async function loadSession() {
-      const data = await fetchTutorScheduleItemByIdClient(id);
-      if (!active) return;
-      setSession(data);
-      setLoading(false);
+      try {
+        const data = isPreviewSession
+          ? getAdminPreviewTutorSession(resolvedPreviewTargetId, id)
+          : await fetchTutorScheduleItemByIdClient(id);
+        if (!active) return;
+        setSession(data ?? getAdminPreviewTutorSession(resolvedPreviewTargetId, id));
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
     }
 
     void loadSession();
@@ -67,7 +78,7 @@ export function TutorSessionDetailRoute({ id }: { id: string }) {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, isPreviewSession, resolvedPreviewTargetId]);
 
   if (loading) {
     return <SessionDetailSkeleton />;

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { StudentShell } from "@/components/student/student-shell";
 import { cancelStudentScheduleItemById } from "@/lib/api/student-schedule-cancel-api";
+import { fetchStudentScheduleItemsBrowser } from "@/lib/api/student-schedule-browser-api";
 import { STUDENT_FIND_TUTORS_ROUTE, STUDENT_SCHEDULE_ROUTE } from "@/lib/routes";
 import { studentScheduleItems, type StudentScheduleItem } from "@/lib/student/schedule-data";
 
@@ -44,12 +45,70 @@ function statusClass(status: StudentScheduleItem["status"]) {
   return "bg-[#fff6de] text-[#b58112]";
 }
 
+function ScheduleTableSkeleton() {
+  return (
+    <div className="divide-y divide-[#eceef2]">
+      {Array.from({ length: 6 }).map((_, rowIndex) => (
+        <div
+          key={`student-schedule-row-skeleton-${rowIndex}`}
+          className="grid grid-cols-[1.15fr_1.65fr_1.15fr_0.8fr_0.9fr_0.9fr_1fr_1.2fr] gap-4 px-4 py-4 text-[14px]"
+        >
+          <div className="contents animate-pulse">
+            <div className="h-4 w-20 rounded bg-[#eef1f4]" />
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-[#eef1f4]" />
+              <div className="h-4 w-28 rounded bg-[#eef1f4]" />
+            </div>
+            <div className="h-4 w-20 rounded bg-[#eef1f4]" />
+            <div className="h-4 w-16 rounded bg-[#eef1f4]" />
+            <div className="h-4 w-14 rounded bg-[#eef1f4]" />
+            <div className="h-6 w-16 rounded-full bg-[#eef1f4]" />
+            <div className="h-6 w-[84px] rounded-full bg-[#eef1f4]" />
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-16 rounded-full bg-[#eef1f4]" />
+              <div className="h-8 w-16 rounded-full bg-[#eef1f4]" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function StudentSchedulePage({ initialSessions }: { initialSessions?: StudentScheduleItem[] }) {
   const [activeTab, setActiveTab] = useState<ScheduleTab>("Upcoming");
   const [sessions, setSessions] = useState<StudentScheduleItem[]>(initialSessions ?? studentScheduleItems);
+  const [loadingRows, setLoadingRows] = useState(true);
   const [cancellingId, setCancellingId] = useState<string>("");
   const [pendingCancelId, setPendingCancelId] = useState<string>("");
   const [cancelError, setCancelError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSessions() {
+      try {
+        setLoadingRows(true);
+        const nextSessions = await fetchStudentScheduleItemsBrowser();
+        if (cancelled) return;
+        startTransition(() => {
+          setSessions(nextSessions);
+        });
+      } catch {
+        if (cancelled) return;
+      } finally {
+        if (!cancelled) {
+          setLoadingRows(false);
+        }
+      }
+    }
+
+    void loadSessions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredSessions = useMemo(
     () => sessions.filter((item) => item.status === activeTab),
@@ -156,7 +215,9 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
               </div>
 
               <div className="divide-y divide-[#eceef2]">
-                {filteredSessions.map((session) => (
+                {loadingRows ? (
+                  <ScheduleTableSkeleton />
+                ) : filteredSessions.map((session) => (
                   <div
                     key={session.id}
                     className="grid grid-cols-[1.15fr_1.65fr_1.15fr_0.8fr_0.9fr_0.9fr_1fr_1.2fr] gap-4 px-4 py-4 text-[14px] text-[#4b5563]"
@@ -203,6 +264,14 @@ export function StudentSchedulePage({ initialSessions }: { initialSessions?: Stu
                     </div>
                   </div>
                 ))}
+                {!loadingRows && filteredSessions.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <p className="text-[14px] font-semibold text-[#20242b]">No sessions in this section yet.</p>
+                    <p className="mt-1 text-[13px] text-[#6b7280]">
+                      Book a tutor or switch tabs to view other schedule items.
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

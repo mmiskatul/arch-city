@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { IconType } from "react-icons";
@@ -27,6 +27,9 @@ import {
   ADMIN_SETTINGS_ROUTE,
   ADMIN_STUDENTS_ROUTE,
   ADMIN_TUTORS_ROUTE,
+  PARENT_DASHBOARD_ROUTE,
+  STUDENT_DASHBOARD_ROUTE,
+  TUTOR_DASHBOARD_ROUTE,
 } from "@/lib/routes";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import { getAdminMessageCount } from "@/lib/api/admin-messages-api";
@@ -35,6 +38,7 @@ import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
+import { clearAdminPreviewRoleCookie, setAdminPreviewRoleCookie, type AdminPreviewRole } from "@/lib/admin-preview";
 
 type NavItem = {
   label: string;
@@ -88,6 +92,7 @@ function clearAuthCookies() {
   document.cookie = `arch_access_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_refresh_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_user_role=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+  clearAdminPreviewRoleCookie();
 }
 
 function redirectToLogin() {
@@ -98,6 +103,7 @@ function redirectToLogin() {
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { tokenPresent, isAuthenticated } = useDashboardAuth();
   const [messageBadge, setMessageBadge] = useState("0");
   const [notificationsBadge, setNotificationsBadge] = useState("0");
@@ -214,6 +220,27 @@ export function AdminShell({ children }: { children: ReactNode }) {
     redirectToLogin();
   }
 
+  function handlePreviewRole(role: AdminPreviewRole) {
+    const nextRoute =
+      role === "student"
+        ? STUDENT_DASHBOARD_ROUTE
+        : role === "parent"
+          ? PARENT_DASHBOARD_ROUTE
+          : TUTOR_DASHBOARD_ROUTE;
+
+    setUserMenuOpen(false);
+    setTopUserMenuOpen(false);
+    setAdminPreviewRoleCookie(role);
+    router.push(nextRoute);
+  }
+
+  function handleAdminDefaultPreview() {
+    setUserMenuOpen(false);
+    setTopUserMenuOpen(false);
+    clearAdminPreviewRoleCookie();
+    router.push(ADMIN_DASHBOARD_ROUTE);
+  }
+
   const searchPlaceholder = pathname.startsWith(ADMIN_MESSAGES_ROUTE)
     ? "Search conversations..."
     : pathname.startsWith(ADMIN_NOTIFICATIONS_ROUTE)
@@ -281,12 +308,55 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-[#e8eaef] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.12)]">
                   <Link
                     href={ADMIN_SETTINGS_ROUTE}
-                    onClick={() => setUserMenuOpen(false)}
+                    onClick={() => {
+                      clearAdminPreviewRoleCookie();
+                      setUserMenuOpen(false);
+                    }}
                     className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-[#374151] transition hover:bg-[#f7f7f8]"
                   >
                     <FiUser className="h-4 w-4 text-[#6b7280]" />
                     <span>Profile</span>
                   </Link>
+
+                  <div className="mt-2 rounded-lg border border-[#eceef2] bg-[#fafafb] p-2">
+                    <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ca3af]">
+                      Preview As
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      <button
+                        type="button"
+                        onClick={handleAdminDefaultPreview}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] text-[#374151] transition hover:bg-white"
+                      >
+                        <FiGrid className="h-4 w-4 text-[#6b7280]" />
+                        <span>Admin (Default)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewRole("student")}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] text-[#374151] transition hover:bg-white"
+                      >
+                        <FiUser className="h-4 w-4 text-[#6b7280]" />
+                        <span>Student</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewRole("parent")}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] text-[#374151] transition hover:bg-white"
+                      >
+                        <FiUsers className="h-4 w-4 text-[#6b7280]" />
+                        <span>Parent</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewRole("tutor")}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] text-[#374151] transition hover:bg-white"
+                      >
+                        <FiUser className="h-4 w-4 text-[#6b7280]" />
+                        <span>Tutor</span>
+                      </button>
+                    </div>
+                  </div>
 
                   <button
                     type="button"
@@ -342,7 +412,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     <div className="absolute right-0 top-full z-30 mt-2 w-40 rounded-xl border border-[#e8eaef] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.12)]">
                       <Link
                         href={ADMIN_SETTINGS_ROUTE}
-                        onClick={() => setTopUserMenuOpen(false)}
+                        onClick={() => {
+                          clearAdminPreviewRoleCookie();
+                          setTopUserMenuOpen(false);
+                        }}
                         className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-[#374151] transition hover:bg-[#f7f7f8]"
                       >
                         <FiUser className="h-4 w-4 text-[#6b7280]" />

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { ParentShell } from "@/components/parent/parent-shell";
+import { useDashboardAuth } from "@/components/auth/dashboard-auth-context";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import {
   getParentStudents,
@@ -11,6 +12,7 @@ import {
   type ParentStudentListItem,
   type ParentStudentSearchItem,
 } from "@/lib/api/parent-students-api";
+import { getAdminPreviewParentStudents } from "@/lib/admin-preview-data";
 
 function normalizeStudentDisplayName(value: string) {
   return String(value || "")
@@ -169,21 +171,23 @@ function StudentsTableSkeleton() {
           key={`parent-students-skeleton-${rowIndex}`}
           className="grid gap-4 px-4 py-3.5 md:grid-cols-[1.7fr_0.9fr_1.1fr_0.95fr_1.1fr_0.7fr] md:items-center"
         >
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 animate-pulse rounded-full bg-[#eef1f4]" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="h-4 w-28 animate-pulse rounded bg-[#eef1f4]" />
-              <div className="h-3 w-40 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="contents animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#eef1f4]" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-4 w-36 rounded bg-[#eef1f4]" />
+                <div className="h-3 w-44 rounded bg-[#eef1f4]" />
+              </div>
             </div>
+            <div className="h-4 w-16 rounded bg-[#eef1f4]" />
+            <div className="h-4 w-28 rounded bg-[#eef1f4]" />
+            <div className="h-6 w-[76px] rounded-full bg-[#eef1f4]" />
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-7 rounded bg-[#eef1f4]" />
+              <div className="h-4 w-24 rounded bg-[#eef1f4]" />
+            </div>
+            <div className="h-4 w-10 rounded bg-[#eef1f4]" />
           </div>
-          <div className="h-4 w-14 animate-pulse rounded bg-[#eef1f4]" />
-          <div className="h-4 w-24 animate-pulse rounded bg-[#eef1f4]" />
-          <div className="h-6 w-[72px] animate-pulse rounded-full bg-[#eef1f4]" />
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-6 animate-pulse rounded bg-[#eef1f4]" />
-            <div className="h-4 w-20 animate-pulse rounded bg-[#eef1f4]" />
-          </div>
-          <div className="h-4 w-8 animate-pulse rounded bg-[#eef1f4]" />
         </div>
       ))}
     </div>
@@ -191,6 +195,8 @@ function StudentsTableSkeleton() {
 }
 
 export function ParentStudentsPage() {
+  const { isPreviewSession, previewTargetId } = useDashboardAuth();
+  const resolvedPreviewTargetId = previewTargetId ?? undefined;
   const [students, setStudents] = useState<ParentStudentListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -220,6 +226,13 @@ export function ParentStudentsPage() {
 
   useEffect(() => {
     async function loadStudents() {
+      if (isPreviewSession) {
+        setStudents(normalizeStudents(getAdminPreviewParentStudents(resolvedPreviewTargetId)));
+        setLoadError("");
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setLoadError("");
       try {
@@ -237,7 +250,7 @@ export function ParentStudentsPage() {
     const refresh = () => void loadStudents();
     window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, refresh);
     return () => window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, refresh);
-  }, []);
+  }, [isPreviewSession, resolvedPreviewTargetId]);
 
   useEffect(() => {
     if (!showModal) return;
