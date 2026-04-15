@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FiBookOpen, FiBriefcase, FiCheck, FiChevronLeft, FiStar, FiX } from "react-icons/fi";
 
+import { AdminPreviewAction } from "@/components/admin/admin-preview-action";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
 import type { AdminTutorDetail } from "@/lib/admin/tutors-data";
@@ -105,19 +106,27 @@ export function AdminTutorDetailPage({ tutor }: { tutor: AdminTutorDetail }) {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActionState(isSuspended ? "unsuspend" : "suspend");
-                setShowSuspendConfirm(true);
-              }}
-              disabled={isUpdating}
-              className={`inline-flex h-9 items-center rounded-lg px-4 text-[13px] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                isSuspended ? "bg-[#239157] hover:bg-[#1d7b49]" : "bg-[#d94a62] hover:bg-[#bf3d53]"
-              }`}
-            >
-              {isSuspended ? "Unsuspend" : "Suspend"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <AdminPreviewAction
+                role="tutor"
+                targetId={tutor.id}
+                label="Preview Tutor"
+                className="inline-flex h-9 items-center rounded-lg border border-[#d61c3f] bg-[#fff4f6] px-4 text-[13px] font-semibold text-[#d61c3f]"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setActionState(isSuspended ? "unsuspend" : "suspend");
+                  setShowSuspendConfirm(true);
+                }}
+                disabled={isUpdating}
+                className={`inline-flex h-9 items-center rounded-lg px-4 text-[13px] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isSuspended ? "bg-[#239157] hover:bg-[#1d7b49]" : "bg-[#d94a62] hover:bg-[#bf3d53]"
+                }`}
+              >
+                {isSuspended ? "Unsuspend" : "Suspend"}
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 grid gap-3 lg:grid-cols-4">

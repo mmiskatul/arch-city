@@ -3,6 +3,9 @@ import {
   type TutorProfileData,
 } from "@/components/tutor/tutor-profile-page";
 import { apiGet } from "@/lib/api/api-client";
+import { cookies } from "next/headers";
+import { ADMIN_PREVIEW_ROLE_COOKIE, ADMIN_PREVIEW_TARGET_COOKIE } from "@/lib/admin-preview";
+import { getAdminPreviewTutorProfile } from "@/lib/admin-preview-data";
 
 export const dynamic = "force-dynamic";
 
@@ -73,37 +76,14 @@ async function fetchTutorProfile(): Promise<TutorProfileData> {
 }
 
 export default async function TutorProfileRoute() {
-  const profile = await fetchTutorProfile().catch(() => ({
-    initials: "TU",
-    firstName: "Tutor",
-    lastName: "",
-    title: "Tutor",
-    email: "",
-    phone: "",
-    location: "",
-    status: "Active",
-    since: "",
-    totalSessions: "0",
-    avgRating: "0.0",
-    activeStudents: "0",
-    allTimeEarnings: "$0",
-    streetAddress: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    emergencyContactName: "",
-    emergencyContactPhone: "",
-    backgroundCheck: "Verified",
-    dateOfBirth: "",
-    gender: "",
-    bio: "",
-    schoolDistrict: "",
-    education: "",
-    workExperience: "",
-    subjectsAndGrades: "",
-    rates: "",
-    preferences: "",
-    locationPreference: "",
-  }));
+  const cookieStore = await cookies();
+  const role = cookieStore.get("arch_user_role")?.value ?? null;
+  const previewRole = cookieStore.get(ADMIN_PREVIEW_ROLE_COOKIE)?.value ?? null;
+  const previewTargetId = cookieStore.get(ADMIN_PREVIEW_TARGET_COOKIE)?.value ?? undefined;
+  const isAdminTutorPreview = role === "admin" && previewRole === "tutor";
+  const fallbackProfile: TutorProfileData = getAdminPreviewTutorProfile(previewTargetId);
+  const profile = isAdminTutorPreview
+    ? fallbackProfile
+    : await fetchTutorProfile().catch(() => fallbackProfile);
   return <TutorProfilePage initialProfile={profile} />;
 }
