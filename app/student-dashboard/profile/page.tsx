@@ -3,6 +3,9 @@ import {
   type StudentProfileData,
 } from "@/components/student/student-profile-page";
 import { apiGet } from "@/lib/api/api-client";
+import { cookies } from "next/headers";
+import { ADMIN_PREVIEW_ROLE_COOKIE, ADMIN_PREVIEW_TARGET_COOKIE } from "@/lib/admin-preview";
+import { getAdminPreviewStudentProfile } from "@/lib/admin-preview-data";
 
 export const dynamic = "force-dynamic";
 
@@ -38,16 +41,14 @@ async function fetchStudentProfile(): Promise<StudentProfileData> {
 }
 
 export default async function StudentProfileRoute() {
-  const profile = await fetchStudentProfile().catch(() => ({
-    firstName: "Student",
-    lastName: "",
-    email: "",
-    gradeLevel: "",
-    initials: "ST",
-    planName: "Student Plan",
-    planPrice: "$0",
-    renewsOn: "",
-    activePlanLabel: "Inactive",
-  }));
+  const cookieStore = await cookies();
+  const role = cookieStore.get("arch_user_role")?.value ?? null;
+  const previewRole = cookieStore.get(ADMIN_PREVIEW_ROLE_COOKIE)?.value ?? null;
+  const previewTargetId = cookieStore.get(ADMIN_PREVIEW_TARGET_COOKIE)?.value ?? undefined;
+  const isAdminStudentPreview = role === "admin" && previewRole === "student";
+  const fallbackProfile: StudentProfileData = getAdminPreviewStudentProfile(previewTargetId);
+  const profile = isAdminStudentPreview
+    ? fallbackProfile
+    : await fetchStudentProfile().catch(() => fallbackProfile);
   return <StudentProfilePage profile={profile} />;
 }

@@ -34,6 +34,8 @@ import { getParentMessageCount } from "@/lib/api/session-messages-api";
 import { NOTIFICATIONS_UPDATED_EVENT } from "@/lib/notifications-store";
 import { useNotificationsSocket } from "@/lib/realtime/notifications-socket";
 import { NotificationBellMenu } from "@/components/shared/notification-bell-menu";
+import { AdminPreviewBanner } from "@/components/shared/admin-preview-banner";
+import { clearAdminPreviewRoleCookie } from "@/lib/admin-preview";
 
 type NavItem = {
   label: string;
@@ -93,6 +95,7 @@ function clearAuthCookies() {
   document.cookie = `arch_access_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_refresh_token=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
   document.cookie = `arch_user_role=; Path=/; Expires=${expired}; Max-Age=0; SameSite=Lax`;
+  clearAdminPreviewRoleCookie();
 }
 
 function redirectToLogin() {
@@ -116,7 +119,7 @@ export function ParentShell({
   messagesUnreadCountOverride?: number;
 }) {
   const pathname = usePathname();
-  const { tokenPresent, isAuthenticated } = useDashboardAuth();
+  const { tokenPresent, isAuthenticated, isPreviewSession } = useDashboardAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [topUserMenuOpen, setTopUserMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -396,7 +399,10 @@ export function ParentShell({
               ) : null}
             </div>
           </div>
-          <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-5 lg:px-6 2xl:px-8">{children}</div>
+          <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-5 lg:px-6 2xl:px-8">
+            {isPreviewSession ? <AdminPreviewBanner label="parent" /> : null}
+            {children}
+          </div>
         </section>
       </div>
     </main>

@@ -13,6 +13,7 @@ export const ADMIN_SETTINGS_PRIVACY_ROUTE = "/admin-dashboard/settings/privacy-p
 export const ADMIN_TUTOR_APPLICATIONS_ROUTE = "/admin-dashboard/tutor-applications";
 export const ADMIN_DISPUTE_REPORTS_ROUTE = "/admin-dashboard/dispute-reports";
 export const ADMIN_PAYOUT_QUEUE_ROUTE = "/admin-dashboard/payout-queue";
+export const ADMIN_PREVIEW_ROUTE = "/admin-dashboard/preview";
 export const STUDENT_DASHBOARD_ROUTE = "/student-dashboard";
 export const PARENT_DASHBOARD_ROUTE = "/parent-dashboard";
 export const PARENT_FIND_TUTORS_ROUTE = "/parent-dashboard/find-tutors";
