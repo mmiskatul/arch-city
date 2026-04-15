@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { startTransition, useEffect, useState } from "react";
 import type { IconType } from "react-icons";
 import {
   FiCalendar,
@@ -11,7 +14,8 @@ import {
 } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
-import type { ParentDashboardOverview, ParentSummaryCard } from "@/lib/api/parent-dashboard-api";
+import { getParentDashboardOverview } from "@/lib/api/parent-dashboard-browser-api";
+import type { ParentDashboardOverview, ParentSummaryCard } from "@/lib/api/parent-dashboard-types";
 import {
   PARENT_FIND_TUTORS_ROUTE,
   PARENT_MESSAGES_ROUTE,
@@ -193,7 +197,32 @@ function EmptyDashboard() {
   );
 }
 
-function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
+function UpcomingSessionsTableSkeleton() {
+  return (
+    <div className="divide-y divide-[#eceef2]">
+      {Array.from({ length: 4 }).map((_, rowIndex) => (
+        <div
+          key={`parent-dashboard-session-skeleton-${rowIndex}`}
+          className="grid grid-cols-[1.5fr_0.9fr_0.7fr_0.9fr_0.7fr_0.7fr_0.8fr_0.8fr] items-center gap-4 px-4 py-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 animate-pulse rounded-full bg-[#eef1f4]" />
+            <div className="h-4 w-28 animate-pulse rounded bg-[#eef1f4]" />
+          </div>
+          <div className="h-4 w-20 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-4 w-16 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-4 w-24 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-4 w-14 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-6 w-16 animate-pulse rounded-full bg-[#eef1f4]" />
+          <div className="h-6 w-18 animate-pulse rounded-full bg-[#eef1f4]" />
+          <div className="h-8 w-16 animate-pulse rounded-full bg-[#eef1f4]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActiveDashboard({ data, sessionsLoading }: { data: ParentDashboardOverview; sessionsLoading: boolean }) {
   const activeStudent = data.students.find((student) => student.active) ?? data.students[0];
   const activeStudentName = activeStudent?.name || "Your student";
   const overviewHeading =
@@ -277,7 +306,9 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {data.upcomingSessions.length > 0 ? (
+              {sessionsLoading ? (
+                <UpcomingSessionsTableSkeleton />
+              ) : data.upcomingSessions.length > 0 ? (
                 data.upcomingSessions.map((session) => (
                   <div
                     key={session.id}
@@ -351,9 +382,39 @@ function ActiveDashboard({ data }: { data: ParentDashboardOverview }) {
 }
 
 export function ParentDashboardPage({ initialData }: { initialData: ParentDashboardOverview }) {
+  const [data, setData] = useState(initialData);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDashboard() {
+      try {
+        setSessionsLoading(true);
+        const nextData = await getParentDashboardOverview();
+        if (cancelled) return;
+        startTransition(() => {
+          setData(nextData);
+        });
+      } catch {
+        if (cancelled) return;
+      } finally {
+        if (!cancelled) {
+          setSessionsLoading(false);
+        }
+      }
+    }
+
+    void loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <ParentShell>
-      <div className="w-full">{initialData.state === "empty" ? <EmptyDashboard /> : <ActiveDashboard data={initialData} />}</div>
+      <div className="w-full">{data.state === "empty" ? <EmptyDashboard /> : <ActiveDashboard data={data} sessionsLoading={sessionsLoading} />}</div>
     </ParentShell>
   );
 }
