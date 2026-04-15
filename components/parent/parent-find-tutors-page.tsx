@@ -19,6 +19,12 @@ type FilterState = {
   search: string;
 };
 
+function normalizeStudentDisplayName(value: string) {
+  return String(value || "")
+    .replace(/\s+update'?s?\s*$/i, "")
+    .trim();
+}
+
 function RatingStars({ rating }: { rating: number }) {
   const normalized = Math.max(0, Math.min(5, rating));
   return (
@@ -210,7 +216,12 @@ export function ParentFindTutorsPage() {
         ]);
         if (!mounted) return;
 
-        const activeStudents = (parentStudentsResponse.items || []).filter((student) => student.status === "active");
+        const activeStudents = (parentStudentsResponse.items || [])
+          .filter((student) => student.status === "active")
+          .map((student) => ({
+            ...student,
+            name: normalizeStudentDisplayName(student.name),
+          }));
         const nextTutors = liveTutors.length > 0 ? liveTutors : parentTutorResults;
         const nextFilters = buildInitialFilters(activeStudents, nextTutors);
 

@@ -12,6 +12,12 @@ import {
   type ParentStudentSearchItem,
 } from "@/lib/api/parent-students-api";
 
+function normalizeStudentDisplayName(value: string) {
+  return String(value || "")
+    .replace(/\s+update'?s?\s*$/i, "")
+    .trim();
+}
+
 function InviteStudentModal({
   open,
   searchValue,
@@ -155,6 +161,35 @@ function InviteStudentModal({
   );
 }
 
+function StudentsTableSkeleton() {
+  return (
+    <div className="divide-y divide-[#eceef2]">
+      {Array.from({ length: 5 }).map((_, rowIndex) => (
+        <div
+          key={`parent-students-skeleton-${rowIndex}`}
+          className="grid gap-4 px-4 py-3.5 md:grid-cols-[1.7fr_0.9fr_1.1fr_0.95fr_1.1fr_0.7fr] md:items-center"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 animate-pulse rounded-full bg-[#eef1f4]" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-4 w-28 animate-pulse rounded bg-[#eef1f4]" />
+              <div className="h-3 w-40 animate-pulse rounded bg-[#eef1f4]" />
+            </div>
+          </div>
+          <div className="h-4 w-14 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-4 w-24 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-6 w-[72px] animate-pulse rounded-full bg-[#eef1f4]" />
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-6 animate-pulse rounded bg-[#eef1f4]" />
+            <div className="h-4 w-20 animate-pulse rounded bg-[#eef1f4]" />
+          </div>
+          <div className="h-4 w-8 animate-pulse rounded bg-[#eef1f4]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ParentStudentsPage() {
   const [students, setStudents] = useState<ParentStudentListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,13 +204,27 @@ export function ParentStudentsPage() {
   const [actionError, setActionError] = useState("");
   const [invitingEmail, setInvitingEmail] = useState("");
 
+  function normalizeStudents(items: ParentStudentListItem[]) {
+    return items.map((student) => ({
+      ...student,
+      name: normalizeStudentDisplayName(student.name),
+    }));
+  }
+
+  function normalizeSearchResults(items: ParentStudentSearchItem[]) {
+    return items.map((student) => ({
+      ...student,
+      name: normalizeStudentDisplayName(student.name),
+    }));
+  }
+
   useEffect(() => {
     async function loadStudents() {
       setLoading(true);
       setLoadError("");
       try {
         const response = await getParentStudents();
-        setStudents(response.items || []);
+        setStudents(normalizeStudents(response.items || []));
       } catch (error) {
         setStudents([]);
         setLoadError(error instanceof Error ? error.message : "Unable to load students.");
@@ -202,7 +251,7 @@ export function ParentStudentsPage() {
       setSearching(true);
       try {
         const response = await searchParentStudents(searchValue.trim());
-        setSearchResults(response.items || []);
+        setSearchResults(normalizeSearchResults(response.items || []));
       } catch {
         setSearchResults([]);
       } finally {
@@ -231,7 +280,7 @@ export function ParentStudentsPage() {
       });
       window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT));
       const refreshed = await getParentStudents();
-      setStudents(refreshed.items || []);
+      setStudents(normalizeStudents(refreshed.items || []));
       setSearchResults((current) =>
         current.map((item) => (item.email === studentEmail ? { ...item, has_pending_invite: true } : item)),
       );
@@ -294,7 +343,7 @@ export function ParentStudentsPage() {
 
             <div className="divide-y divide-[#eceef2]">
               {loading ? (
-                <div className="px-4 py-5 text-[14px] text-[#6b7280]">Loading students...</div>
+                <StudentsTableSkeleton />
               ) : students.length > 0 ? (
                 students.map((student) => (
                   <div

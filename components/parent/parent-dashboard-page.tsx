@@ -111,6 +111,12 @@ const quickActions: QuickAction[] = [
   },
 ];
 
+function normalizeStudentDisplayName(value: string) {
+  return String(value || "")
+    .replace(/\s+update'?s?\s*$/i, "")
+    .trim();
+}
+
 function getSummaryIcon(tone: ParentSummaryCard["tone"]) {
   if (tone === "green") {
     return {
@@ -214,7 +220,7 @@ function UpcomingSessionsTableSkeleton() {
           <div className="h-4 w-24 animate-pulse rounded bg-[#eef1f4]" />
           <div className="h-4 w-14 animate-pulse rounded bg-[#eef1f4]" />
           <div className="h-6 w-16 animate-pulse rounded-full bg-[#eef1f4]" />
-          <div className="h-6 w-18 animate-pulse rounded-full bg-[#eef1f4]" />
+          <div className="h-6 w-[72px] animate-pulse rounded-full bg-[#eef1f4]" />
           <div className="h-8 w-16 animate-pulse rounded-full bg-[#eef1f4]" />
         </div>
       ))}
@@ -223,7 +229,11 @@ function UpcomingSessionsTableSkeleton() {
 }
 
 function ActiveDashboard({ data, sessionsLoading }: { data: ParentDashboardOverview; sessionsLoading: boolean }) {
-  const activeStudent = data.students.find((student) => student.active) ?? data.students[0];
+  const normalizedStudents = data.students.map((student) => ({
+    ...student,
+    name: normalizeStudentDisplayName(student.name),
+  }));
+  const activeStudent = normalizedStudents.find((student) => student.active) ?? normalizedStudents[0];
   const activeStudentName = activeStudent?.name || "Your student";
   const overviewHeading =
     activeStudentName === "Your student" ? "Student overview" : `${activeStudentName} overview`;
@@ -246,7 +256,7 @@ function ActiveDashboard({ data, sessionsLoading }: { data: ParentDashboardOverv
         <section className="rounded-[14px] border border-[#e7e7eb] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[14px] font-medium text-[#374151]">Viewing stats for:</span>
-            {data.students.map((student) => (
+            {normalizedStudents.map((student) => (
               <button
                 key={student.name}
                 type="button"

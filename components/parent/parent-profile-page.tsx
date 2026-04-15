@@ -6,14 +6,13 @@ import { FiCheck, FiEdit2, FiMail, FiPhone } from "react-icons/fi";
 
 import { ParentShell } from "@/components/parent/parent-shell";
 import { browserApiRequest } from "@/lib/api/browser-api-client";
+import { getParentScheduleItems } from "@/lib/api/parent-schedule-browser-api";
+import type { ParentSessionHistoryItem } from "@/lib/api/parent-schedule-types";
+import { getParentStudents, type ParentStudentListItem } from "@/lib/api/parent-students-api";
 import {
-  parentBillingHistory,
-  parentProfileHistoryItems,
-  parentPlan,
   parentPlanOptions,
   parentProfile,
 } from "@/lib/parent/profile-data";
-import { parentStudentsData } from "@/lib/parent/students-data";
 import { PARENT_STUDENTS_ROUTE } from "@/lib/routes";
 
 type ParentProfileTab = "Personal Info" | "Plan & Billing" | "History";
@@ -44,6 +43,7 @@ type ParentProfileForm = {
 };
 
 const profileTabs: ParentProfileTab[] = ["Personal Info", "Plan & Billing", "History"];
+const parentBillingHistory: Array<{ id: string; date: string; description: string; amount: string; status: string }> = [];
 
 function normalizeBaseUrl(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -60,6 +60,39 @@ function deriveInitials(firstName: string, lastName: string): string {
   if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
   if (first) return first.slice(0, 2).toUpperCase();
   return "PA";
+}
+
+function normalizeStudentDisplayName(value: string) {
+  return String(value || "")
+    .replace(/\s+update'?s?\s*$/i, "")
+    .trim();
+}
+
+function monthLabelFromDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Unknown";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function deriveCurrentPlan(students: ParentStudentListItem[]) {
+  const studentCount = students.filter((student) => student.status !== "declined").length;
+  const matchingOption =
+    parentPlanOptions.find((option) => {
+      const match = option.studentLimitLabel.match(/(\d+)/g);
+      if (!match?.length) return false;
+      const limit = Number(match[match.length - 1]);
+      return studentCount <= limit;
+    }) ?? parentPlanOptions[parentPlanOptions.length - 1];
+
+  return {
+    ...matchingOption,
+    summary: `${matchingOption.studentLimitLabel} - Unlimited sessions`,
+    enrolledStudents: studentCount,
+    currentTierId: matchingOption.id,
+  };
 }
 
 function mapParentProfile(data: {
@@ -242,18 +275,21 @@ function PersonalInfoSection({
   );
 }
 
-function PlanAndBillingSection() {
+function PlanAndBillingSection({
+  currentPlan,
+}: {
+  currentPlan: ReturnType<typeof deriveCurrentPlan>;
+}) {
   return (
     <section className="p-5">
       <h3 className="text-[18px] font-bold text-[#20242b]">Plan & Billing</h3>
 
       <div className="mt-5 rounded-[12px] bg-[#fff0f3] px-4 py-4">
         <p className="text-[16px] font-bold text-[#d61c3f]">
-          {parentPlan.name} - Currently Active
+          {currentPlan.name} - Currently Active
         </p>
         <p className="mt-1 text-[13px] text-[#6b7280]">
-          {parentPlan.enrolledStudents} students enrolled - Unlimited sessions - Member since{" "}
-          {parentPlan.memberSince}
+          {currentPlan.enrolledStudents} students enrolled - Unlimited sessions
         </p>
       </div>
 
@@ -261,7 +297,7 @@ function PlanAndBillingSection() {
         <h4 className="text-[18px] font-bold text-[#20242b]">Available Plans</h4>
         <div className="mt-4 grid gap-4 xl:grid-cols-2">
           {parentPlanOptions.map((plan) => {
-            const current = plan.id === parentPlan.currentTierId;
+            const current = plan.id === currentPlan.currentTierId;
             const buttonClassName = current
               ? "bg-[#eceef2] text-[#9ca3af]"
               : plan.actionLabel === "Downgrade"
@@ -342,6 +378,13 @@ function PlanAndBillingSection() {
                   </td>
                 </tr>
               ))}
+              {parentBillingHistory.length === 0 ? (
+                <tr className="border-t border-[#eceef2]">
+                  <td className="px-4 py-4 text-[#6b7280]" colSpan={4}>
+                    No billing records available yet.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -350,27 +393,41 @@ function PlanAndBillingSection() {
   );
 }
 
-function HistorySection() {
-  const [historyFilter, setHistoryFilter] = useState<"All" | "Jordan" | "Maya">("All");
+function HistorySection({
+  historyItems,
+  students,
+}: {
+  historyItems: ParentSessionHistoryItem[];
+  students: ParentStudentListItem[];
+}) {
+  const studentFilters = ["All", ...students.map((student) => student.name)] as const;
+  const [historyFilter, setHistoryFilter] = useState<string>("All");
 
   const filteredItems =
     historyFilter === "All"
-      ? parentProfileHistoryItems
-      : parentProfileHistoryItems.filter((item) => item.student === historyFilter);
+      ? historyItems.filter((item) => item.status !== "Upcoming")
+      : historyItems.filter((item) => item.studentName === historyFilter && item.status !== "Upcoming");
 
-  const groupedItems = filteredItems.reduce<Record<string, typeof filteredItems>>((groups, item) => {
-    if (!groups[item.monthLabel]) {
-      groups[item.monthLabel] = [];
+  const groupedItems = filteredItems.reduce<Record<string, ParentSessionHistoryItem[]>>((groups, item) => {
+    const monthLabel = monthLabelFromDate(item.sessionDate || item.fullDate || item.createdAt);
+    if (!groups[monthLabel]) {
+      groups[monthLabel] = [];
     }
-    groups[item.monthLabel].push(item);
+    groups[monthLabel].push(item);
     return groups;
   }, {});
+
+  const orderedGroups = Object.entries(groupedItems).sort(([left], [right]) => {
+    const leftDate = new Date(`${left} 1`).getTime();
+    const rightDate = new Date(`${right} 1`).getTime();
+    return rightDate - leftDate;
+  });
 
   return (
     <section className="p-5">
       <h3 className="text-[18px] font-bold text-[#20242b]">History</h3>
       <div className="mt-5 flex items-center gap-3 border-b border-[#eceef2] pb-4">
-        {(["All", "Jordan", "Maya"] as const).map((filter) => {
+        {studentFilters.map((filter) => {
           const active = historyFilter === filter;
           return (
             <button
@@ -390,7 +447,7 @@ function HistorySection() {
       </div>
 
       <div className="mt-4 space-y-5">
-        {Object.entries(groupedItems).map(([monthLabel, items]) => (
+        {orderedGroups.map(([monthLabel, items]) => (
           <section key={monthLabel}>
             <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#5f6673]">
               {monthLabel}
@@ -408,11 +465,11 @@ function HistorySection() {
                     <div className="min-w-0">
                       <p className="text-[16px] font-bold text-[#20242b]">{item.tutorName}</p>
                       <p className="text-[13px] text-[#6b7280]">
-                        {item.subject} - {item.dateLabel}
+                        {item.subject} - {item.date} - {item.time}
                       </p>
                       <div className="mt-3 flex items-center gap-2 text-[12px] text-[#6b7280]">
                         <span className="font-semibold text-[#d61c3f]">{item.studentInitials}</span>
-                        <span>{item.student}</span>
+                        <span>{item.studentName}</span>
                         <span>-</span>
                         <span>{item.duration}</span>
                         <span>-</span>
@@ -423,7 +480,7 @@ function HistorySection() {
 
                   <div className="shrink-0 text-right">
                     <p className="text-[12px] font-medium text-[#4b5563]">{item.status}</p>
-                    <p className="mt-4 text-[24px] font-bold text-[#20242b]">{item.amount}</p>
+                    <p className="mt-4 text-[24px] font-bold text-[#20242b]">{item.rate}</p>
                   </div>
                 </article>
               ))}
@@ -444,10 +501,13 @@ export function ParentProfilePage() {
   const [activeTab, setActiveTab] = useState<ParentProfileTab>("Personal Info");
   const [currentProfile, setCurrentProfile] = useState<ParentProfileData>(parentProfile);
   const [formValues, setFormValues] = useState<ParentProfileForm>(parentProfile);
+  const [linkedStudents, setLinkedStudents] = useState<ParentStudentListItem[]>([]);
+  const [historyItems, setHistoryItems] = useState<ParentSessionHistoryItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const currentPlan = deriveCurrentPlan(linkedStudents);
 
   useEffect(() => {
     getParentProfile()
@@ -466,6 +526,24 @@ export function ParentProfilePage() {
       })
       .catch(() => {
         // Keep existing fallback data.
+      });
+  }, []);
+
+  useEffect(() => {
+    getParentStudents()
+      .then((response) => {
+        setLinkedStudents(response.items || []);
+      })
+      .catch(() => {
+        setLinkedStudents([]);
+      });
+
+    getParentScheduleItems()
+      .then((response) => {
+        setHistoryItems(response.items || []);
+      })
+      .catch(() => {
+        setHistoryItems([]);
       });
   }, []);
 
@@ -574,15 +652,18 @@ export function ParentProfilePage() {
             <div className="border-b border-[#eceef2] py-4">
               <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">My Students</p>
               <div className="mt-3 space-y-3">
-                {parentStudentsData.map((student) => (
+                {linkedStudents.map((student) => (
                   <div key={student.id} className="flex items-start gap-2">
                     <span className="mt-0.5 text-[11px] font-bold text-[#d61c3f]">{student.initials}</span>
                     <div>
-                      <p className="text-[14px] font-semibold text-[#20242b]">{student.name}</p>
+                      <p className="text-[14px] font-semibold text-[#20242b]">{normalizeStudentDisplayName(student.name)}</p>
                       <p className="text-[12px] text-[#6b7280]">{student.grade}</p>
                     </div>
                   </div>
                 ))}
+                {linkedStudents.length === 0 ? (
+                  <p className="text-[12px] text-[#6b7280]">No linked students yet.</p>
+                ) : null}
               </div>
               <Link
                 href={PARENT_STUDENTS_ROUTE}
@@ -595,8 +676,8 @@ export function ParentProfilePage() {
             <div className="pt-4">
               <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">Current Plan</p>
               <div className="mt-3 rounded-[12px] bg-[#fff0f3] px-4 py-4">
-                <p className="text-[16px] font-bold text-[#d61c3f]">{parentPlan.name}</p>
-                <p className="mt-1 text-[12px] text-[#6b7280]">{parentPlan.summary}</p>
+                <p className="text-[16px] font-bold text-[#d61c3f]">{currentPlan.name}</p>
+                <p className="mt-1 text-[12px] text-[#6b7280]">{currentPlan.summary}</p>
               </div>
               <button
                 type="button"
@@ -643,8 +724,8 @@ export function ParentProfilePage() {
                 lastSavedAt={lastSavedAt}
               />
             ) : null}
-            {activeTab === "Plan & Billing" ? <PlanAndBillingSection /> : null}
-            {activeTab === "History" ? <HistorySection /> : null}
+            {activeTab === "Plan & Billing" ? <PlanAndBillingSection currentPlan={currentPlan} /> : null}
+            {activeTab === "History" ? <HistorySection historyItems={historyItems} students={linkedStudents.map((student) => ({ ...student, name: normalizeStudentDisplayName(student.name) }))} /> : null}
           </section>
         </div>
       </div>

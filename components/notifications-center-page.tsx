@@ -90,6 +90,29 @@ function formatTimeLabel(value: string) {
   return String(value || "").trim();
 }
 
+function NotificationsListSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={`notifications-skeleton-${index}`}
+          className="flex items-center justify-between gap-3 border-b border-[#eceef2] px-4 py-3 last:border-b-0"
+        >
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="h-8 w-8 shrink-0 animate-pulse rounded-lg bg-[#eef1f4]" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-4 w-40 animate-pulse rounded bg-[#eef1f4]" />
+              <div className="h-3 w-full max-w-[420px] animate-pulse rounded bg-[#eef1f4]" />
+              <div className="h-3 w-24 animate-pulse rounded bg-[#eef1f4]" />
+            </div>
+          </div>
+          <div className="h-8 w-16 shrink-0 animate-pulse rounded-lg bg-[#eef1f4]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RatingPreviewModal({
   open,
   loading,
@@ -559,13 +582,10 @@ export function NotificationsCenterPage({
             </div>
           ) : null}
           {loading ? (
-            <div className="rounded-xl border border-[#e7e7eb] bg-white px-4 py-5 text-[13px] text-[#6b7280]">
-              Loading notifications...
-            </div>
-          ) : null}
-
-          <div className="overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white">
-            {displayItems.length > 0 ? (
+            <NotificationsListSkeleton />
+          ) : (
+            <div className="overflow-hidden rounded-[14px] border border-[#e7e7eb] bg-white">
+              {displayItems.length > 0 ? (
               displayItems.map((item) => {
                 const { icon: Icon, className } = getIconConfig(item);
                 const unread = Boolean(item.unread);
@@ -615,10 +635,11 @@ export function NotificationsCenterPage({
                   </article>
                 );
               })
-            ) : (
-              <div className="px-4 py-5 text-[13px] text-[#6b7280]">No notifications.</div>
-            )}
-          </div>
+              ) : (
+                <div className="px-4 py-5 text-[13px] text-[#6b7280]">No notifications.</div>
+              )}
+            </div>
+          )}
         </section>
 
         <RatingPreviewModal

@@ -13,6 +13,12 @@ import { PARENT_DASHBOARD_ROUTE, PARENT_FIND_TUTORS_ROUTE } from "@/lib/routes";
 
 export type ParentBookingStep = "student" | "session" | "schedule" | "confirm";
 
+function normalizeStudentDisplayName(value: string) {
+  return String(value || "")
+    .replace(/\s+update'?s?\s*$/i, "")
+    .trim();
+}
+
 const stepMeta: {
   key: ParentBookingStep;
   number: number;
@@ -128,7 +134,12 @@ export function ParentBookSessionPage({
       try {
         const response = await getParentStudents();
         if (!mounted) return;
-        const activeStudents = (response.items || []).filter((student) => student.status === "active");
+        const activeStudents = (response.items || [])
+          .filter((student) => student.status === "active")
+          .map((student) => ({
+            ...student,
+            name: normalizeStudentDisplayName(student.name),
+          }));
         setStudents(activeStudents);
       } catch {
         if (mounted) {

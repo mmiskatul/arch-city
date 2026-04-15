@@ -1,7 +1,19 @@
 import { ParentSchedulePage } from "@/components/parent/parent-schedule-page";
-import { fetchParentScheduleItems } from "@/lib/api/parent-schedule-api";
+import type { ParentSessionHistoryResponse } from "@/lib/api/parent-schedule-types";
 
-export default async function ParentScheduleRoute() {
-  const data = await fetchParentScheduleItems();
-  return <ParentSchedulePage data={data} />;
+const initialScheduleData: ParentSessionHistoryResponse = {
+  summaryCards: [
+    {
+      title: "Total Sessions",
+      value: "0",
+      subtitle: "All linked students",
+      badge: "",
+      tone: "red",
+    },
+  ],
+  items: [],
+};
+
+export default function ParentScheduleRoute() {
+  return <ParentSchedulePage initialData={initialScheduleData} />;
 }

@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { startTransition, useEffect, useState } from "react";
 
 import { ParentShell } from "@/components/parent/parent-shell";
-import type { ParentSessionHistoryResponse, ParentScheduleSummaryCard } from "@/lib/api/parent-schedule-api";
+import { getParentScheduleItems } from "@/lib/api/parent-schedule-browser-api";
+import type { ParentSessionHistoryResponse, ParentScheduleSummaryCard } from "@/lib/api/parent-schedule-types";
 import { PARENT_SCHEDULE_ROUTE } from "@/lib/routes";
 
 function SummaryCard({
@@ -33,7 +37,63 @@ function SummaryCard({
   );
 }
 
-export function ParentSchedulePage({ data }: { data: ParentSessionHistoryResponse }) {
+function ScheduleRowsSkeleton() {
+  return (
+    <div className="divide-y divide-[#eceef2]">
+      {Array.from({ length: 6 }).map((_, rowIndex) => (
+        <div
+          key={`parent-schedule-row-skeleton-${rowIndex}`}
+          className="grid grid-cols-[1fr_1fr_0.9fr_1.1fr_0.8fr_0.8fr_0.8fr_0.9fr_0.7fr] items-center gap-4 px-4 py-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 animate-pulse rounded-full bg-[#eef1f4]" />
+            <div className="h-4 w-24 animate-pulse rounded bg-[#eef1f4]" />
+          </div>
+          <div className="h-4 w-24 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-4 w-20 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-4 w-24 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-4 w-16 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-6 w-16 animate-pulse rounded-full bg-[#eef1f4]" />
+          <div className="h-4 w-16 animate-pulse rounded bg-[#eef1f4]" />
+          <div className="h-6 w-[84px] animate-pulse rounded-full bg-[#eef1f4]" />
+          <div className="h-4 w-10 animate-pulse rounded bg-[#eef1f4]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ParentSchedulePage({ initialData }: { initialData: ParentSessionHistoryResponse }) {
+  const [data, setData] = useState(initialData);
+  const [rowsLoading, setRowsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSchedule() {
+      try {
+        setRowsLoading(true);
+        const nextData = await getParentScheduleItems();
+        if (cancelled) return;
+        startTransition(() => {
+          setData(nextData);
+        });
+      } catch {
+        if (cancelled) return;
+      } finally {
+        if (!cancelled) {
+          setRowsLoading(false);
+        }
+      }
+    }
+
+    void loadSchedule();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <ParentShell>
       <div className="w-full">
@@ -79,7 +139,9 @@ export function ParentSchedulePage({ data }: { data: ParentSessionHistoryRespons
             </div>
 
             <div className="divide-y divide-[#eceef2]">
-              {data.items.map((session) => (
+              {rowsLoading ? (
+                <ScheduleRowsSkeleton />
+              ) : data.items.map((session) => (
                 <div
                   key={session.id}
                   className="grid grid-cols-[1fr_1fr_0.9fr_1.1fr_0.8fr_0.8fr_0.8fr_0.9fr_0.7fr] items-center gap-4 px-4 py-4"
@@ -115,7 +177,7 @@ export function ParentSchedulePage({ data }: { data: ParentSessionHistoryRespons
                   </div>
                 </div>
               ))}
-              {data.items.length === 0 ? (
+              {!rowsLoading && data.items.length === 0 ? (
                 <div className="px-4 py-6 text-[14px] text-[#6b7280]">
                   No session history yet. Book a session to see it here.
                 </div>
